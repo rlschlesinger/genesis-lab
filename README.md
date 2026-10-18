@@ -2,7 +2,15 @@
 
 A local-first artificial life laboratory. Digital organisms live in a simulated 2D world, eat, reproduce and (from Milestone 2) evolve. Everything runs on your machine: no cloud services, no API keys.
 
-**Status:** Milestone 1 (The Petri Dish), increment 1.0: project scaffold only.
+**Status:** Milestone 1 (The Petri Dish), increment 1.2: validated configuration, and a world with regrowing food. No organisms yet.
+
+## Configuration
+
+Runs are described by YAML files in `configs/`. [configs/default.yaml](configs/default.yaml) documents every field and its unit. Invalid files are rejected before anything runs:
+
+```bash
+uv run python -c "from genesis.core.config import load_config; print(load_config('configs/default.yaml'))"
+```
 
 ## Requirements
 

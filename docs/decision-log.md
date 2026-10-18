@@ -35,3 +35,27 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Decision:** one run seed → `SeedSequence.spawn` → separate generators for food, controllers, reproduction and tie-breaking.
 **Why:** keeps subsystems from shifting each other's random sequences, so paired-seed experiments stay comparable as code changes.
 **Limit:** bit-identical results are guaranteed only within the same machine, OS and package versions.
+
+## D-007 · YAML files validated by Pydantic (2026-10-18)
+
+**Decision:** configs are YAML, read with `yaml.safe_load`, validated into frozen Pydantic models that forbid unknown keys.
+**Why:** a typo or impossible value should stop a run before it starts, with an error naming the field. Frozen configs can't drift mid-run.
+**Alternatives:** TOML via the standard library's `tomllib` (no dependency, but the spec names YAML); dataclasses with hand-written checks; `msgspec`.
+
+## D-008 · Reproduction energy split (2026-10-18)
+
+**Decision:** reproducing costs the parent `offspring_energy + reproduction_overhead`; the child receives `offspring_energy`; the overhead is lost.
+**Why:** makes reproduction costly (as the spec requires) while keeping the energy ledger explicit. A config is rejected if reproducing could drive the parent to zero.
+
+## D-009 · Poisson food regrowth (2026-10-18)
+
+**Decision:** new food per tick ~ Poisson(`regrowth_per_tick`), capped at `max_count`, at uniformly random positions.
+**Why:** the standard model for independent events at a constant average rate; supports fractional rates (0.3/tick) naturally.
+**Alternatives:** a deterministic accumulator (adds exactly 0.3 per tick, spawns when it passes 1). It's less noisy, but its regular timing could become an artefact organisms exploit. We could revisit it as a config option.
+**Note:** the Poisson draw happens even when food is at the cap, so the food stream's sequence doesn't depend on how much was eaten.
+
+## D-010 · Food stored as a NumPy array, not objects (2026-10-18)
+
+**Decision:** `FoodSupply` holds an `(n, 2)` float64 array.
+**Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
+**Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.

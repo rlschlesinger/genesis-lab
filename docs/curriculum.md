@@ -12,9 +12,27 @@ What has been covered, where it appears in the code, and what comes next.
 - **Linting vs formatting:** `ruff check` finds likely bugs and style problems; `ruff format` rewrites layout consistently.
 - **Tests:** pytest discovers `test_*.py` files and runs every `test_*` function.
 
+### 1.1 · Configuration (`src/genesis/core/config.py`)
+- **Validate at the boundary:** untrusted input (a file) becomes a trusted typed object exactly once.
+- **Pydantic models:** fields with types and constraints (`Field(gt=0)`), `Literal` for fixed choices, `X | None` for optional values.
+- **Field vs model validators:** single-field rules vs rules that relate several fields (`@model_validator`).
+- **`extra="forbid"` and `frozen=True`:** typos become errors; configs can't change mid-run.
+- **`yaml.safe_load`:** parses data only, never executes code embedded in the file.
+- **Units:** every number states its unit (world units, ticks, EU, radians).
+- **pytest techniques:** fixtures (`raw`), `parametrize` (one test, many cases), `pytest.raises(..., match=...)`, `tmp_path`.
+
+### 1.2 · World and food (`src/genesis/core/world.py`, `resources.py`)
+- **NumPy arrays:** shape `(n, 2)`, dtype `float64`, column slicing (`positions[:, 0]` = all x values).
+- **Vectorization:** one call operates on every row (`rng.uniform(..., size=(k, 2))`, `np.clip`).
+- **Broadcasting:** a length-2 array `[width, height]` applies per column to an `(n, 2)` array.
+- **Boolean masks:** `keep[idx] = False; positions[keep]` removes rows in one step.
+- **Views and read-only flags:** sharing data without copying, while preventing mutation.
+- **Poisson distribution:** random counts of independent events at a fixed average rate; sample noise shrinks as √(rate / n).
+- **Dependency injection of randomness:** functions receive a `Generator` instead of creating one.
+- **Testing randomness:** seeded statistical tests with tolerances derived from the standard error.
+
 ## Upcoming (Milestone 1)
-- Data validation with Pydantic; YAML configuration (1.1)
-- NumPy arrays and vectorized distance calculations (1.2–1.4)
+- Vectorized distance calculations (1.4)
 - Dataclasses and object-oriented state (1.3)
 - Pure functions and separation of concerns (1.4)
 - Pseudo-random number generators, seeds, and reproducibility (1.5)

@@ -1,0 +1,35 @@
+# Genesis Lab default configuration.
+# Units: distance = world units, time = ticks, energy = EU (abstract), angle = radians.
+# Values are provisional starting points; they get tuned and recorded in increment 1.9.
+
+run:
+  seed: 42
+  max_ticks: 5000
+  stop_on_extinction: true
+
+world:
+  width: 200.0
+  height: 200.0
+
+food:
+  initial_count: 150
+  max_count: 300
+  regrowth_per_tick: 2.0     # expected new items per tick while below max_count
+  energy_value: 20.0         # EU per item eaten
+  eat_radius: 2.0
+
+organisms:
+  initial_count: 30
+  max_population: 500
+  initial_energy: 50.0
+  max_age: null              # null = no age limit
+  move_cost_per_distance: 0.1
+  offspring_energy: 40.0     # transferred parent -> child
+  reproduction_overhead: 10.0  # lost by parent on top of the transfer
+  controller: nearest_food_seeker   # or: random_walk
+  traits:
+    speed: 1.5
+    sense_range: 20.0
+    max_turn: 0.5            # ~29 degrees per tick
+    metabolic_rate: 0.2
+    reproduction_threshold: 80.0  # must exceed offspring_energy + reproduction_overhead
