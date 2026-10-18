@@ -60,6 +60,11 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-012 · A fifth RNG stream for setup; streams are append-only (2026-10-18)
+
+**Decision:** founder placement gets its own `setup` stream. Streams are spawned in a fixed order, and a new one is only ever added at the end.
+**Why:** borrowing another stream for founder placement would shift that stream's sequence. `SeedSequence.spawn` hands out child seeds in order, so inserting a stream in the middle would silently change every stream after it, and with it every result from earlier software versions.
+
 ## D-011 · Energy left at death leaves the system (2026-10-18)
 
 **Decision:** energy an organism still holds when it dies (e.g. of old age) is removed and recorded in the energy ledger as "lost at death".

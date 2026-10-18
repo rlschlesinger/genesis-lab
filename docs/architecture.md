@@ -9,7 +9,7 @@ configs/default.yaml ──► core/config.py (Pydantic) ──► SimulationCon
                                                             │
 cli.py ──► core/simulation.py ──owns──► World       (core/world.py: bounds, food positions)
                 │                 ├──► Organisms   (core/organism.py: state + Traits)
-                │                 └──► RNG streams {food, controller, reproduction, tiebreak}
+                │                 └──► RNG streams {setup, food, controller, reproduction, tiebreak}
                 │
            tick():
              1 world.regrow_food(rng.food)
@@ -35,7 +35,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `intelligence/controllers.py` | `Observations` → `Actions` (pure) | Mutate world state |
 | `core/movement.py` | Apply `Actions` within trait limits; walls; distance moved | Decide anything |
 | `core/geometry.py` | `wrap_angle` | |
-| `core/simulation.py` *(planned)* | Tick order, RNG streams, conflict rules | Do I/O |
+| `core/simulation.py` | Tick order, RNG streams, founders, deaths, `TickSummary`, `state_digest` | Do I/O |
 | `analytics/metrics.py` *(planned)* | Per-tick measurements | Mutate state |
 | `cli.py` *(planned)* | Arguments, file output | Contain simulation rules |
 
@@ -84,9 +84,19 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 - **Baselines:** `RandomWalk` (normal turns, sd 0.3 rad, full speed) and `NearestFoodSeeker` (turn toward nearest sensed food, otherwise identical to `RandomWalk`, with the same random draws). The only difference between them is the response to sensed food.
 - **Turning circle:** minimum radius = `speed / max_turn` (3 units by default). A full-speed organism cannot stop on a target; it overshoots and loops. On a head-on approach, steps of `speed` always land within `speed / 2` of the food, so `eat_radius >= speed / 2` guarantees a head-on approach can eat (default 2.0 vs 0.75).
 
+## Simulation loop
+
+- `Simulation(config)` builds streams, world, controller and founders (ids `0..n-1`, generation 0).
+- `step()` runs one tick and returns a `TickSummary` (tick, population, deaths, food_count, food_spawned, mean_energy). Population and energy are end-of-tick values; `mean_energy` is NaN for an empty population.
+- `run()` steps until `max_ticks`, or extinction if `stop_on_extinction`.
+- Living organisms stay in ascending id order; dead organisms move to `sim.dead` and keep their records.
+- Snapshot: all per-organism arrays are built once at the start of the tick, before anyone moves.
+- Survivors' `age` increments at step 9, so a death check in step 6 sees the age *before* this tick's increment.
+- `state_digest()`: SHA-256 over tick, food positions, and every organism's id/x/y/heading/energy/age/alive. Equal digests mean bit-identical state.
+
 ## Randomness
 
-One integer seed per run → `numpy.random.SeedSequence` → `.spawn(4)` → one independent `Generator` per subsystem. Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
+One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`. New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
 
 ## Milestone 1 plan
 
@@ -97,7 +107,7 @@ One integer seed per run → `numpy.random.SeedSequence` → `.spawn(4)` → one
 | 1.2 | `world.py`: bounds, food regrowth | Food within cap and bounds | done |
 | 1.3 | `organism.py`: state, Traits, energy, death | Zero energy → dead | done |
 | 1.4 | Controllers, movement, wall clamping | Walls hold; seeker approaches food | done |
-| 1.5 | `simulation.py`: tick loop, RNG streams | Determinism | |
+| 1.5 | `simulation.py`: tick loop, RNG streams | Determinism | done |
 | 1.6 | Eating, tie rule, energy ledger | Tie rule; ledger balances | |
 | 1.7 | Cloning, population cap, newborn delay | Newborns inactive on birth tick | |
 | 1.8 | Metrics, CLI, CSV output | Identical files from repeated runs | |

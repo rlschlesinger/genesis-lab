@@ -23,7 +23,7 @@ uv run ruff check . && uv run ruff format --check .
 
 ## Simulation invariants (do not break)
 
-- **Determinism:** same config + seed + environment → identical output. All randomness comes from `numpy.random.Generator` streams spawned from one `SeedSequence` per run, one stream per subsystem (food, controller, reproduction, tiebreak). Never use `random`, `np.random.<function>` global state, or iterate over sets/unordered collections in simulation code. Organisms are processed in ascending ID order.
+- **Determinism:** same config + seed + environment → identical output. All randomness comes from `numpy.random.Generator` streams spawned from one `SeedSequence` per run, one stream per subsystem, in fixed order (setup, food, controller, reproduction, tiebreak); new streams are appended only at the end. Never use `random`, `np.random.<function>` global state, or iterate over sets/unordered collections in simulation code. Organisms are processed in ascending ID order.
 - **Snapshot observation:** all organisms observe the same frozen world state before any action is applied.
 - **Newborns** are inactive until the tick after their birth.
 - **Food contention:** the closest organism wins; exact ties are broken with the tiebreak stream (never by ID, which would bias toward older lineages).

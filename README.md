@@ -2,7 +2,7 @@
 
 A local-first artificial life laboratory. Digital organisms live in a simulated 2D world, eat, reproduce and (from Milestone 2) evolve. Everything runs on your machine: no cloud services, no API keys.
 
-**Status:** Milestone 1 (The Petri Dish), increment 1.4: validated configuration, a world with regrowing food, organisms with energy and death rules, and sensing, decisions (random walk / food seeker) and movement. Not yet wired into a running simulation, and no eating yet.
+**Status:** Milestone 1 (The Petri Dish), increment 1.5: a running, deterministic simulation. Organisms sense, decide, move, pay energy costs and die. They can't eat yet (1.6), so every run currently ends in starvation.
 
 A **tick** is one step of simulated time: every organism senses, acts and pays its energy costs once per tick.
 

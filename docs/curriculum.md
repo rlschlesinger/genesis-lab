@@ -52,8 +52,16 @@ What has been covered, where it appears in the code, and what comes next.
 - **Debugging a failing test:** trace the behaviour, then decide whether the code or the test is wrong. Here it was the test (checking the final position, not the closest approach).
 - **Turning circles:** a speed / turn-rate limit creates a minimum radius; a full-speed organism can't stop on a target.
 
+### 1.5 · Simulation loop (`src/genesis/core/simulation.py`)
+- **Pseudo-random number generators:** a deterministic formula that produces a random-looking sequence from a seed.
+- **Independent streams:** `SeedSequence.spawn` gives one generator per subsystem, so a draw in one never shifts another. (Analogy: separate decks of cards instead of one shared deck.)
+- **Orchestration:** one object owns the state and runs the steps in a fixed order; the parts it calls stay simple.
+- **Snapshots:** copy state into arrays once at the start of the tick, so every organism sees the same world.
+- **Hashing:** SHA-256 turns the whole state into a short fingerprint; any change, however tiny, changes it completely.
+- **Determinism checks:** the same digest in two separate processes is stronger evidence than two runs in one process.
+- **Reviewing your own tests:** an assertion that compares a value with itself can never fail. Check that a test can fail.
+
 ## Upcoming (Milestone 1)
-- Pseudo-random number generators, seeds, and reproducibility (1.5)
 - Simultaneous update and conflict resolution; invariants and conservation checks (1.6)
 - Population dynamics and carrying capacity (1.7)
 - CLI design; CSV output (1.8)
