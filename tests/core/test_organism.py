@@ -1,0 +1,177 @@
+"""Tests for Organism and Traits: energy bookkeeping, death rules, and data safety."""
+
+import dataclasses
+from pathlib import Path
+
+import pytest
+
+from genesis.core.config import load_config
+from genesis.core.organism import DeathCause, Organism, Traits
+
+DEFAULT_CONFIG = Path(__file__).parents[2] / "configs" / "default.yaml"
+
+TRAITS = Traits(
+    speed=1.5, sense_range=20.0, max_turn=0.5, metabolic_rate=0.2, reproduction_threshold=80.0
+)
+
+
+def make_organism(**overrides) -> Organism:
+    fields = dict(
+        id=1, parent_id=None, generation=0, birth_tick=0,
+        traits=TRAITS, x=10.0, y=10.0, heading=0.0, energy=50.0,
+    )  # fmt: skip
+    fields.update(overrides)
+    return Organism(**fields)
+
+
+# --- Traits -------------------------------------------------------------------------------
+
+
+def test_traits_from_config_copies_every_value():
+    config = load_config(DEFAULT_CONFIG).organisms.traits
+    traits = Traits.from_config(config)
+    # Compare field by field, so adding a trait to one class but not the other fails here.
+    assert dataclasses.asdict(traits) == config.model_dump()
+
+
+def test_traits_are_immutable():
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        TRAITS.speed = 99.0
+
+
+# --- Construction -------------------------------------------------------------------------
+
+
+def test_new_organism_starts_alive_with_zeroed_totals():
+    org = make_organism()
+    assert org.alive and org.age == 0
+    assert org.death_tick is None and org.death_cause is None
+    assert (org.energy_gained, org.energy_spent, org.food_eaten, org.offspring_count) == (
+        0,
+        0,
+        0,
+        0,
+    )
+
+
+def test_misspelled_attribute_raises():
+    org = make_organism()
+    with pytest.raises(AttributeError):
+        org.enrgy = 5.0
+
+
+def test_positional_construction_rejected():
+    # kw_only=True: guards against swapping two numbers by position.
+    with pytest.raises(TypeError):
+        Organism(1, None, 0, 0, TRAITS, 10.0, 10.0, 0.0, 50.0)
+
+
+# --- Energy -------------------------------------------------------------------------------
+
+
+def test_spend_deducts_and_records():
+    org = make_organism(energy=50.0)
+    assert org.spend(10.0) == 10.0
+    assert org.energy == 40.0
+    assert org.energy_spent == 10.0
+
+
+def test_overspending_stops_at_zero_and_reports_actual_amount():
+    org = make_organism(energy=0.3)
+    paid = org.spend(0.5)
+    assert paid == pytest.approx(0.3)  # only what it had
+    assert org.energy == 0.0
+    assert org.energy_spent == pytest.approx(0.3)  # the ledger sees 0.3, not 0.5
+
+
+def test_reaching_zero_energy_does_not_kill_immediately():
+    # Deaths are processed in their own tick step, never mid-update.
+    org = make_organism(energy=1.0)
+    org.spend(5.0)
+    assert org.energy == 0.0
+    assert org.alive
+
+
+def test_negative_spend_rejected():
+    with pytest.raises(ValueError):
+        make_organism().spend(-1.0)
+
+
+def test_eat_adds_energy_and_counts_food():
+    org = make_organism(energy=10.0)
+    org.eat(20.0)
+    org.eat(20.0)
+    assert org.energy == 50.0
+    assert org.energy_gained == 40.0
+    assert org.food_eaten == 2
+
+
+@pytest.mark.parametrize("bad", [0.0, -5.0])
+def test_eating_non_positive_energy_rejected(bad):
+    with pytest.raises(ValueError):
+        make_organism().eat(bad)
+
+
+def test_energy_bookkeeping_balances():
+    # start + gained - spent == current: the per-organism version of the energy ledger.
+    org = make_organism(energy=50.0)
+    for _ in range(10):
+        org.spend(7.3)
+        org.eat(4.1)
+    assert org.energy == pytest.approx(50.0 + org.energy_gained - org.energy_spent)
+
+
+# --- Death --------------------------------------------------------------------------------
+
+
+def test_healthy_organism_survives():
+    assert make_organism(energy=10.0, age=5).cause_of_death(max_age=100) is None
+
+
+def test_zero_energy_means_starvation():
+    assert make_organism(energy=0.0).cause_of_death(max_age=None) is DeathCause.STARVATION
+
+
+def test_reaching_max_age_means_old_age():
+    org = make_organism(age=100)
+    assert org.cause_of_death(max_age=100) is DeathCause.OLD_AGE
+    assert make_organism(age=99).cause_of_death(max_age=100) is None
+
+
+def test_no_max_age_means_no_old_age_death():
+    assert make_organism(age=10**9).cause_of_death(max_age=None) is None
+
+
+def test_starvation_takes_precedence_over_old_age():
+    org = make_organism(energy=0.0, age=100)
+    assert org.cause_of_death(max_age=100) is DeathCause.STARVATION
+
+
+def test_cause_of_death_does_not_change_state():
+    org = make_organism(energy=0.0)
+    org.cause_of_death(max_age=None)
+    assert org.alive
+
+
+def test_die_records_tick_and_cause():
+    org = make_organism()
+    org.die(tick=42, cause=DeathCause.OLD_AGE)
+    assert not org.alive
+    assert org.death_tick == 42
+    assert org.death_cause == "old_age"  # StrEnum compares equal to its string value
+
+
+@pytest.mark.parametrize(
+    "action",
+    [
+        lambda o: o.spend(1.0),
+        lambda o: o.eat(10.0),
+        lambda o: o.die(tick=2, cause=DeathCause.STARVATION),
+    ],
+    ids=["spend", "eat", "die-twice"],
+)
+def test_dead_organisms_cannot_act(action):
+    org = make_organism()
+    org.die(tick=1, cause=DeathCause.STARVATION)
+    with pytest.raises(RuntimeError, match="is dead"):
+        action(org)

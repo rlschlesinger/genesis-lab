@@ -30,7 +30,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `core/config.py` | Validated, immutable configuration | Contain simulation logic |
 | `core/world.py` | Bounds, wall clamping; owns the `FoodSupply` | Know about controllers |
 | `core/resources.py` | Food positions `(n, 2)`, Poisson regrowth, removal | Create its own RNG |
-| `core/organism.py` *(planned)* | Per-organism state, `Traits` | Draw random numbers itself |
+| `core/organism.py` | Per-organism state, `Traits`, energy bookkeeping, death rules | Draw random numbers, sense, or move itself |
 | `intelligence/controllers.py` *(planned)* | Observation → action | Mutate world state |
 | `core/simulation.py` *(planned)* | Tick order, RNG streams, conflict rules | Do I/O |
 | `analytics/metrics.py` *(planned)* | Per-tick measurements | Mutate state |
@@ -56,6 +56,16 @@ Reproduction energy model: the parent pays `offspring_energy + reproduction_over
 - Each tick, `regrow` draws a Poisson count (mean `regrowth_per_tick`), then spawns up to the cap. The draw happens even at the cap, so random draws per tick don't depend on world state.
 - `remove` rejects duplicate or out-of-range indices: one item can never feed two organisms.
 
+## Organisms
+
+- `Traits`: frozen dataclass; fixed for a lifetime (heritable from Milestone 2).
+- `Organism`: mutable dataclass with `slots=True, kw_only=True`. Identity/lineage fields are set at birth; physical state (`x`, `y`, `heading`, `energy`) is changed by the simulation.
+- **Time:** a *tick* is one step of simulated time, during which the 9-step sequence runs once for every organism. `age` counts ticks survived.
+- `spend(amount)` never takes energy below zero and returns the amount actually deducted (the ledger records that, not the amount requested).
+- **Zero energy does not kill on the spot.** `cause_of_death(max_age)` is a side-effect-free query; `die(tick, cause)` is applied in tick step 6 for all organisms together. Starvation takes precedence over old age.
+- Dead organisms raise `RuntimeError` on any action, so a tick-loop bug that keeps processing them fails loudly.
+- Energy still held by an organism when it dies (e.g. old age) is removed from the living system by the simulation and logged in the ledger (1.6).
+
 ## Randomness
 
 One integer seed per run → `numpy.random.SeedSequence` → `.spawn(4)` → one independent `Generator` per subsystem. Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
@@ -67,7 +77,7 @@ One integer seed per run → `numpy.random.SeedSequence` → `.spawn(4)` → one
 | 1.0 | Scaffold: git, uv, ruff, pytest, docs | Smoke test passes | done |
 | 1.1 | `config.py` + `default.yaml` | Invalid config rejected | done |
 | 1.2 | `world.py`: bounds, food regrowth | Food within cap and bounds | done |
-| 1.3 | `organism.py`: state, Traits, energy, death | Zero energy → dead | |
+| 1.3 | `organism.py`: state, Traits, energy, death | Zero energy → dead | done |
 | 1.4 | Controllers, movement, wall clamping | Walls hold; seeker approaches food | |
 | 1.5 | `simulation.py`: tick loop, RNG streams | Determinism | |
 | 1.6 | Eating, tie rule, energy ledger | Tie rule; ledger balances | |
