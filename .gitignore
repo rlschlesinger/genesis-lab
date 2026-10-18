@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Generated experiment data stays out of Git (small fixtures go in tests/fixtures/)
+data/*
+!data/.gitkeep
+
+# OS
+.DS_Store

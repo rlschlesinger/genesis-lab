@@ -1,0 +1,45 @@
+[project]
+name = "genesis-lab"
+version = "0.1.0"
+description = "A local-first artificial life laboratory: digital organisms, evolution, and controlled experiments."
+readme = "README.md"
+authors = [
+    { name = "Robby Schlesinger", email = "18275013+rlschlesinger@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+# Runtime dependencies are added one at a time, in the increment that first needs them.
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1",
+    "ruff>=0.17",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.16,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+# Distribution is "genesis-lab"; the importable package is "genesis".
+module-name = "genesis"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes: unused names, undefined names
+    "I",    # import sorting
+    "UP",   # modern Python syntax
+    "B",    # bugbear: likely bugs (mutable defaults, etc.)
+    "SIM",  # simplifications
+    "NPY",  # NumPy: flags legacy np.random global-state calls
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
