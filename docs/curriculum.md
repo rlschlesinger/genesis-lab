@@ -40,9 +40,19 @@ What has been covered, where it appears in the code, and what comes next.
 - **Floating-point arithmetic:** 0.35 isn't exact in binary; compare floats with a tolerance (`pytest.approx`).
 - **Zero- vs one-based counting:** the 143rd tick is tick 142.
 
+### 1.4 · Sensing, controllers, movement (`intelligence/`, `core/movement.py`, `core/geometry.py`)
+- **Radians and trigonometry:** `cos`/`sin` turn a heading into x/y steps; `atan2` turns an offset back into an angle.
+- **Angle wrapping:** one canonical value per direction, in `[-pi, pi)`.
+- **Broadcasting in 3D:** `(n, 1, 2) - (1, m, 2) -> (n, m, 2)`, giving every pairwise offset in one step.
+- **`argmin` and fancy indexing:** `distances[rows, nearest]` picks one column per row.
+- **Pure functions:** controllers read inputs and return outputs, with no side effects, so they're easy to test and to swap out.
+- **Protocols:** an interface defined by method shape, not inheritance.
+- **Requests vs limits:** the controller asks, the body (traits) decides.
+- **Control conditions:** baselines differ in exactly one behaviour, so outcome differences are attributable.
+- **Debugging a failing test:** trace the behaviour, then decide whether the code or the test is wrong. Here it was the test (checking the final position, not the closest approach).
+- **Turning circles:** a speed / turn-rate limit creates a minimum radius; a full-speed organism can't stop on a target.
+
 ## Upcoming (Milestone 1)
-- Vectorized distance calculations (1.4)
-- Pure functions and separation of concerns (1.4)
 - Pseudo-random number generators, seeds, and reproducibility (1.5)
 - Simultaneous update and conflict resolution; invariants and conservation checks (1.6)
 - Population dynamics and carrying capacity (1.7)

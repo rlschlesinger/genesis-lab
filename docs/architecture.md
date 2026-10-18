@@ -31,7 +31,10 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `core/world.py` | Bounds, wall clamping; owns the `FoodSupply` | Know about controllers |
 | `core/resources.py` | Food positions `(n, 2)`, Poisson regrowth, removal | Create its own RNG |
 | `core/organism.py` | Per-organism state, `Traits`, energy bookkeeping, death rules | Draw random numbers, sense, or move itself |
-| `intelligence/controllers.py` *(planned)* | Observation → action | Mutate world state |
+| `intelligence/sensors.py` | World snapshot → `Observations` (nearest food in range) | Mutate anything |
+| `intelligence/controllers.py` | `Observations` → `Actions` (pure) | Mutate world state |
+| `core/movement.py` | Apply `Actions` within trait limits; walls; distance moved | Decide anything |
+| `core/geometry.py` | `wrap_angle` | |
 | `core/simulation.py` *(planned)* | Tick order, RNG streams, conflict rules | Do I/O |
 | `analytics/metrics.py` *(planned)* | Per-tick measurements | Mutate state |
 | `cli.py` *(planned)* | Arguments, file output | Contain simulation rules |
@@ -66,6 +69,21 @@ Reproduction energy model: the parent pays `offspring_energy + reproduction_over
 - Dead organisms raise `RuntimeError` on any action, so a tick-loop bug that keeps processing them fails loudly.
 - Energy still held by an organism when it dies (e.g. old age) is removed from the living system by the simulation and logged in the ledger (1.6).
 
+## Sensing, deciding, moving
+
+```text
+sense_food(positions, headings, sense_ranges, energies, food)  -> Observations
+controller.decide(observations, rng)                           -> Actions (requests)
+move(positions, headings, actions, speeds, max_turns, world)   -> new positions, headings, distances
+```
+
+- **Angles:** radians; heading 0 = +x, counter-clockwise positive; always wrapped to `[-pi, pi)`. **Bearing** = turn needed to face the food (positive = left).
+- **Sensing** computes all organism-to-food distances at once, an `(n, m)` table via broadcasting. Food beyond an organism's own `sense_range` is invisible. Equidistant food: lowest index wins.
+- **Actions are requests:** `turn` is clipped to `+/- max_turn`, `throttle` to `[0, 1]`. Non-finite actions raise.
+- **Move order:** turn, step along the new heading, clamp to walls. `distances` is measured after clamping, and movement cost (1.6) is charged on it.
+- **Baselines:** `RandomWalk` (normal turns, sd 0.3 rad, full speed) and `NearestFoodSeeker` (turn toward nearest sensed food, otherwise identical to `RandomWalk`, with the same random draws). The only difference between them is the response to sensed food.
+- **Turning circle:** minimum radius = `speed / max_turn` (3 units by default). A full-speed organism cannot stop on a target; it overshoots and loops. On a head-on approach, steps of `speed` always land within `speed / 2` of the food, so `eat_radius >= speed / 2` guarantees a head-on approach can eat (default 2.0 vs 0.75).
+
 ## Randomness
 
 One integer seed per run → `numpy.random.SeedSequence` → `.spawn(4)` → one independent `Generator` per subsystem. Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
@@ -78,7 +96,7 @@ One integer seed per run → `numpy.random.SeedSequence` → `.spawn(4)` → one
 | 1.1 | `config.py` + `default.yaml` | Invalid config rejected | done |
 | 1.2 | `world.py`: bounds, food regrowth | Food within cap and bounds | done |
 | 1.3 | `organism.py`: state, Traits, energy, death | Zero energy → dead | done |
-| 1.4 | Controllers, movement, wall clamping | Walls hold; seeker approaches food | |
+| 1.4 | Controllers, movement, wall clamping | Walls hold; seeker approaches food | done |
 | 1.5 | `simulation.py`: tick loop, RNG streams | Determinism | |
 | 1.6 | Eating, tie rule, energy ledger | Tie rule; ledger balances | |
 | 1.7 | Cloning, population cap, newborn delay | Newborns inactive on birth tick | |
