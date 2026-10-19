@@ -22,12 +22,13 @@ import math
 
 import numpy as np
 
-from genesis.analytics.metrics import tick_row
+from genesis.analytics.metrics import GENE_FIELDS, tick_row
 from genesis.core.simulation import Simulation, TickSummary
 from genesis.evolution.genome import gene_names
 
 GENE_STAT_FIELDS: list[str] = ["tick", "gene", "n", "mean", "sd", "min", "max"]
-GENOME_SNAPSHOT_FIELDS: list[str] = ["tick", "id", *[f"gene_{g}" for g in gene_names()]]
+# The same gene_* column names as organisms.csv, so the two files can be joined on them.
+GENOME_SNAPSHOT_FIELDS: list[str] = ["tick", "id", *GENE_FIELDS]
 
 
 def gene_stat_rows(tick: int, genome_values: dict[str, list[float]]) -> list[dict]:

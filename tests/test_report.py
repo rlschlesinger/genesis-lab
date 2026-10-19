@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from genesis.analytics.experiments import apply_changes
 from genesis.analytics.runs import execute_run
 from genesis.cli import main
 from genesis.core.config import SimulationConfig, load_config
@@ -15,15 +16,7 @@ CONFIGS = Path(__file__).parents[1] / "configs"
 
 
 def config(name="evolution.yaml", **changes) -> SimulationConfig:
-    raw = load_config(CONFIGS / name).model_dump()
-    raw["run"]["max_ticks"] = 400
-    for path, value in changes.items():
-        *parents, leaf = path.split(".")
-        section = raw
-        for key in parents:
-            section = section[key]
-        section[leaf] = value
-    return SimulationConfig.model_validate(raw)
+    return apply_changes(load_config(CONFIGS / name), {"run.max_ticks": 400, **changes})
 
 
 @pytest.fixture(scope="module")

@@ -8,7 +8,8 @@ import numpy as np
 import pytest
 import yaml
 
-from genesis.core.config import SimulationConfig
+from genesis.analytics.experiments import apply_changes
+from genesis.core.config import SimulationConfig, load_config
 from genesis.core.energy import EnergyLedgerError
 from genesis.core.organism import DeathCause
 from genesis.core.simulation import RngStreams, Simulation
@@ -19,14 +20,7 @@ DEFAULT_CONFIG = Path(__file__).parents[2] / "configs" / "default.yaml"
 
 def make_config(**changes) -> SimulationConfig:
     """Default config with dotted-path overrides, e.g. make_config(**{"run.seed": 7})."""
-    raw = yaml.safe_load(DEFAULT_CONFIG.read_text())
-    for path, value in changes.items():
-        *parents, leaf = path.split(".")
-        section = raw
-        for key in parents:
-            section = section[key]
-        section[leaf] = value
-    return SimulationConfig.model_validate(raw)
+    return apply_changes(load_config(DEFAULT_CONFIG), changes)
 
 
 # Food that never appears: organisms can only starve. Used to test deaths and stopping.
