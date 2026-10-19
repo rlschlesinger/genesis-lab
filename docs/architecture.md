@@ -50,6 +50,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `analytics/experiments.py` | Conditions (dotted config changes), `run_condition`, `settled_gene_means`, `paired`, `genomes_never_changed` | Decide hypotheses |
 | `analytics/spec.py` | `ExperimentSpec` (experiments/specs/*.yaml): base config, conditions, seeds; validates every run's config on load | Run anything |
 | `analytics/batch.py` | `plan`, `task_status` (missing/completed/stale/incomplete), `run_experiment` (process pool, resume, ingest) | |
+| `analytics/analysis.py` | `query_df`, `settled_gene_means_df`, `describe(_by)`, `bootstrap_ci`, `wilson_interval`, `paired_effect`, `practical_significance` | Treat organisms as replicates |
 | `analytics/runs.py` | `execute_run`: simulate + write run.json/ticks.csv/organisms.csv with status | |
 | `report/` | `genesis report`: `data.py` (load run folder, downsample), `theme.py` (design tokens), `figures.py` (charts), `render.py` + `template.html` + `report.css` | Run simulations; read anything outside the run folder |
 | `lake/` | ETL: `tables.py` (data dictionary as Arrow schemas), `ingest.py` (extract, transform, load), `validate.py` (the five checks) | Modify run folders |
@@ -276,7 +277,7 @@ Decisions: Parquet files are the source of truth with DuckDB views over them; ru
 | 3.2 | ETL: run folder → Parquet with validation; back-fill E001–E003 | Rows and values match the CSVs | done |
 | 3.3 | DuckDB views; `genesis sql`; join and lineage examples | SQL = independent Python from the CSVs (pandas arrives in 3.5) | done |
 | 3.4 | Batch runner: experiment file → parallel, resumable runs | Parallel = sequential, byte for byte | done |
-| 3.5 | pandas + SciPy analysis: descriptive stats, bootstrap/Wilson CIs, effect sizes; cross-check hand-written tests | Known answers | |
+| 3.5 | pandas + SciPy analysis: descriptive stats, bootstrap/Wilson CIs, effect sizes; cross-check hand-written tests | Known answers; SciPy agreement | done |
 | 3.6 | Experiment dashboards: individual runs vs aggregates | Built from the database | |
 | 3.7 | Export to CSV/Parquet; reload and re-analyse | Round trip | |
 | 3.8 | Analysis notebook, executed in tests | Runs clean | |

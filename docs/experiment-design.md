@@ -47,6 +47,14 @@ Formal experiments live in [experiments/](experiments/), one file per experiment
 - **Significant ≠ large:** always report the effect size (mean or median difference, and range) beside the p-value. A hypothesis about size ("within 10%") isn't tested by "is there a difference?".
 - **Drift isn't always centred:** under drift with reflection, a gene's mean tends toward the middle of its range. Predictions must state the drift expectation for each gene (e.g. metabolic_rate starts at 0.2, below its midpoint 0.26, so drift alone would push it *up*).
 
+## Estimation: intervals, effect sizes, practical significance (`genesis.analytics.analysis`)
+
+- **Describe per condition** with `describe_by`: n, mean, *sample* sd (n − 1), standard error, median, quartiles, range.
+- **Confidence intervals:** percentile bootstrap (`bootstrap_ci`, seeded, 10,000 resamples) for means, medians and paired differences; Wilson score interval (`wilson_interval`) for proportions such as extinction rates. Report n with every interval (bootstraps are optimistic below ~10 runs).
+- **Effect sizes** with every test: the difference in the measurement's units, as a % of control, and Cohen's d (d_z for paired designs).
+- **Practical significance:** each future experiment states a **smallest effect of interest (SESOI)** before running. Verdicts: *meaningful* (CI entirely beyond ±SESOI), *negligible* (CI entirely inside), *inconclusive* (overlaps). A result can be statistically significant yet practically inconclusive (E002's reproduction threshold under an illustrative 5%-of-range SESOI).
+- **Two-sided p-values:** ours count arrangements at least as far from zero; SciPy doubles the smaller one-sided p. They agree when the null distribution is symmetric (paired designs, equal groups) and can differ otherwise; always state which is used.
+
 ## Principles
 
 - **The run is the replicate.** Organisms within one population share a history and are not independent samples. Statistics compare runs, not organisms.

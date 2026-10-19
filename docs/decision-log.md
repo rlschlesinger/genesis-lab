@@ -60,6 +60,13 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-032 · pandas and SciPy for analysis; estimation alongside testing (2026-10-19)
+
+**Decision:** pandas 3.0.6 for tables in Python (results arrive from DuckDB via `.df()`); SciPy 1.18.1 as an independent reference. New tools in `analytics/analysis.py`: percentile bootstrap CIs, Wilson intervals, paired effect sizes, and a SESOI-based practical-significance verdict. The hand-written tests stay; SciPy cross-checks them.
+**Evidence:** sign test = `scipy.stats.binomtest` in all 39 cases; exact paired and equal-group permutation tests = `scipy.stats.permutation_test` to 1e-12; Wilson = SciPy's to 1e-12; bootstrap interval covered the true mean in 90–98% of 400 simulated datasets.
+**Why:** p-values say whether an effect is distinguishable from zero, not how big or how precisely known it is; intervals and effect sizes answer that, and a pre-stated SESOI turns "significant" into "matters / doesn't / don't know yet".
+**Alternatives:** BCa bootstrap (better coverage at small n; more complex to explain); statsmodels (adds Holm and regression; not needed yet); Polars (faster DataFrames; less teaching material).
+
 ## D-031 · Experiment spec files and a parallel, resumable runner (2026-10-19)
 
 **Decision:** experiments are YAML spec files run by `genesis experiment run`; runs execute in a process pool; completed runs with the same config hash are skipped; completed runs with a different hash ("stale") stop the batch unless `--rerun-stale`.

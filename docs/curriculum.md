@@ -241,6 +241,16 @@ What has been covered, where it appears in the code, and what comes next.
 - **YAML features:** anchors and merge keys (`&neutral`, `<<: *neutral`); quoting `"off"`, which YAML would otherwise read as `false`.
 - **Refactoring safely:** after moving conditions into spec files, re-analysing the saved data reproduced every published number.
 
+### 3.5 · Analysis with pandas and SciPy (`analytics/analysis.py`)
+- **DataFrames:** query results as tables; `groupby`, `pivot` (long → wide), `loc`.
+- **pandas 3 changes:** copy-on-write (chained assignment silently does nothing; use `.loc`); a dedicated string dtype for text.
+- **Descriptive statistics:** mean vs median, sample sd (n − 1) vs population sd (n), standard error, quartiles.
+- **Confidence intervals:** the percentile bootstrap (resample runs with replacement); the Wilson interval for proportions, and why the textbook interval fails near 0% and 100%.
+- **Coverage:** a "95%" interval should contain the truth in about 95% of repeated experiments; check it by simulation.
+- **Effect sizes:** raw difference, % of control, Cohen's d.
+- **Statistical vs practical significance:** compare the interval with a smallest effect of interest stated in advance.
+- **Independent implementations:** two codebases agreeing to 12 decimals is strong evidence both are right; where they differ, find out why (two definitions of "two-sided").
+
 ## Future learning objectives
 - **Milestone 3:** pandas, SQL with DuckDB, Parquet, significance tests and effect sizes with SciPy, batch experiment design.
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.
