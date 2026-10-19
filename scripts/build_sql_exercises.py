@@ -179,7 +179,7 @@ EXERCISES = {
 }
 ANSWER_NOTES = {
     1: "Only E006 has extinctions (162 of 250 runs), by design: its harsh world (no starting food, regrowth 0.1) was chosen by pilots so that extinction happens. Every other experiment kept all its runs.",
-    2: "All three come from E004's highest food level (4 items per tick), as E004 found: population is proportional to food, so four times the food supports about four times as many organisms. The question says \"across all experiments\", so the answer changes as experiments are added.",
+    2: 'All three come from E004\'s highest food level (4 items per tick), as E004 found: population is proportional to food, so four times the food supports about four times as many organisms. The question says "across all experiments", so the answer changes as experiments are added.',
     3: "Seekers lived through fewer organisms than random walkers, consistent with the slightly lower carrying capacity found in E001.",
     4: "Descriptively, organisms under selection live longer (399 and 376 ticks vs 365 and 358 under drift); this is not a pre-registered test. Averaging per run first matters: runs with more deaths would otherwise dominate the result.",
     5: "With mutation off there is no variation at all (0). Selection leaves less marker variation than drift alone: sweeps carry neutral genes along with selected ones (hitchhiking).",
