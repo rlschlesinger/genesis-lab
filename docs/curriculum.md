@@ -297,7 +297,8 @@ What has been covered, where it appears in the code, and what comes next.
 - **A failed prediction is a result:** E006's monotonic founder effect wasn't there; the data suggest a U-shape instead, recorded as a new hypothesis, not a finding.
 - **Wide intervals with binary outcomes:** even 50 runs per level leaves ±0.13 on a proportion; differences between levels need many runs.
 
+## Milestone 3 complete
+
 ## Future learning objectives
-- **Milestone 3:** pandas, SQL with DuckDB, Parquet, significance tests and effect sizes with SciPy, batch experiment design.
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

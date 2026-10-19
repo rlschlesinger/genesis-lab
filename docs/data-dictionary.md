@@ -14,7 +14,7 @@ Status: **implemented.** Run-folder fields (3.1) and lake tables (3.2, `src/gene
 
 ## `experiments`
 
-One row per experiment. Source: experiment definition files (from 3.4; E001–E003 back-filled from `docs/experiments/`).
+One row per experiment. Source: the definition documents `docs/experiments/E*.md`, read each time the database connects (`lake/db.py`); `defined_at_commit` comes from git history.
 
 | Column | Type | Unit | Key | Null when | Meaning |
 |---|---|---|---|---|---|

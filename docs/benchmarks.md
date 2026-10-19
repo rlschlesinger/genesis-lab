@@ -33,3 +33,21 @@ Same machine and method as above (`configs/default.yaml` population sweep).
 `configs/evolution.yaml` (mutation and trade-offs on, seed 9100, 5000 ticks, best of 2): **4726 ticks/s** simulating alone, **3548 ticks/s** with `RunRecorder` (gene statistics every tick plus snapshots, ~25% overhead). A 20,000-tick recorded evolution run takes ~6 s; E002 + E003 (140 runs, two processes) took ~15 minutes.
 
 **Where the ~10% went:** per-organism genome/trait handling, the cost functions, and building per-tick payment lists for the exact ledger sums (D-026). No optimization needed yet (D-017 still applies).
+
+## 2026-10-19 · commit `aee1017` (end of Milestone 3): data pipeline
+
+Same machine. Lake: 495 runs (E001–E006 plus stand-alone runs), 293 MB in 3,236 Parquet files.
+
+| Operation | Time |
+|---|---:|
+| Full ingest of every run folder into a new lake (`genesis lake ingest`, 495 runs) | 14.7 s |
+| `connect()`: define every view and macro | 0.11 s |
+| `count(*)` over all 25.5 M `gene_stats` rows | 33 ms |
+| `settled_gene_means(19000, 19999)` over the whole lake (1,098 run × gene rows) | 40 ms |
+| Organisms × ticks join on (run_id, birth tick), 846 k rows | 112 ms |
+| E003 per-condition median (SQL example 4) | 79 ms |
+| Experiment dashboard, E003 with two paired panels | 4.1 s |
+| Export E003 (13.7 M rows, Parquet) | 1.7 s (3.7) |
+| Batch runner: 12 runs of 5,000 ticks on 1 vs 13 workers | 17.5 s vs 2.6 s (3.4) |
+
+Simulation throughput is unchanged from the end of Milestone 2 (Milestone 3 added no simulation code beyond event collection, which tests show doesn't change results).

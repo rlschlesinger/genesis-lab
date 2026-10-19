@@ -32,7 +32,7 @@ organisms:
   reproduction_overhead: 10.0  # lost by parent on top of the transfer
   controller: nearest_food_seeker   # or: random_walk
 
-# Heritable genes. `initial` is every founder's value. Mutation (from increment 2.2) can move a
+# Heritable genes. `initial` is every founder's value. Mutation (when enabled) can move a
 # gene anywhere in [min, max], so each whole range must be physically sensible.
 # Units: speed = world units/tick; sense_range = world units; max_turn = radians/tick;
 # metabolic_rate = EU/tick; reproduction_threshold = EU; neutral_marker = none (no effect).

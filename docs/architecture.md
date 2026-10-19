@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Milestones 1 and 2 complete.** Milestone 3 (The Science Lab) approved 2026-10-19 and in progress; schema in [schema.md](schema.md), columns in [data-dictionary.md](data-dictionary.md).
+Status: **Milestones 1–3 complete** (2026-10-19). Milestone 4 (Evolving Neural Brains) not started; it needs the user's approval. Schema in [schema.md](schema.md), columns in [data-dictionary.md](data-dictionary.md).
 
 ## Component map
 
@@ -307,5 +307,32 @@ Decisions: Parquet files are the source of truth with DuckDB views over them; ru
 | 3.9 | SQL exercises (hints, hidden answers) | Answers verified | done |
 | 3.10a | Experiments A, B, C: pilots, pre-registration, specs, analysis scripts | Analyses recover known answers | done |
 | 3.10b | Run E004–E006 and report (after review) | Results appended to definitions | done |
-| 3.11 | Wrap-up; stop before neural networks | | |
+| 3.11 | Wrap-up; stop before neural networks | | done |
+
+### Milestone 3 scope check (2026-10-19)
+
+| Scope item / acceptance criterion / deliverable | Evidence |
+|---|---|
+| Schemas for experiments, runs, organisms, lineages, time series | [schema.md](schema.md) (explained before implementation, 3.0), [data-dictionary.md](data-dictionary.md), `lake/tables.py` |
+| Parquet persistence and DuckDB queries | `lake/ingest.py` (D-029), `lake/db.py` (D-030); 495 runs, 293 MB |
+| Run IDs, config snapshots, seeds, versions, completion status | `run.json` (schema v3: condition, config_hash), `runs` table; failed runs recorded |
+| Configurable metric sampling and event logging | `recording.ticks_every` (flows summed, D-028), `recording.events` |
+| Batch execution; repeated simulations with different seeds | spec files + `genesis experiment run` (parallel, resumable, D-031); parallel = sequential byte for byte |
+| Comparison using pandas and SciPy | `analytics/analysis.py` (D-032); SciPy cross-checks to 1e-12 |
+| Interactive Plotly charts | `genesis dashboard` (D-033), run reports |
+| CSV and Parquet export | `genesis lake export` with README + manifest (D-034) |
+| Notebook demonstrating the workflow | `notebooks/analysis-workflow.ipynb`, executed in tests (D-035) |
+| Experiments A, B, C, each pre-specified | E004 (food dose-response), E005 (mutation vs diversity), E006 (founders vs extinction): hypothesis, control, metrics, replicates, analysis and SESOI committed before running |
+| Every run has reproducible metadata | run.json provenance + `config_hash`; golden and determinism tests |
+| Multiple experiments run headlessly | `genesis experiment run`, scripts with `--analyse-only` / `--smoke` |
+| Data queryable with SQL | `genesis sql`, [sql-examples.md](sql-examples.md) (executed by tests) |
+| Time series and lineage can be joined | SQL examples 3 and 7, exercises 4–5, 8; tests compare with independent Python |
+| Failed runs marked and excluded from completed-run analyses | `status` column, `completed_runs` view; tests |
+| Charts distinguish individual runs from aggregates | dashboards: faint per-run lines/dots vs bold medians and CIs; tests count traces |
+| Results report variation across replicates | describe_by, bootstrap and Wilson intervals, dashboards, experiment result tables |
+| Organisms never used as replicates | per-run summaries everywhere; exercise 4; analysis docstrings |
+| Exported data reloadable and independently analysable | `experiments/independent_reanalysis.py` (pandas/SciPy only) reproduced E003 H7a |
+| SQL exercises with questions about the populations | [sql-exercises.md](sql-exercises.md), 10 exercises, answers checked against the lake |
+| Data dictionary; updated documentation | data-dictionary.md; README, CLAUDE.md, curriculum, decision log D-026–D-035 |
+| Stop before neural-network controllers | none added |
 

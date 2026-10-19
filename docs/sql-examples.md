@@ -6,7 +6,7 @@ Every query here runs against the lake (`tests/lake/test_db.py` executes each on
 uv run genesis sql "SELECT experiment_id, count(*) FROM runs GROUP BY experiment_id"
 ```
 
-Tables and columns are described in [schema.md](schema.md) and the [data dictionary](data-dictionary.md). Exercises to try yourself are in 3.9.
+Tables and columns are described in [schema.md](schema.md) and the [data dictionary](data-dictionary.md). Exercises to try yourself: [sql-exercises.md](sql-exercises.md).
 
 ---
 
