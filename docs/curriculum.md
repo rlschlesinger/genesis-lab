@@ -251,6 +251,14 @@ What has been covered, where it appears in the code, and what comes next.
 - **Statistical vs practical significance:** compare the interval with a smallest effect of interest stated in advance.
 - **Independent implementations:** two codebases agreeing to 12 decimals is strong evidence both are right; where they differ, find out why (two definitions of "two-sided").
 
+### 3.6 · Experiment dashboards (`report/dashboard*.py`)
+- **Show the data, then the summary:** every replicate visible (faint lines, dots) beside the aggregate (bold median, CI).
+- **Spread vs precision:** a middle-50% band shows how runs differ; a confidence interval shows how well the median is known.
+- **Survivorship bias:** summaries over time only include runs still alive; show how many.
+- **Paired difference plots:** one dot per seed against a zero line shows consistency directly.
+- **Refactoring with a byte-for-byte check:** shared helpers moved, and the run report stayed identical (compared via `git stash`).
+- **Check every screen size:** a layout fine on desktop broke on a phone.
+
 ## Future learning objectives
 - **Milestone 3:** pandas, SQL with DuckDB, Parquet, significance tests and effect sizes with SciPy, batch experiment design.
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.

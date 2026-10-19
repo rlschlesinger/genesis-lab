@@ -18,6 +18,9 @@ ACCENT = "#d9a441"  # amber: highlights, the population line
 SERIF = '"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif'
 MONO = 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace'
 
+# Conditions in an experiment dashboard, in the order they're listed in the spec.
+CONDITION_COLORS = ["#d9a441", "#5fb3a5", "#e07a5f", "#9c8fd0", "#a9b665", "#7d8a83"]
+
 GENE_COLORS = {
     "speed": "#d9a441",  # amber
     "sense_range": "#5fb3a5",  # verdigris
@@ -62,3 +65,32 @@ def base_layout(height: int) -> dict:
         hoverlabel=dict(bgcolor=INK, bordercolor=RULE, font=dict(family=MONO, color=BONE)),
         showlegend=False,
     )
+
+
+def style_axes(fig) -> None:
+    """Grid, ticks and left-aligned subplot titles in the report palette."""
+    fig.update_xaxes(
+        gridcolor=RULE,
+        linecolor=RULE,
+        zeroline=False,
+        tickfont=dict(color=MUTED),
+        ticks="outside",
+        tickcolor=RULE,
+    )
+    fig.update_yaxes(
+        gridcolor=RULE,
+        linecolor=RULE,
+        zeroline=False,
+        tickfont=dict(color=MUTED),
+        ticks="outside",
+        tickcolor=RULE,
+    )
+    # Subplot titles are annotations, created in the same row-by-row order as the axes
+    # (xaxis, xaxis2, ...). Left-align each one with the left edge of *its own* subplot.
+    for i, title in enumerate(fig.layout.annotations):
+        axis = fig.layout["xaxis" if i == 0 else f"xaxis{i + 1}"]
+        title.update(
+            x=axis.domain[0],
+            xanchor="left",
+            font=dict(family=MONO, size=11, color=MUTED),
+        )

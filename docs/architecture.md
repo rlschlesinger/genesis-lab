@@ -52,6 +52,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `analytics/batch.py` | `plan`, `task_status` (missing/completed/stale/incomplete), `run_experiment` (process pool, resume, ingest) | |
 | `analytics/analysis.py` | `query_df`, `settled_gene_means_df`, `describe(_by)`, `bootstrap_ci`, `wilson_interval`, `paired_effect`, `practical_significance` | Treat organisms as replicates |
 | `analytics/runs.py` | `execute_run`: simulate + write run.json/ticks.csv/organisms.csv with status | |
+| `report/dashboard*.py` | `genesis dashboard EXP`: `dashboard_data.py` (SQL loaders), `dashboard_figures.py` (runs vs summaries), `dashboard.py` + template | Read run folders |
 | `report/` | `genesis report`: `data.py` (load run folder, downsample), `theme.py` (design tokens), `figures.py` (charts), `render.py` + `template.html` + `report.css` | Run simulations; read anything outside the run folder |
 | `lake/` | ETL: `tables.py` (data dictionary as Arrow schemas), `ingest.py` (extract, transform, load), `validate.py` (the five checks) | Modify run folders |
 | `lake/db.py` | `connect()`: in-memory DuckDB with a view per lake table, derived views, `settled_gene_means` macro, `experiments` from docs; `rebuild_db()` | Store data |
@@ -208,6 +209,14 @@ Founders pay exactly the Milestone 1 movement price at any exponent. Defaults re
 - Results are ingested into the lake afterwards (`--no-ingest` to skip).
 - E001–E003 have spec files; their existing runs show as **stale** because configs gained fields since (recording settings; for E001 the whole genome section). Their configs otherwise match the specs exactly (checked).
 
+## Experiment dashboards (`genesis dashboard EXP [--compare T:C] [--window A B]`)
+
+- Built from the lake (completed runs only; failed and extinct runs are counted in the header). Output `data/dashboards/<EXP>.html`: self-contained, offline, deterministic (fixed chart IDs and bootstrap seed).
+- Individual runs vs summaries are always visually distinct: faint per-run lines and small per-run dots; bold per-condition medians with a middle-50%-of-runs band (spread); diamonds with 95% bootstrap CIs (precision).
+- Sections: population; gene trends (evolving genes); settled values (window default: last 1,000 ticks); paired differences per seed (`--compare`). Sections without data are left out (e.g. no genes in E001).
+- Median-over-time hovers show how many runs each point is based on; the header warns about survivorship when runs went extinct.
+- Shares `report.css`, `theme.py` and `report/html.py` with run reports.
+
 ## Randomness
 
 One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`, `mutation` (added in 2.2; a test checks the first five are unchanged). New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
@@ -278,7 +287,7 @@ Decisions: Parquet files are the source of truth with DuckDB views over them; ru
 | 3.3 | DuckDB views; `genesis sql`; join and lineage examples | SQL = independent Python from the CSVs (pandas arrives in 3.5) | done |
 | 3.4 | Batch runner: experiment file → parallel, resumable runs | Parallel = sequential, byte for byte | done |
 | 3.5 | pandas + SciPy analysis: descriptive stats, bootstrap/Wilson CIs, effect sizes; cross-check hand-written tests | Known answers; SciPy agreement | done |
-| 3.6 | Experiment dashboards: individual runs vs aggregates | Built from the database | |
+| 3.6 | Experiment dashboards: individual runs vs aggregates | Built from the database | done |
 | 3.7 | Export to CSV/Parquet; reload and re-analyse | Round trip | |
 | 3.8 | Analysis notebook, executed in tests | Runs clean | |
 | 3.9 | SQL exercises (hints, hidden answers) | Answers verified | |

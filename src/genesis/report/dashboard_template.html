@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>$experiment_id dashboard</title>
+<style>
+$css_variables
+$stylesheet
+</style>
+$plotly_js
+</head>
+<body>
+<header class="masthead">
+  <p class="eyebrow">Genesis Lab &middot; experiment dashboard</p>
+  <h1>$experiment_id &middot; $title</h1>
+  <p class="lede">$lede</p>
+  <dl class="facts">
+$facts
+  </dl>
+  <p class="caveat">$caveat</p>
+</header>
+
+<main>
+$sections
+</main>
+
+<footer>
+  <p>Built from the data lake ($lake) for completed runs only. Faint lines and small dots are
+  individual runs; bold lines are medians across runs with the middle 50% of runs shaded
+  (spread); diamonds are medians or mean differences with 95% bootstrap confidence intervals
+  (precision). Time series plot every $stride ticks. Definition:
+  <code>$definition</code>.</p>
+</footer>
+</body>
+</html>

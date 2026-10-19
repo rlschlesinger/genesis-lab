@@ -18,34 +18,6 @@ from genesis.report.data import RunData, downsample
 HEATMAP_BINS = 24
 
 
-def _style_axes(fig: go.Figure) -> None:
-    fig.update_xaxes(
-        gridcolor=theme.RULE,
-        linecolor=theme.RULE,
-        zeroline=False,
-        tickfont=dict(color=theme.MUTED),
-        ticks="outside",
-        tickcolor=theme.RULE,
-    )
-    fig.update_yaxes(
-        gridcolor=theme.RULE,
-        linecolor=theme.RULE,
-        zeroline=False,
-        tickfont=dict(color=theme.MUTED),
-        ticks="outside",
-        tickcolor=theme.RULE,
-    )
-    # Subplot titles are annotations, created in the same row-by-row order as the axes
-    # (xaxis, xaxis2, ...). Left-align each one with the left edge of *its own* subplot.
-    for i, title in enumerate(fig.layout.annotations):
-        axis = fig.layout["xaxis" if i == 0 else f"xaxis{i + 1}"]
-        title.update(
-            x=axis.domain[0],
-            xanchor="left",
-            font=dict(family=theme.MONO, size=11, color=theme.MUTED),
-        )
-
-
 def population_figure(run: RunData) -> go.Figure:
     """Population, uneaten food and surviving founder lineages, on one shared time axis."""
     rows = downsample(run.ticks)
@@ -72,7 +44,7 @@ def population_figure(run: RunData) -> go.Figure:
         )
     fig.update_layout(**theme.base_layout(height=480))
     fig.update_xaxes(title_text="tick", row=3, col=1)
-    _style_axes(fig)
+    theme.style_axes(fig)
     return fig
 
 
@@ -124,7 +96,7 @@ def gene_trends_figure(run: RunData) -> go.Figure:
         )
         fig.update_yaxes(range=[bounds.min, bounds.max], row=row, col=col)
     fig.update_layout(**theme.base_layout(height=210 * rows_n + 40))
-    _style_axes(fig)
+    theme.style_axes(fig)
     return fig
 
 
@@ -179,7 +151,7 @@ def distributions_figure(run: RunData) -> go.Figure | None:
         )
     fig.update_layout(**theme.base_layout(height=210 * rows_n + 40))
     fig.update_layout(hovermode="closest")
-    _style_axes(fig)
+    theme.style_axes(fig)
     return fig
 
 

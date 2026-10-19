@@ -60,6 +60,13 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-033 · Experiment dashboards show runs and summaries separately (2026-10-19)
+
+**Decision:** one HTML dashboard per experiment from the lake. Runs are faint lines and small dots; summaries are bold medians with a middle-50% band, or medians and mean differences with 95% bootstrap CIs. Median-over-time points carry their run count.
+**Why:** the scope requires distinguishing individual runs from aggregates; a single line per condition hides replicate variation, and raw lines hide the pattern. Spread (middle 50%) and precision (CI) answer different questions and are labelled as such. Run counts expose survivorship bias when runs go extinct.
+**Verified:** in Chrome at 1280 px and 390 px (offline, no horizontal scroll). A phone-width screenshot showed rotated pair labels running into subplot titles, fixed with two-line labels and more spacing.
+**Alternatives:** mean ± SE error bars only (hides individual runs and skew); box plots (hide n and individual runs at n = 20); one subplot per run (unreadable at 80 runs).
+
 ## D-032 · pandas and SciPy for analysis; estimation alongside testing (2026-10-19)
 
 **Decision:** pandas 3.0.6 for tables in Python (results arrive from DuckDB via `.df()`); SciPy 1.18.1 as an independent reference. New tools in `analytics/analysis.py`: percentile bootstrap CIs, Wilson intervals, paired effect sizes, and a SESOI-based practical-significance verdict. The hand-written tests stay; SciPy cross-checks them.

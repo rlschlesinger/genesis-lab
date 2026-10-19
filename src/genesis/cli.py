@@ -25,6 +25,7 @@ from genesis.core.config import ConfigError, load_config, with_overrides
 from genesis.lake.db import DEFAULT_DB, connect, rebuild_db
 from genesis.lake.ingest import DEFAULT_LAKE, ingest_paths
 from genesis.report import write_report
+from genesis.report.dashboard import write_dashboard
 
 PROGRESS_EVERY = 1000  # ticks between progress lines
 
@@ -87,6 +88,25 @@ def build_parser() -> argparse.ArgumentParser:
     exp_status = exp_commands.add_parser("status", help="which runs exist, are stale, or missing")
     exp_status.add_argument("spec", type=Path)
 
+    dashboard = commands.add_parser("dashboard", help="write an HTML dashboard of an experiment")
+    dashboard.add_argument("experiment_id", help="e.g. E003 (its runs must be in the lake)")
+    dashboard.add_argument("--lake", type=Path, default=DEFAULT_LAKE)
+    dashboard.add_argument("--out", type=Path, help="default: data/dashboards/<id>.html")
+    dashboard.add_argument(
+        "--window",
+        type=int,
+        nargs=2,
+        metavar=("FIRST", "LAST"),
+        help="ticks to average for settled values (default: last 1000)",
+    )
+    dashboard.add_argument(
+        "--compare",
+        action="append",
+        default=[],
+        metavar="TREATMENT:CONTROL",
+        help="add a paired-difference panel, e.g. selection:neutral",
+    )
+
     sql = commands.add_parser("sql", help="run a SQL query against the lake (docs/sql-examples.md)")
     sql.add_argument("query", help="the SQL query, in quotes")
     sql.add_argument("--lake", type=Path, default=DEFAULT_LAKE)
@@ -103,8 +123,27 @@ def main(argv: list[str] | None = None) -> int:
         "lake": _lake,
         "sql": _sql,
         "experiment": _experiment,
+        "dashboard": _dashboard,
     }
     return handlers[args.command](args)
+
+
+def _dashboard(args: argparse.Namespace) -> int:
+    pairs = []
+    for item in args.compare:
+        treatment, sep, control = item.partition(":")
+        if not sep or not treatment or not control:
+            print(f"error: --compare expects TREATMENT:CONTROL, got {item!r}", file=sys.stderr)
+            return 2
+        pairs.append((treatment, control))
+    window = tuple(args.window) if args.window else None
+    try:
+        path = write_dashboard(args.experiment_id, args.lake, args.out, window, pairs)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(f"dashboard written to {path}")
+    return 0
 
 
 def _experiment(args: argparse.Namespace) -> int:

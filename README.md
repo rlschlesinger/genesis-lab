@@ -43,6 +43,13 @@ uv run genesis sql "SELECT condition, count(*) FROM completed_runs GROUP BY cond
 
 Worked SQL examples (joins, window functions, a recursive family tree): [docs/sql-examples.md](docs/sql-examples.md).
 
+A dashboard for a whole experiment (every run, plus medians and confidence intervals), built from the lake:
+
+```bash
+uv run genesis dashboard E003 --compare S_plenty:N_plenty --compare S_scarce:N_scarce
+open data/dashboards/E003.html
+```
+
 ## What a run writes
 
 | File | Contents |

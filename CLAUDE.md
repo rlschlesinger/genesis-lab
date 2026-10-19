@@ -25,6 +25,7 @@ uv run genesis run --seed 42 --out data/runs/<name>   # one recorded run
 uv run genesis report data/runs/<name>               # HTML report (Plotly, offline)
 uv run genesis lake ingest data/runs data/experiments  # validate + convert runs to data/lake/ (Parquet)
 uv run genesis sql "SELECT ..."                      # query the lake (views: docs/schema.md)
+uv run genesis dashboard E00N [--compare T:C]       # experiment dashboard from the lake
 ```
 
 ## Simulation invariants (do not break)

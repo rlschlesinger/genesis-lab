@@ -13,13 +13,9 @@ from importlib.resources import files
 from pathlib import Path
 from string import Template
 
-import plotly.io as pio
-
 from genesis.report import figures, theme
 from genesis.report.data import MAX_POINTS, REQUIRED_FILES, RunData, load_run
-
-# No toolbar: drag to zoom and double-click to reset still work, without generic Plotly chrome.
-CHART_CONFIG = {"displayModeBar": False, "responsive": True}
+from genesis.report.html import chart_html, plotly_js
 
 
 def write_report(run_dir: str | Path, out_path: str | Path | None = None) -> Path:
@@ -40,11 +36,11 @@ def render(run: RunData) -> str:
         facts=_facts(run),
         css_variables=theme.css_variables(),
         stylesheet=package.joinpath("report.css").read_text(encoding="utf-8"),
-        plotly_js=f"<script>{_plotly_js()}</script>",
-        population_figure=_chart(figures.population_figure(run), "population"),
-        gene_trends_figure=_chart(figures.gene_trends_figure(run), "gene-trends"),
+        plotly_js=f"<script>{plotly_js()}</script>",
+        population_figure=chart_html(figures.population_figure(run), "population"),
+        gene_trends_figure=chart_html(figures.gene_trends_figure(run), "gene-trends"),
         distributions_figure=(
-            _chart(distributions, "distributions")
+            chart_html(distributions, "distributions")
             if distributions is not None
             else "<p class='caveat'>No mutable genes or no snapshots in this run.</p>"
         ),
@@ -54,20 +50,6 @@ def render(run: RunData) -> str:
         max_points=MAX_POINTS,
         stride_note=_stride_note(run),
     )
-
-
-def _chart(fig, div_id: str) -> str:
-    inner = pio.to_html(
-        fig, full_html=False, include_plotlyjs=False, div_id=div_id, config=CHART_CONFIG
-    )
-    return f'<div class="chart">{inner}</div>'
-
-
-def _plotly_js() -> str:
-    # The plotly.js bundle shipped inside the Python package, so no network is needed.
-    from plotly.offline import get_plotlyjs
-
-    return get_plotlyjs()
 
 
 def _lede(run: RunData) -> str:
