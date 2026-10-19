@@ -17,6 +17,7 @@ import pydantic
 
 from genesis.analytics.runs import execute_run, new_run_id
 from genesis.core.config import ConfigError, load_config, with_overrides
+from genesis.report import write_report
 
 PROGRESS_EVERY = 1000  # ticks between progress lines
 
@@ -36,12 +37,26 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--overwrite", action="store_true",
                      help="allow writing into a non-empty output directory")  # fmt: skip
     run.add_argument("--quiet", action="store_true", help="no progress output")
+
+    report = commands.add_parser("report", help="write an HTML report of a recorded run")
+    report.add_argument("run_dir", type=Path, help="a run folder written by `genesis run`")
+    report.add_argument("--out", type=Path, help="output file (default: <run_dir>/report.html)")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    return _run(args)
+    return _run(args) if args.command == "run" else _report(args)
+
+
+def _report(args: argparse.Namespace) -> int:
+    try:
+        path = write_report(args.run_dir, args.out)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(f"report written to {path}")
+    return 0
 
 
 def _run(args: argparse.Namespace) -> int:

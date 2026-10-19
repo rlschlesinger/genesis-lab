@@ -60,6 +60,13 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-023 · HTML run reports with Plotly (2026-10-18)
+
+**Decision:** `genesis report` writes one self-contained HTML file per run, using Plotly 7.1.0 (embedded once, ~6 MB), a custom dark "instrument" theme with system fonts, and fixed chart IDs for deterministic output. Charts are downsampled to ≤2000 points per line by fixed stride. Built only from recorded files.
+**Why:** interactive charts (hover, zoom) from the spec's stack; offline and shareable as one file; re-plottable from any past run. Deterministic output keeps reports reproducible like everything else.
+**Alternatives:** matplotlib PNGs (static, small); loading Plotly from a CDN (1/10 the size, needs a network); a web app (Milestone 5).
+**Verified:** rendered in Chrome at 1280 px and 390 px (no horizontal scroll), and with the network disabled.
+
 ## D-022 · Trait statistics and genome snapshots (2026-10-18)
 
 **Decision:** a `RunRecorder` in analytics writes `gene_stats.csv` (tidy: tick, gene, n, mean, population sd, min, max, every tick) and `genomes.csv` (every living genome every `recording.genome_snapshot_every` ticks, default 50, plus the final tick).

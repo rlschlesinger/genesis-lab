@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run report: $run_id</title>
+<style>
+$css_variables
+$stylesheet
+</style>
+$plotly_js
+</head>
+<body>
+<header class="masthead">
+  <p class="eyebrow">Genesis Lab &middot; run report</p>
+  <h1>$run_id</h1>
+  <p class="lede">$lede</p>
+  <dl class="facts">
+$facts
+  </dl>
+  <p class="caveat">One run is one replicate. Trends here are observations to form hypotheses
+  from, not evidence of adaptation; that needs replicated, pre-registered experiments
+  (docs/experiment-design.md).</p>
+</header>
+
+<main>
+  <section>
+    <div class="rail"><span class="num">01</span><h2>Population</h2></div>
+    <div class="body">
+      <p>Population, uneaten food, and how many of the founding families still have living
+      descendants. Lineages can only disappear, never return.</p>
+      $population_figure
+    </div>
+  </section>
+
+  <section>
+    <div class="rail"><span class="num">02</span><h2>Gene trends</h2></div>
+    <div class="body">
+      <p>For each gene: the population mean (line), one standard deviation either side
+      (band) and the founders' value (dotted). Each y-axis spans the gene's full allowed
+      range. Compare every gene with <span class="gene-key neutral">neutral_marker</span>,
+      which has no effect on survival: its movement is what chance alone looks like.</p>
+      $gene_trends_figure
+    </div>
+  </section>
+
+  <section>
+    <div class="rail"><span class="num">03</span><h2>Distributions</h2></div>
+    <div class="body">
+      <p>The whole distribution over time, from genome snapshots. Each column is one
+      snapshot; brighter means more of the population in that value range. Look for
+      distributions shifting, narrowing (lost variation) or splitting in two.</p>
+      $distributions_figure
+    </div>
+  </section>
+
+  <section>
+    <div class="rail"><span class="num">04</span><h2>Mutations</h2></div>
+    <div class="body">
+      <p>How often each gene mutated, and the typical step size as a fraction of the
+      gene's range.</p>
+      $mutation_table
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>Built from <code>$run_dir</code> only: $files. Charts plot at most $max_points points per
+  line ($stride_note); the CSV files hold every tick.</p>
+</footer>
+</body>
+</html>

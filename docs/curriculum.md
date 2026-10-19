@@ -153,6 +153,16 @@ What has been covered, where it appears in the code, and what comes next.
 - **Time series reveal timing:** the positive control's drop happened between ticks 1000 and 5000; a final value can't show when selection acted.
 - **Check estimates against measurements:** "a few MB" was really 16 MB.
 
+### 2.6 · Reports (`report/`, Plotly)
+- **Visualizing distributions over time:** mean ± sd bands for trends; heatmaps for whole distributions (shifts, narrowing, splits).
+- **Honest axes:** each gene's y-axis spans its full allowed range, so changes aren't exaggerated by zooming in.
+- **Downsampling for display:** a fixed stride keeps plots light; the raw data stays complete.
+- **Deterministic output:** fixed element IDs make generated HTML byte-identical.
+- **Design tokens:** one palette shared by CSS and charts, so they can't drift apart.
+- **Verify by looking:** a screenshot caught overlapping subplot titles that no test did.
+- **Precise tests:** "no font URL anywhere" failed on Plotly's own library code; the right check is our markup.
+- **A sanity check from theory:** the mean absolute mutation step should be size × √(2/π) ≈ 0.040; four genes matched. Metabolic rate (0.034) was lower because steps reflected at its lower bound.
+
 
 ## Future learning objectives
 - **Milestone 2:** mutation and heredity, variation vs selection vs drift, lineage trees, trait distributions.

@@ -12,6 +12,7 @@ A **tick** is one step of simulated time: every organism senses, acts and pays i
 uv run genesis run                                  # default config, results in data/runs/<run id>/
 uv run genesis run --seed 7 --ticks 2000 --out data/runs/try-seed-7
 uv run genesis run --help                           # every option
+uv run genesis report data/runs/seed-1             # charts: writes data/runs/seed-1/report.html
 ```
 
 Each run directory holds `run.json` (seed, config, code version, status), `ticks.csv` (one row per tick), `gene_stats.csv` (gene mean/spread per tick), `genomes.csv` (genome snapshots), `organisms.csv` (one row per organism that ever lived) and `mutations.csv` (every gene change). The same config and seed always produce identical CSV files.

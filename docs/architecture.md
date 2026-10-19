@@ -47,6 +47,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `analytics/provenance.py` | Git commit/dirty flag, versions, platform | |
 | `analytics/recorder.py` | `RunRecorder.observe(sim, summary)` after each tick: tick rows, gene stats, genome snapshots | Change the simulation |
 | `analytics/runs.py` | `execute_run`: simulate + write run.json/ticks.csv/organisms.csv with status | |
+| `report/` | `genesis report`: `data.py` (load run folder, downsample), `theme.py` (design tokens), `figures.py` (charts), `render.py` + `template.html` + `report.css` | Run simulations; read anything outside the run folder |
 | `cli.py` | `genesis run` arguments → `execute_run`; exit codes 0/1/2 | Contain logic |
 
 The API (Milestone 5) will drive the same `Simulation` object as the CLI.
@@ -169,6 +170,14 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 
 Founders pay exactly the Milestone 1 movement price at any exponent. Defaults reproduce Milestone 1 bit for bit. `configs/evolution.yaml` = `default.yaml` + mutation on, drag exponent 1, sense cost 0.004, max_turn frozen, 20000 ticks (a test enforces that nothing else differs).
 
+## Reports (`genesis report <run_dir>`)
+
+- Reads only the run folder's files; bounds and settings come from the recorded `run.json`, not `configs/`.
+- Sections: population/food/lineages; per-gene mean ± sd over each gene's full range with the founder value; distribution heatmaps from `genomes.csv` (mutable genes only); a mutation table.
+- At most 2000 points per line (a fixed stride, always keeping the last tick); the CSVs keep everything.
+- Self-contained and offline: Plotly embedded once, system fonts, no external links. Deterministic: fixed chart `div_id`s give byte-identical output.
+- Refuses runs whose status isn't `completed`.
+
 ## Randomness
 
 One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`, `mutation` (added in 2.2; a test checks the first five are unchanged). New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
@@ -200,7 +209,7 @@ Decisions: trade-off costs for sense range and speed; metabolic rate as a cost-f
 | 2.3 | Inheritance wired in; `mutations.csv`; gene columns | Child = parent + recorded changes | done |
 | 2.4 | Trade-off costs; positive control and neutral marker | Ledger balances; defaults = Milestone 1 | done |
 | 2.5 | Trait statistics per tick; genome snapshots | Matches a recount from raw data | done |
-| 2.6 | `genesis report`: Plotly HTML trait charts | Built from recorded files | |
+| 2.6 | `genesis report`: Plotly HTML trait charts | Built from recorded files | done |
 | 2.7 | Permutation and sign tests | Known cases | |
 | 2.8 | E002 (machinery and controls), E003 (food scarcity), pre-registered | Reported against the drift baseline | |
 | 2.9 | Docs, curriculum, push, stop for review | | |
