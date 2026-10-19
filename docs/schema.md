@@ -144,13 +144,14 @@ JOIN ticks AS t
 
 If ticks are sampled (3.1), not every birth tick has a row; such queries use the nearest earlier sampled tick (an "as-of" join, which DuckDB supports).
 
-## Views (saved queries) planned for 3.3
+## Views (saved queries), implemented in 3.3
 
 | View | Purpose |
 |---|---|
 | `completed_runs` | `runs WHERE status = 'completed'`. Analyses start here, so failed runs are excluded by default (acceptance criterion). |
 | `run_params` | Commonly filtered config values as plain columns: controller, food regrowth, mutation on/rate/size, initial count, trade-off costs. |
-| `settled_gene_means` | Per run and gene, the mean over a stated tick window: the measurement used in E002/E003. |
+| `settled_gene_means(first_tick, last_tick)` | Table macro: per run and gene, the mean over a tick window (the E002/E003 measurement), with `rows_in_window` and `rows_with_population` so incomplete windows can be spotted. |
+| `experiments` | Built from `docs/experiments/E*.md` on connect, including the commit that first added each definition. |
 | `lineage_sizes` | Per run and founder: descendants ever born, alive at the end. |
 
 ## Old run folders: schema versions

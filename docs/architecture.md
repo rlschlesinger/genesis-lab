@@ -51,6 +51,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `analytics/runs.py` | `execute_run`: simulate + write run.json/ticks.csv/organisms.csv with status | |
 | `report/` | `genesis report`: `data.py` (load run folder, downsample), `theme.py` (design tokens), `figures.py` (charts), `render.py` + `template.html` + `report.css` | Run simulations; read anything outside the run folder |
 | `lake/` | ETL: `tables.py` (data dictionary as Arrow schemas), `ingest.py` (extract, transform, load), `validate.py` (the five checks) | Modify run folders |
+| `lake/db.py` | `connect()`: in-memory DuckDB with a view per lake table, derived views, `settled_gene_means` macro, `experiments` from docs; `rebuild_db()` | Store data |
 | `cli.py` | `genesis run` arguments → `execute_run`; exit codes 0/1/2 | Contain logic |
 
 The API (Milestone 5) will drive the same `Simulation` object as the CLI.
@@ -193,6 +194,7 @@ Founders pay exactly the Milestone 1 movement price at any exponent. Defaults re
 - Failed runs: a `runs` row only. Version 1–2 runs: `condition` derived from the folder name, `config_hash` computed from the stored config; missing columns are NULL.
 - Re-ingesting replaces a run's files (all written to `.tmp` first, then renamed).
 - Back-fill 2026-10-19: 165 runs, 25.2 M rows, 206 MB (from ~1.94 GB of CSV), 8.7 s.
+- **SQL** (`genesis sql "..."`, or `genesis.lake.db.connect()` in Python): views read `data/lake/<table>/*.parquet` directly and are created on every connect (instant, always current). A table with no files yet gets a typed empty view. `genesis lake rebuild-db` writes the same views to `data/genesis.duckdb` (absolute paths) for other tools. Examples: [sql-examples.md](sql-examples.md), each executed by the tests.
 
 ## Randomness
 
@@ -261,7 +263,7 @@ Decisions: Parquet files are the source of truth with DuckDB views over them; ru
 | 3.0 | Schema document and data dictionary; stop for review | — | done |
 | 3.1 | Tick sampling, optional event log, schema version, condition, config hash in run.json | Defaults give identical results | done |
 | 3.2 | ETL: run folder → Parquet with validation; back-fill E001–E003 | Rows and values match the CSVs | done |
-| 3.3 | DuckDB views; `genesis sql`; join and lineage examples | SQL = pandas answers | |
+| 3.3 | DuckDB views; `genesis sql`; join and lineage examples | SQL = independent Python from the CSVs (pandas arrives in 3.5) | done |
 | 3.4 | Batch runner: experiment file → parallel, resumable runs | Parallel = sequential, byte for byte | |
 | 3.5 | pandas + SciPy analysis: descriptive stats, bootstrap/Wilson CIs, effect sizes; cross-check hand-written tests | Known answers | |
 | 3.6 | Experiment dashboards: individual runs vs aggregates | Built from the database | |

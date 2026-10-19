@@ -38,7 +38,10 @@ To query runs together, convert them into the Parquet **data lake** (validated, 
 
 ```bash
 uv run genesis lake ingest data/runs data/experiments    # writes data/lake/<table>/<run_id>.parquet
+uv run genesis sql "SELECT condition, count(*) FROM completed_runs GROUP BY condition"
 ```
+
+Worked SQL examples (joins, window functions, a recursive family tree): [docs/sql-examples.md](docs/sql-examples.md).
 
 ## What a run writes
 

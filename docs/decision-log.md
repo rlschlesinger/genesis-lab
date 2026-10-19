@@ -60,6 +60,13 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-030 · DuckDB views created on connect (2026-10-19)
+
+**Decision:** `connect()` returns an in-memory DuckDB connection and defines every view each time (a view per lake table, derived views, a table macro, and an `experiments` table built from the experiment documents and git history). A database file is optional (`genesis lake rebuild-db`) and uses absolute paths.
+**Why:** views store no data, so creating them costs milliseconds and they can never be stale; no database file has to be kept in sync with the lake. DuckDB resolves relative Parquet paths against the working directory, not the database file, so a persistent file needs absolute paths.
+**Verification:** SQL results are compared with independent plain-Python computations from the CSVs (not pandas, which arrives in 3.5: an even more independent check); the documented examples are executed by the tests; two views were deliberately broken to confirm the tests catch it.
+**Alternatives:** a persistent database with data loaded into native tables (faster repeated queries; a second copy to keep in sync); SQLite (can't read Parquet; built for transactions, not scans).
+
 ## D-029 · ETL design (2026-10-19)
 
 **Decision:** pyarrow reads each CSV with stated column types (never inferred), writes one zstd Parquet file per run per table, and only after every check passes. Failed runs get a `runs` row only. Timestamps are microseconds (UTC). A run failing any check is refused whole and nothing of it is written; a bug inside a check crashes the batch rather than being skipped.

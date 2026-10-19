@@ -221,6 +221,17 @@ What has been covered, where it appears in the code, and what comes next.
 - **Damage testing:** break copies of real data in specific ways, and confirm each is caught with the right reason.
 - **Format limits show up as test failures:** Parquet's smallest timestamp unit is ms; the schema test caught the silent widening.
 
+### 3.3 · SQL with DuckDB (`lake/db.py`, `docs/sql-examples.md`)
+- **SELECT, WHERE, GROUP BY, ORDER BY, LIMIT:** choose columns, filter rows, collapse groups, sort, cap.
+- **JOIN ... ON:** match rows across tables; with composite keys, every key column must be in `ON` (fan-out: 1,254 vs 205,788 rows).
+- **Views and table macros:** saved queries, with or without parameters.
+- **Window functions:** `lag`, rolling `avg ... OVER (... ROWS BETWEEN ...)`, `row_number() ... QUALIFY` for the top row per group; unlike `GROUP BY`, rows aren't collapsed.
+- **WITH RECURSIVE:** follow parent pointers back to a founder.
+- **JSON in SQL:** `config ->> '$.food.regrowth_per_tick'`.
+- **NULL in aggregates:** `count(mean)` counts non-NULL values; `count(*)` counts rows.
+- **Testing queries:** compare with an independent computation; break the code on purpose to check the test can fail.
+- **Test isolation:** "passes alone, fails in the suite" means tests share state (here: a shared temporary folder).
+
 ## Future learning objectives
 - **Milestone 3:** pandas, SQL with DuckDB, Parquet, significance tests and effect sizes with SciPy, batch experiment design.
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.

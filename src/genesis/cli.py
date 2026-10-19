@@ -11,13 +11,16 @@ Exit codes: 0 success, 1 the run failed while simulating (or a run was refused b
 from __future__ import annotations
 
 import argparse
+import csv
 import sys
 from pathlib import Path
 
+import duckdb
 import pydantic
 
 from genesis.analytics.runs import execute_run, new_run_id
 from genesis.core.config import ConfigError, load_config, with_overrides
+from genesis.lake.db import DEFAULT_DB, connect, rebuild_db
 from genesis.lake.ingest import DEFAULT_LAKE, ingest_paths
 from genesis.report import write_report
 
@@ -59,16 +62,80 @@ def build_parser() -> argparse.ArgumentParser:
     ingest.add_argument(
         "--lake", type=Path, default=DEFAULT_LAKE, help="lake directory (default: %(default)s)"
     )
+    rebuild = lake_commands.add_parser(
+        "rebuild-db", help="write the SQL views into a DuckDB file for other tools"
+    )
+    rebuild.add_argument("--lake", type=Path, default=DEFAULT_LAKE)
+    rebuild.add_argument(
+        "--db", type=Path, default=DEFAULT_DB, help="database file (default: %(default)s)"
+    )
+
+    sql = commands.add_parser("sql", help="run a SQL query against the lake (docs/sql-examples.md)")
+    sql.add_argument("query", help="the SQL query, in quotes")
+    sql.add_argument("--lake", type=Path, default=DEFAULT_LAKE)
+    sql.add_argument("--max-rows", type=int, default=40, help="rows to print (default: 40)")
+    sql.add_argument("--csv", action="store_true", help="print every row as CSV instead")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    handlers = {"run": _run, "report": _report, "lake": _lake}
+    handlers = {"run": _run, "report": _report, "lake": _lake, "sql": _sql}
     return handlers[args.command](args)
 
 
+def _sql(args: argparse.Namespace) -> int:
+    try:
+        relation = connect(args.lake).sql(args.query)
+    except duckdb.Error as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    if relation is None:  # a statement with no result (e.g. CREATE)
+        return 0
+    if args.csv:
+        writer = csv.writer(sys.stdout, lineterminator="\n")
+        writer.writerow(relation.columns)
+        writer.writerows(relation.fetchall())
+        return 0
+    rows = relation.fetchmany(args.max_rows + 1)
+    print(format_table(relation.columns, rows[: args.max_rows]))
+    if len(rows) > args.max_rows:
+        print(f"(first {args.max_rows} rows shown; use --max-rows or --csv for more)")
+    return 0
+
+
+def format_table(columns: list[str], rows: list[tuple]) -> str:
+    """Rows as aligned text columns, numbers right-aligned, NULL shown as 'NULL'."""
+
+    def text(value) -> str:
+        if value is None:
+            return "NULL"
+        return f"{value:.6g}" if isinstance(value, float) else str(value)
+
+    def is_number(value) -> bool:
+        return isinstance(value, int | float) and not isinstance(value, bool)
+
+    cells = [[text(v) for v in row] for row in rows]
+    widths = [max([len(name), *(len(r[i]) for r in cells)]) for i, name in enumerate(columns)]
+    numeric = [
+        bool(rows) and all(is_number(r[i]) or r[i] is None for r in rows)
+        for i in range(len(columns))
+    ]
+
+    def line(values: list[str]) -> str:
+        parts = [
+            v.rjust(w) if n else v.ljust(w) for v, w, n in zip(values, widths, numeric, strict=True)
+        ]
+        return "  ".join(parts).rstrip()
+
+    return "\n".join([line(columns), line(["-" * w for w in widths]), *map(line, cells)])
+
+
 def _lake(args: argparse.Namespace) -> int:
+    if args.lake_command == "rebuild-db":
+        path = rebuild_db(args.db, args.lake)
+        print(f"wrote views to {path} (absolute paths: rebuild if the project folder moves)")
+        return 0
     results = ingest_paths(args.paths, args.lake)
     if not results:
         print("error: no run folders (folders containing run.json) found", file=sys.stderr)
