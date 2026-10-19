@@ -162,6 +162,31 @@ def test_cli_reports_impossible_requests_without_a_traceback(run_dir, capsys):
 
 
 def test_inputs_shown_are_the_ones_that_produced_the_action():
-    i = inspect_tick(config(), 77, 0)
+    cfg = config()
+    i = inspect_tick(cfg, 77, 0)
     assert np.all(np.abs(i.inputs) <= 1.0)
     assert len(i.inputs) == 7 and len(i.hidden) == 6 and len(i.outputs) == 2
+    # The inputs are built from what was sensed at the *start* of the tick (D-040).
+    food_seen, food_ahead, food_left, closeness, energy, _wall, noise = i.inputs
+    assert food_seen == float(i.food_seen)
+    if i.food_seen:
+        assert food_ahead == pytest.approx(math.cos(i.food_bearing), abs=1e-12)
+        assert food_left == pytest.approx(math.sin(i.food_bearing), abs=1e-12)
+        assert closeness == pytest.approx(1 - i.food_distance / cfg.genome.sense_range.initial)
+    else:
+        assert (food_ahead, food_left, closeness) == (0.0, 0.0, 0.0)
+    assert energy == min(1.0, i.before.energy / cfg.genome.reproduction_threshold.initial)
+    assert -1.0 <= noise <= 1.0
+
+
+def test_a_dead_founder_can_be_inspected_from_tick_zero():
+    """Founders act from tick 0 (architecture.md), so the error for a dead founder must not
+    tell the user to start at tick 1."""
+    raw = config().model_dump()
+    raw["food"] |= {"initial_count": 0, "regrowth_per_tick": 0.0}
+    raw["organisms"]["initial_energy"] = 0.5
+    raw["run"]["stop_on_extinction"] = False
+    starved = SimulationConfig.model_validate(raw)
+    with pytest.raises(InspectError, match="choose a tick from 0 to"):
+        inspect_tick(starved, 5, 0)
+    assert inspect_tick(starved, 0, 0).organism_id == 0
