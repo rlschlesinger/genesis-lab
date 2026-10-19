@@ -369,6 +369,12 @@ What has been covered, where it appears in the code, and what comes next.
 - **Exploration after the fact:** a crowding hypothesis (seekers herd) found and labelled exploratory, with a test design for later.
 - **Plotting runs, not organisms:** each dot a world; the verdict drawn as an interval against a band.
 
+### 4.9 · Wrap-up
+- **Deciding not to add a dependency:** PyTorch deferred until it would teach what it is for (D-046).
+- **Profiling a new feature:** brains double the per-organism cost; most of it is reshaping data (stacking brains), not the maths.
+
+## Milestone 4 complete
+
 ## Future learning objectives
-- **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.
+- **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

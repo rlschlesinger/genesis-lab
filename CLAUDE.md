@@ -6,7 +6,7 @@ An artificial life research platform built incrementally as a teaching project. 
 
 ## Working rules
 
-- **Milestone gating:** never start a new milestone without explicit user approval. **Milestones 1–3 complete (2026-10-19). Milestone 4 (Evolving Neural Brains) approved 2026-10-19 and in progress** (plan in docs/architecture.md; Milestone 5 needs separate approval). Stop after each numbered increment. Scope for Milestones 4–6 is in `docs/roadmap/` (the user's chunk files, word for word); `docs/roadmap/README.md` says how each maps onto this project and which details are adapted (no Mesa, hard walls, `genesis` not `alife`).
+- **Milestone gating:** never start a new milestone without explicit user approval. **Milestones 1–4 complete (2026-10-19). Milestone 5 (API and browser lab, roadmap chunks 05A–05B) has not been approved:** propose a plan and wait. Stop after each numbered increment. Scope for Milestones 4–6 is in `docs/roadmap/` (the user's chunk files, word for word); `docs/roadmap/README.md` says how each maps onto this project and which details are adapted (no Mesa, hard walls, `genesis` not `alife`).
 - **Experiments:** define each one in `docs/experiments/E00N-*.md` (question, hypotheses, metrics, analysis) and `experiments/specs/E00N.yaml` (conditions, seeds), and commit both *before* running with `genesis experiment run`. Append results; never edit the definition afterwards. Label post-hoc findings as exploratory.
 - **Notebooks:** commit them without outputs (tests/test_notebook.py checks); the test suite executes `notebooks/analysis-workflow.ipynb`.
 - **Exercises for the user:** always say where to look, give the method, and put the answer at the bottom. Flag judgment calls.
@@ -31,6 +31,7 @@ uv run genesis lake ingest data/runs data/experiments  # validate + convert runs
 uv run genesis sql "SELECT ..."                      # query the lake (views: docs/schema.md)
 uv run genesis dashboard E00N [--compare T:C]       # experiment dashboard from the lake
 uv run genesis lake export --experiment E00N --out data/exports/E00N   # + README + manifest
+uv run python experiments/e007_neuroevolution.py --analyse-only --report   # E007 verdicts + results page
 ```
 
 ## Simulation invariants (do not break)

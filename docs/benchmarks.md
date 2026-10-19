@@ -99,3 +99,15 @@ Two lessons the profile taught: the fix that mattered at 1,000+ organisms (the g
 | Extinction on tick 0; empty world kept ticking; caps of 1 and 2; all genes on a bound; one organism in a 3 × 2 world; 20,000 food items in a 2000 × 2000 world | all run, record, ingest and query correctly; nothing needed fixing |
 
 **Bit-identity, verified not assumed:** every commit was checked against `tests/test_regression.py` (Linux state digests included) and against fifteen extra scenarios plus two complete recorded run folders recorded before the first change (state, event and energy digests; CSV bytes). All identical throughout.
+
+## Neural brains (Milestone 4, 2026-10-19)
+
+Apple Silicon (macOS 27, arm64), Python 3.12, simulation only (no recorder), 5,000 ticks, seed 9100, best of 3.
+
+| Config | ticks/s | mean population | µs per organism-tick |
+|---|---:|---:|---:|
+| `evolution.yaml` (seeker, genes evolving) | 7,007 | 72.9 | 2.0 |
+| `neural.yaml` with the controller swapped to the seeker | 6,333 | 88.5 | 1.8 |
+| `neural.yaml` (brains decide) | 2,713 | 96.1 | 3.8 |
+
+Brains roughly double the cost per organism-tick. A profile of 3,000 neural ticks puts **stacking every organism's brain into arrays each tick (`BrainStack.of`) at 24 %** of run time, against **6 % for the forward pass itself**; sensing and feeding take most of the rest, as for rule-based runs. The stack only changes when organisms are born or die, so caching it would be a bit-identical speed-up (same values, same arithmetic). Not done: a recorded 20,000-tick neural run takes ~10 s and E007's 144 runs took 34 s, so speed is not a constraint yet.

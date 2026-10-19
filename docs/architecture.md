@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Milestones 1–3 complete** (2026-10-19). **Milestone 4 (Evolving Neural Brains) approved 2026-10-19, in progress** (plan below; scope in [roadmap/](roadmap/README.md)). Schema in [schema.md](schema.md), columns in [data-dictionary.md](data-dictionary.md).
+Status: **Milestones 1–4 complete** (2026-10-19). Milestone 5 (API and browser lab) has not been approved; scope in [roadmap/](roadmap/README.md). Schema in [schema.md](schema.md), columns in [data-dictionary.md](data-dictionary.md).
 
 ## Component map
 
@@ -356,7 +356,7 @@ Scope: [roadmap/04A](roadmap/04A_NEURAL_BRAINS.md) and [roadmap/04B](roadmap/04B
 | 4.6 | `genesis inspect`: inputs → hidden → outputs → action → state for one organism and tick | Replay = original run | done |
 | 4.7 | Pre-register E007: random vs seeker vs evolved brains, train/evaluation seed groups; neural golden values (Darwin done; Linux pending) | Smoke runs on throwaway seeds | done |
 | 4.8 | Run E007 and report | Results appended to the definition | done |
-| 4.9 | Wrap-up: docs, scope check; stop before Milestone 5 | | |
+| 4.9 | Wrap-up: docs, scope check; stop before Milestone 5 | | done |
 
 ### Chunk 04A scope check (2026-10-19)
 
@@ -373,3 +373,22 @@ Scope: [roadmap/04A](roadmap/04A_NEURAL_BRAINS.md) and [roadmap/04B](roadmap/04B
 | Learning: vectors/matrices, weighted sums, activations, genotype→controller, selection vs backpropagation | [neural-networks.md](neural-networks.md); [curriculum.md](curriculum.md) 4.1–4.6 |
 | Rule-based results unchanged | Golden values; byte-identical CSVs against `main` after every increment |
 
+
+
+### Milestone 4 scope check (chunk 04B, 2026-10-19)
+
+Chunk 04A's checklist is above. Chunk 04B:
+
+| 04B requirement | Evidence |
+|---|---|
+| Inherited fixed-topology networks with mutation inside ecological reproduction; no separate genetic algorithm | Brains inherited and mutated at birth like genes (D-041); selection is survival and reproduction in the world |
+| Random, hand-written and neural policies under matched settings; endpoints and seeds predefined; 10–20+ seeds | E007: same evaluation worlds for all conditions; endpoint and four hypotheses pre-registered (`826a705`); 24 worlds |
+| Genotype complexity, computation cost and starting conditions discussed as limitations; survival/energy, not "intelligence" | E007 "Limitations stated in advance" and "What this does not show"; endpoint is meals and energy per meal |
+| Plots of per-run outcomes and of weights/behaviour over time | E007 results page (`--report`): per-world dots, paired differences vs SESOI, training behaviour and weight drift across 24 runs; run reports' Behaviour section (D-043) |
+| Train and evaluate on different seed groups; discuss generalisation | Training seeds 7000–7023, evaluation worlds 7100+; H13 home vs away: equivalent |
+| Optional PyTorch forward-pass check | Deferred, with reasons (D-046) |
+| Tests: reproducible neural actions; no shape/NaN errors in batches; condition labels and seeds preserved; train/evaluation separated | tests/core/test_simulation_neural.py, tests/intelligence/test_neural_controller.py, neural golden values (D-045); evaluation-rule test re-derives the brain sample; seed-overlap test |
+| Comparison report with uncertainty and an unembellished conclusion | [E007 results](experiments/E007-neuroevolution.md): H12 reported as inconclusive although the difference is "significant" |
+| Rule-based runs still work, unchanged | Golden values; byte-identical CSVs against `main` after every increment |
+
+Open item: Linux x86_64 neural golden values (D-045) await a Linux session.

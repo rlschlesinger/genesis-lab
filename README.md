@@ -4,12 +4,13 @@ A local-first artificial life laboratory. Digital organisms live in a 2D world: 
 
 Built as a learning project: the [curriculum](docs/curriculum.md) tracks the concepts covered so far.
 
-**Status:** Milestones 1 (The Petri Dish), 2 (Genetics and Evolution) and 3 (The Science Lab) complete. Milestone 4 (Evolving Neural Brains) in progress.
+**Status:** Milestones 1 (The Petri Dish), 2 (Genetics and Evolution), 3 (The Science Lab) and 4 (Evolving Neural Brains) complete. Next: Milestone 5 (an API and a browser lab), not yet started.
 
 ## What it does
 
-- **Ecosystem:** a bounded world with regrowing food. Organisms sense the nearest food, decide (random walk or food seeker), move, eat, pay energy costs, reproduce and die. Every unit of energy is accounted for and checked every tick.
+- **Ecosystem:** a bounded world with regrowing food. Organisms sense the nearest food, decide (random walk, food seeker, or an evolved neural brain), move, eat, pay energy costs, reproduce and die. Every unit of energy is accounted for and checked every tick.
 - **Evolution:** each organism carries a genome (speed, sense range, turning, metabolic rate, reproduction threshold, and a neutral marker). Children inherit a mutated copy; trade-off costs make each gene's value matter.
+- **Neural brains:** optionally, each organism is driven by its own small neural network (7 senses, 6 hidden units, turn and throttle), written from scratch in NumPy. Its 62 weights are inherited and mutated like genes, so behaviour evolves; nothing is trained. `genesis inspect` replays any organism's decision step by step.
 - **Reproducibility:** the same config and seed always produce byte-identical results. Each run records its config, seed, code version and a fingerprint of the final state.
 - **Science:** pre-registered experiments run in parallel from spec files, paired seeds, drift-only control runs, confidence intervals, effect sizes and significance tests (hand-written and cross-checked with SciPy).
 - **Data:** every run validated into a Parquet data lake, queried with SQL (DuckDB), charted in experiment dashboards, and exportable with its own documentation and checksums.

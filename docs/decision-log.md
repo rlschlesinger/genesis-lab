@@ -60,6 +60,15 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-046 · The optional PyTorch cross-check is deferred (2026-10-19)
+
+**Decision:** chunk 04B's optional learning task (re-implement one forward pass in PyTorch and show it matches NumPy) is not done in Milestone 4. PyTorch is not added.
+**Why:**
+- **Little new evidence:** the NumPy forward pass is already checked against a hand-computed example, plain-Python loops (to 1e-12) and itself in batch (bit for bit). A PyTorch match would show two libraries agree on multiplication and tanh.
+- **Cost:** several hundred MB of dependency for one test, downloaded by every fresh setup, cloud sessions included.
+- **Better later:** PyTorch's purpose is gradient-based training (automatic differentiation). It teaches most when it does that: for example, training the same 7-6-2 network by backpropagation on foraging and comparing it with E007's evolved brains.
+**Revisit when:** a milestone or extension wants gradient-based learning, or the user wants a first look at an ML library.
+
 ## D-045 · E007's machinery: given founder brains, per-condition seeds, neural golden values (2026-10-19)
 
 **Decision:**
