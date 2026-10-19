@@ -26,6 +26,7 @@ uv run ruff check . && uv run ruff format --check .
 uv run python experiments/benchmark.py [--sizes 30,1000,3000] [--evolution]   # docs/benchmarks.md
 uv run genesis run --seed 42 --out data/runs/<name>   # one recorded run
 uv run genesis report data/runs/<name>               # HTML report (Plotly, offline)
+uv run genesis inspect data/runs/<name> --tick T --organism ID [--weights]   # replay one decision
 uv run genesis lake ingest data/runs data/experiments  # validate + convert runs to data/lake/ (Parquet)
 uv run genesis sql "SELECT ..."                      # query the lake (views: docs/schema.md)
 uv run genesis dashboard E00N [--compare T:C]       # experiment dashboard from the lake

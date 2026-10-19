@@ -50,6 +50,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `analytics/storage.py` | Byte-stable CSV/JSON writers, atomic replace | Know about simulations |
 | `analytics/provenance.py` | Git commit/dirty flag, versions, platform | |
 | `analytics/behaviour.py` | `behaviour_row`: turning toward food, turn, throttle, brain spread and drift per recorded tick (D-043) | Change the simulation |
+| `analytics/inspector.py` | `genesis inspect`: `replay_to`, `inspect_tick`, `inspect_run_folder`, `format_inspection` (D-044) | Change a recorded run |
 | `analytics/recorder.py` | `RunRecorder.observe(sim, summary)` after each tick: tick rows, gene stats, genome snapshots | Change the simulation |
 | `analytics/significance.py` | Sign test, paired and two-group permutation tests (exact or seeded sampling), Holm correction | Use per-organism data as replicates |
 | `analytics/experiments.py` | Conditions (dotted config changes), `run_condition`, `settled_gene_means`, `paired`, `genomes_never_changed` | Decide hypotheses |
@@ -352,7 +353,23 @@ Scope: [roadmap/04A](roadmap/04A_NEURAL_BRAINS.md) and [roadmap/04B](roadmap/04B
 | 4.3 | Brains as inherited genes: `brain` RNG stream (appended), founder initialisation, bounded mutation, inheritance, digest | Golden values unchanged; child = parent + mutation | done |
 | 4.4 | `controller: neural` in the tick; `configs/neural.yaml` | Rule-based runs byte-identical; ledger balances | done |
 | 4.5 | Recording: brains at birth, behaviour summaries; schema v4; lake tables; report charts | Lake checks; recount | done |
-| 4.6 | `genesis inspect`: inputs → hidden → outputs → action → state for one organism and tick | Replay = original run | |
+| 4.6 | `genesis inspect`: inputs → hidden → outputs → action → state for one organism and tick | Replay = original run | done |
 | 4.7 | Pre-register E007: random vs seeker vs evolved brains, train/evaluation seed groups; neural golden values (both platforms) | Smoke runs on throwaway seeds | |
 | 4.8 | Run E007 and report | Results appended to the definition | |
 | 4.9 | Wrap-up: docs, scope check; stop before Milestone 5 | | |
+
+### Chunk 04A scope check (2026-10-19)
+
+| 04A requirement | Evidence |
+|---|---|
+| Fixed-topology feedforward policy in NumPy; documented sensors and outputs | `intelligence/neural.py` (D-039), `brain_inputs.py` (D-040), [neural-networks.md](neural-networks.md) |
+| Normalised inputs; stable activations; bounded turn and throttle | Inputs in [−1, 1] (property-tested); tanh/sigmoid; turn = tanh × max_turn |
+| Forage output, or a documented 2-output alternative | 2 outputs; eating is automatic (D-039, roadmap note) |
+| Weights as inheritable genome parameters: validated shapes, finite, seeded initialisation, bounded Gaussian mutation; no gradient descent | `evolution/brain.py` (D-041): own stream, ±4 reflected, read-only arrays |
+| CLI inspector: inputs, hidden activations, outputs, action, resulting state | `genesis inspect` (D-044) |
+| Tests: shapes and parameter count; hand-computed example; extreme inputs; reproducible initialisation and inference; mutation; no shared mutable parameters; newborns inherit | tests/intelligence/test_neural.py, test_brain_inputs.py, test_neural_controller.py; tests/evolution/test_brain.py |
+| A neural organism lives in the deterministic engine | `controller: neural`, `configs/neural.yaml` (D-042); deterministic, ledger-checked, extinction-safe |
+| Worked example verifiable by hand | [neural-networks.md](neural-networks.md), asserted by tests |
+| Learning: vectors/matrices, weighted sums, activations, genotype→controller, selection vs backpropagation | [neural-networks.md](neural-networks.md); [curriculum.md](curriculum.md) 4.1–4.6 |
+| Rule-based results unchanged | Golden values; byte-identical CSVs against `main` after every increment |
+

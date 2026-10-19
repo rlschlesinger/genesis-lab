@@ -60,6 +60,15 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-044 · Inspecting a decision by replay (2026-10-19)
+
+**Decision:** `genesis inspect RUN_DIR --tick T --organism ID [--weights]` (or `--config FILE --seed S`) replays the run to the start of tick T, lets the simulation take that tick, and prints the organism's decision from the simulation's own record: what it sensed, the 7 inputs, the 6 hidden sums and activations, the 2 outputs and how they became a turn and throttle, and the result (heading, position, energy, whether it ate or died). The simulation keeps the controller's `Thought` in `last_decision` (it already computed it). The replay is checked against the recorded ticks.csv row for that tick, and a run recorded on another OS family or machine is flagged.
+**Why:**
+- **Replay instead of logging:** recording every decision would be ~1 KB per organism per tick (gigabytes per run); determinism makes any tick recoverable from config and seed.
+- **Print the simulation's own computation:** recomputing it separately could drift from the simulation's wiring; reading `last_decision` cannot.
+- **Check, don't assume, the replay:** comparing the tick's counts with ticks.csv catches a replay that has diverged (a code change since recording, or another platform, D-027).
+**Alternatives:** logging decisions for chosen organisms during the run (needs knowing in advance whom to watch); snapshots every N ticks to replay from (faster for late ticks; unnecessary at ~2,000 ticks/s).
+
 ## D-043 · Recording behaviour and brains (run-folder version 4) (2026-10-19)
 
 **Decision:** two new files in every run folder, and matching lake tables. `behaviour.csv`: one row per recorded tick, for every controller: organisms deciding, how many saw food, the share whose applied turn brought seen food closer to straight ahead (`|bearing − turn| < |bearing|`), mean |turn|/max_turn, mean throttle, and with brains the mean per-weight population sd and the mean |weight − founder's weight|. `brains.csv`: one row per organism with a brain, its 62 parameters under readable names (`wh_3_food_ahead`). The simulation keeps the tick's observations and actions as `last_decision` (references, no copies); the recorder reads them. Schema version 4; every earlier file is unchanged. Reports gain a Behaviour section (rolling means; a 0.5 "random turning" reference).

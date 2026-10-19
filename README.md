@@ -30,6 +30,7 @@ uv sync            # creates .venv and installs the locked dependencies
 uv run genesis run --seed 7 --out data/runs/first             # ecosystem, no evolution
 uv run genesis run --config configs/evolution.yaml --out data/runs/evo   # with evolution (~6 s)
 uv run genesis run --config configs/neural.yaml --out data/runs/neural  # evolving neural brains (~10 s)
+uv run genesis inspect data/runs/neural --tick 5000 --organism 1027 --weights  # one organism's decision, step by step
 uv run genesis report data/runs/evo                           # writes data/runs/evo/report.html
 open data/runs/evo/report.html
 ```

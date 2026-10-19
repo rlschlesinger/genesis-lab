@@ -347,6 +347,12 @@ What has been covered, where it appears in the code, and what comes next.
 - **Schema evolution without breaking old data:** new files, a version number, older runs load with the new tables absent.
 - **Smoothing a noisy signal honestly:** a rolling mean, labelled as such, with missing values skipped rather than treated as zero.
 
+### 4.6 · Inspecting a decision (`genesis inspect`)
+- **Replay as a debugger:** determinism means any moment of any run can be recreated from config and seed, so nothing per-decision needs storing.
+- **Reading a network's computation:** inputs → weighted sums → tanh → outputs → turn and throttle, for one real organism.
+- **Reading weights:** which inputs each hidden unit listens to, and how each hidden unit pushes the outputs.
+- **Trust but verify:** the replay checks itself against the recording and flags another platform.
+
 ## Future learning objectives
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

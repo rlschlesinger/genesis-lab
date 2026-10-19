@@ -85,6 +85,16 @@ Every weight and bias is one number in the brain. For the organism brain:
 
 `Brain.to_vector()` lays these 62 numbers out in exactly that order (hidden weights row by row, hidden biases, output weights row by row, output biases). That flat vector is what organisms inherit and mutate (increment 4.3).
 
+## Watching a real brain decide
+
+`genesis inspect` replays a run to any tick and prints one organism's whole computation:
+
+```bash
+uv run genesis inspect data/runs/neural-1 --tick 15000 --organism 3217 --weights
+```
+
+It shows what the organism sensed, its 7 inputs, each hidden unit's weighted sum and tanh, the two outputs and how they became a turn and a throttle, and what happened (new heading, position, energy). `--weights` adds the weight tables: row *h* of the hidden table is what hidden unit *h* listens to; the output table is how much each hidden unit pushes turn and throttle.
+
 ## Where the weights come from: selection, not training
 
 In most machine learning, a network is **trained**: it is shown examples and the right answers, its error is measured, and **backpropagation** works out how to nudge every weight to reduce that error (the nudges point along the *gradient*, the direction in which the error falls fastest). Repeated millions of times, the network gets better.

@@ -19,6 +19,12 @@ import duckdb
 import pydantic
 
 from genesis.analytics.batch import StaleRunsError, plan, run_experiment, task_status
+from genesis.analytics.inspector import (
+    InspectError,
+    format_inspection,
+    inspect_run_folder,
+    inspect_tick,
+)
 from genesis.analytics.runs import execute_run, new_run_id
 from genesis.analytics.spec import load_spec
 from genesis.core.config import ConfigError, load_config, with_overrides
@@ -120,6 +126,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="add a paired-difference panel, e.g. selection:neutral",
     )
 
+    inspect = commands.add_parser(
+        "inspect", help="replay a run to one tick and show one organism's decision step by step"
+    )
+    inspect.add_argument("run_dir", type=Path, nargs="?", help="a run folder (or use --config)")
+    inspect.add_argument("--config", type=Path, help="replay this config instead of a run folder")
+    inspect.add_argument("--seed", type=int, help="with --config: override run.seed")
+    inspect.add_argument("--tick", type=int, required=True, help="the tick to inspect")
+    inspect.add_argument("--organism", type=int, required=True, help="the organism's ID")
+    inspect.add_argument("--weights", action="store_true", help="also print the brain's weights")
+
     sql = commands.add_parser("sql", help="run a SQL query against the lake (docs/sql-examples.md)")
     sql.add_argument("query", help="the SQL query, in quotes")
     sql.add_argument("--lake", type=Path, default=DEFAULT_LAKE)
@@ -137,8 +153,29 @@ def main(argv: list[str] | None = None) -> int:
         "sql": _sql,
         "experiment": _experiment,
         "dashboard": _dashboard,
+        "inspect": _inspect,
     }
     return handlers[args.command](args)
+
+
+def _inspect(args: argparse.Namespace) -> int:
+    if (args.run_dir is None) == (args.config is None):
+        print("error: give either a run folder or --config (not both)", file=sys.stderr)
+        return 2
+    try:
+        if args.run_dir is not None:
+            if not (args.run_dir / "run.json").exists():
+                print(f"error: {args.run_dir} has no run.json", file=sys.stderr)
+                return 2
+            inspection = inspect_run_folder(args.run_dir, args.tick, args.organism)
+        else:
+            config = with_overrides(load_config(args.config), seed=args.seed)
+            inspection = inspect_tick(config, args.tick, args.organism)
+    except (InspectError, ConfigError, pydantic.ValidationError, OSError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(format_inspection(inspection, weights=args.weights))
+    return 0
 
 
 def _dashboard(args: argparse.Namespace) -> int:

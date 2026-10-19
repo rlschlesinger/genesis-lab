@@ -37,7 +37,7 @@ from genesis.evolution.genome import Genome, express
 from genesis.evolution.mutation import mutate
 from genesis.evolution.reproduction import place_offspring, select_parents
 from genesis.intelligence.brain_inputs import wall_distance_ahead
-from genesis.intelligence.controllers import Actions, make_controller
+from genesis.intelligence.controllers import Actions, Thought, make_controller
 from genesis.intelligence.neural import BrainStack
 from genesis.intelligence.sensors import BodySenses, Observations, sense_food
 
@@ -107,6 +107,9 @@ class Decision:
     observations: Observations
     actions: Actions  # as requested; movement clips turn to +/- max_turn, throttle to [0, 1]
     max_turn: NDArray[np.float64]
+    # Neural runs: the controller's whole computation (inputs, activations), exactly as used.
+    # This is what `genesis inspect` prints, so it can never disagree with the simulation.
+    thought: Thought | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -267,10 +270,13 @@ class Simulation:
                 ),
             )
             brains = BrainStack.of([o.brain for o in living])
-            actions = self.controller.decide(observations, self.rng.controller, brains)
+            # think() is what decide() calls; keeping its result costs nothing extra.
+            thought = self.controller.think(observations, self.rng.controller, brains)
+            actions = thought.actions
         else:
+            thought = None
             actions = self.controller.decide(observations, self.rng.controller)
-        self.last_decision = Decision(observations, actions, max_turns)
+        self.last_decision = Decision(observations, actions, max_turns, thought)
 
         # 4. Move, then write the results back to each organism. tolist() hands back plain
         #    Python floats with the same values; it is many times faster than converting one
