@@ -151,6 +151,10 @@ def test_e007_evaluation_follows_the_pre_registered_rule(e007_trained):
         assert configs[("home", seed)].brain.founder_weights == away.brain.founder_weights
         assert away.organisms.max_population == away.organisms.initial_count == 30
         assert not away.mutation.enabled
+        assert not away.run.stop_on_extinction and away.run.max_ticks == 50
+        # The primary endpoint sums behaviour.n over every tick, so the training spec's
+        # sampling (ticks_every 10) must not leak into the evaluation runs.
+        assert away.recording.ticks_every == 1
     assert configs[("seeker", 9200)].organisms.controller == "nearest_food_seeker"
     assert configs[("random_brains", 9200)].brain.founder_weights is None
 

@@ -132,6 +132,20 @@ def test_toward_food_matches_a_hand_count():
     assert row["mean_throttle"] == pytest.approx(0.5)
 
 
+def test_toward_food_wraps_the_bearing_past_straight_behind():
+    """Food almost directly behind on the right (bearing -3.0 rad). Turning left by 0.5 puts
+    it at -3.5 rad, which wrapped is +2.78 rad: 159 degrees to the left, nearer dead ahead
+    than 172 degrees to the right was. Without wrapping, |-3.5| > 3.0 would count as away."""
+    obs = Observations(
+        food_found=np.array([True, True]),
+        food_distance=np.array([5.0, 5.0]),
+        food_bearing=np.array([-3.0, 3.0]),
+        energy=np.ones(2),
+    )
+    decision = Decision(obs, Actions(np.array([0.5, -0.5]), np.ones(2)), np.full(2, 0.5))
+    assert behaviour_row(0, decision, [], {})["toward_food"] == 1.0
+
+
 def test_empty_population_row_has_no_values():
     row = behaviour_row(3, None, [], {})
     assert (row["n"], row["seeing_food"]) == (0, 0)
@@ -190,3 +204,17 @@ def test_damaged_brain_files_are_refused(runs, tmp_path, file, damage, check):
     result = ingest_run(damaged, tmp_path / "lake")
     assert not result.ingested
     assert f"[{check}]" in result.reason
+
+
+def test_brain_rows_in_a_run_without_brains_are_refused(runs, tmp_path):
+    """A rule-based run has no brain section, so a brains.csv with rows is a corrupt folder,
+    even when every value is a valid weight of an existing organism."""
+    damaged = tmp_path / "run"
+    shutil.copytree(runs["nearest_food_seeker"], damaged)
+    with (damaged / "brains.csv").open("w", newline="") as f:
+        writer = csv.writer(f, lineterminator="\n")
+        writer.writerow(BRAIN_FIELDS)
+        writer.writerow([0, *([0.0] * (len(BRAIN_FIELDS) - 1))])
+    result = ingest_run(damaged, tmp_path / "lake")
+    assert not result.ingested
+    assert "[row counts]" in result.reason and "no brains" in result.reason

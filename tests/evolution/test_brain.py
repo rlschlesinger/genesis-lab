@@ -98,7 +98,8 @@ def test_huge_mutations_stay_within_the_limits():
 
 
 def test_rng_streams_are_append_only():
-    """Adding the brain stream must not change the six existing streams (D-012)."""
+    """Adding the brain stream must not change the six existing streams (D-012), and the
+    brain stream itself must be the seventh child, not a re-seeding of an earlier one."""
     streams = RngStreams.from_seed(42)
     children = np.random.SeedSequence(42).spawn(6)
     for name, child in zip(
@@ -107,14 +108,39 @@ def test_rng_streams_are_append_only():
         strict=True,
     ):
         assert getattr(streams, name).random() == np.random.default_rng(child).random()
+    seventh = np.random.SeedSequence(42).spawn(7)[6]
+    assert streams.brain.random() == np.random.default_rng(seventh).random()
 
 
-def test_rule_based_configs_have_no_brain_section_and_unchanged_hashes():
-    config = load_config(CONFIGS / "default.yaml")
+# config_hash values recorded with the code before Milestone 4 (commit 067cab9), for configs
+# that have not changed since. They lock the promise that an absent brain section leaves
+# every existing run's hash alone; a default added to any config section changes them too
+# (then every completed experiment looks stale to the batch runner, CLAUDE.md invariants).
+PRE_MILESTONE_4_HASHES = {
+    "default.yaml": "631dc06570cd1664077fdc49294c5ec42ec90c4ff25dd3928d9df4532752c483",
+    "evolution.yaml": "abdaed39f4a022981b60de355012fb02afc440f0afa53dcfc9dafe322f8b97b3",
+}
+
+
+@pytest.mark.parametrize("name", sorted(PRE_MILESTONE_4_HASHES))
+def test_rule_based_configs_have_no_brain_section_and_unchanged_hashes(name):
+    config = load_config(CONFIGS / name)
     assert config.brain is None
     assert "brain" not in config.model_dump(mode="json")
-    assert config_hash(config) == config_hash(SimulationConfig.model_validate(config.model_dump()))
+    assert config_hash(config) == PRE_MILESTONE_4_HASHES[name]
     assert all(o.brain is None for o in Simulation(config).organisms)
+
+
+def test_experiment_spec_hashes_are_unchanged_since_milestone_3():
+    """E006's first run, hashed by the pre-Milestone-4 code: its recorded run would be
+    reported stale if this changed."""
+    from genesis.analytics.spec import PROJECT_ROOT, load_spec
+
+    configs = load_spec(PROJECT_ROOT / "experiments" / "specs" / "E006.yaml").configs()
+    assert (
+        config_hash(configs[("founders_10", 6000)])
+        == "947bf00fded9567bac5a5adecf03f6b20c7b3c043ac2f91bbe181264a3ef0b1e"
+    )
 
 
 def test_brains_do_not_change_anything_else_yet():
