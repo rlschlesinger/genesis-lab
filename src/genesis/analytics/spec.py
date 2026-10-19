@@ -68,6 +68,17 @@ class ExperimentSpec(_Strict):
     def base(self, root: Path = PROJECT_ROOT) -> SimulationConfig:
         return apply_changes(load_config(root / self.base_config), self.base_changes)
 
+    def smoke_copy(self, seeds: list[int], max_ticks: int) -> ExperimentSpec:
+        """A tiny version for checking an experiment's code: throwaway seeds, short runs, and
+        its own output folder, so it can never mix with (or overwrite) the real runs."""
+        return self.model_copy(
+            update={
+                "seeds": list(seeds),
+                "base_changes": {**self.base_changes, "run.max_ticks": max_ticks},
+                "output": f"data/experiments/{self.experiment_id}-smoke",
+            }
+        )
+
     def condition(self, label: str) -> Condition:
         spec = next(c for c in self.conditions if c.label == label)
         return Condition(spec.label, dict(spec.changes))

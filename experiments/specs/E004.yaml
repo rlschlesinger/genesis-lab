@@ -1,0 +1,11 @@
+# E004 · Food dose-response (Experiment A). Definition: docs/experiments/E004-food-dose-response.md
+experiment_id: E004
+title: Does the settled population grow in proportion to food?
+definition: docs/experiments/E004-food-dose-response.md
+base_config: configs/default.yaml
+seeds: {first: 4000, count: 10}
+conditions:
+  - {label: food_0_5, changes: {food.regrowth_per_tick: 0.5}}
+  - {label: food_1, changes: {food.regrowth_per_tick: 1.0}}
+  - {label: food_2, changes: {food.regrowth_per_tick: 2.0}}
+  - {label: food_4, changes: {food.regrowth_per_tick: 4.0}}

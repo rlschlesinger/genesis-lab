@@ -281,6 +281,16 @@ What has been covered, where it appears in the code, and what comes next.
 - **Mutation rate vs selection:** 7 metabolic mutations in 76 births matches the 10% rate; selection changes which lines survive, not how often mutations happen.
 - **Documents that test themselves:** printed results are re-checked against the data; a one-digit change is caught.
 
+### 3.10a · Designing Experiments A–C (`docs/experiments/E004–E006`)
+- **Dose-response designs:** several levels of the variable, and a model for how the outcome should follow (elasticity: slope of log outcome on log dose; 1 = proportional).
+- **Equivalence testing:** "proportional within ±10%" is supported only if the whole interval lies inside the bounds.
+- **Mutation–drift balance:** mutation adds variation, drift removes it; their balance rises with the mutation rate.
+- **Binary outcomes:** proportions, Wilson intervals, and a trend test across ordered groups (Cochran–Armitage, by permutation).
+- **Calibration pilots that look at the outcome:** sometimes necessary; disclose them fully and use separate seeds.
+- **Floor and ceiling effects:** an outcome at 0% or 100% can't show differences; pilots find the informative middle.
+- **Testing the analysis before the data:** synthetic data with known answers (exponent 0.5, a trend, pure noise).
+- **Mistakes in your own queries:** `count(*)` after a join counts joined rows, not runs (the fan-out, made by me in a pilot query).
+
 ## Future learning objectives
 - **Milestone 3:** pandas, SQL with DuckDB, Parquet, significance tests and effect sizes with SciPy, batch experiment design.
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.

@@ -1,0 +1,16 @@
+# E006 · Founders vs extinction (Experiment C). Definition: docs/experiments/E006-founders-extinction.md
+experiment_id: E006
+title: Do smaller founding populations go extinct more often?
+definition: docs/experiments/E006-founders-extinction.md
+base_config: configs/default.yaml
+base_changes:                       # harsh world chosen by the disclosed pilots
+  run.max_ticks: 3000
+  food.initial_count: 0
+  food.regrowth_per_tick: 0.1
+seeds: {first: 6000, count: 50}
+conditions:
+  - {label: founders_2, changes: {organisms.initial_count: 2}}
+  - {label: founders_5, changes: {organisms.initial_count: 5}}
+  - {label: founders_10, changes: {organisms.initial_count: 10}}
+  - {label: founders_20, changes: {organisms.initial_count: 20}}
+  - {label: founders_40, changes: {organisms.initial_count: 40}}

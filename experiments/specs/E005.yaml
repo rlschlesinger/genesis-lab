@@ -1,0 +1,17 @@
+# E005 · Mutation rate vs neutral diversity (Experiment B). Definition: docs/experiments/E005-mutation-diversity.md
+experiment_id: E005
+title: Does a higher mutation rate maintain more genetic diversity?
+definition: docs/experiments/E005-mutation-diversity.md
+base_config: configs/evolution.yaml
+base_changes:                       # every gene neutral: drift only, no selection (D-025)
+  genome.speed.neutral: true
+  genome.sense_range.neutral: true
+  genome.max_turn.neutral: true
+  genome.metabolic_rate.neutral: true
+  genome.reproduction_threshold.neutral: true
+seeds: {first: 5000, count: 10}
+conditions:
+  - {label: rate_0, changes: {mutation.rate: 0.0}}
+  - {label: rate_0_02, changes: {mutation.rate: 0.02}}
+  - {label: rate_0_1, changes: {mutation.rate: 0.1}}
+  - {label: rate_0_3, changes: {mutation.rate: 0.3}}
