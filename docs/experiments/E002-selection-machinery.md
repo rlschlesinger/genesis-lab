@@ -51,3 +51,7 @@ Under drift with reflection, a gene's mean moves toward the middle of its own ra
 ---
 
 ## Results
+
+### Protocol deviation (recorded before any results)
+
+The first attempt, at the pre-registration commit `13a1561`, stopped with `EnergyLedgerError` before producing any results (E002: tick 13,820 of seed 1000 in the *off* condition; E003: tick 17,476). The cause was floating-point drift in the ledger's running totals, not an accounting error. It was fixed at commit `609c39b` (decision D-026). Simulation behaviour is unchanged (the ledger isn't part of the state; the golden regression tests pass). **No hypothesis, metric, seed, condition, window or analysis was changed, and no partial output was analysed.** All runs were re-executed from the commit that adds this note.
