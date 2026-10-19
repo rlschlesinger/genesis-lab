@@ -227,6 +227,17 @@ def test_energy_left_at_old_age_death_is_recorded_as_lost():
     assert sim.ledger.lost_at_death > 0
 
 
+def test_energy_lost_at_death_is_summed_exactly_per_tick():
+    # All 30 founders die of old age on tick 5, each holding an inexact float (50 minus six
+    # payments of 0.2 metabolism and ~0.15 movement). Adding thirty such values one at a time
+    # drifts from the exact sum by ~1e-12 on this input; math.fsum does not (D-026).
+    sim = Simulation(make_config(**NO_FOOD, **{"organisms.max_age": 5}))
+    sim.run()
+    assert {o.death_tick for o in sim.dead} == {5}
+    assert all(o.death_cause is DeathCause.OLD_AGE for o in sim.dead)
+    assert sim.ledger.lost_at_death == math.fsum(o.energy for o in sim.dead)
+
+
 def test_determinism_holds_with_eating():
     a, b = Simulation(make_config()), Simulation(make_config())
     for _ in range(300):
