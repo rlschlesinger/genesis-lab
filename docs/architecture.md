@@ -46,6 +46,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `analytics/storage.py` | Byte-stable CSV/JSON writers, atomic replace | Know about simulations |
 | `analytics/provenance.py` | Git commit/dirty flag, versions, platform | |
 | `analytics/recorder.py` | `RunRecorder.observe(sim, summary)` after each tick: tick rows, gene stats, genome snapshots | Change the simulation |
+| `analytics/significance.py` | Sign test, paired and two-group permutation tests (exact or seeded sampling), Holm correction | Use per-organism data as replicates |
 | `analytics/runs.py` | `execute_run`: simulate + write run.json/ticks.csv/organisms.csv with status | |
 | `report/` | `genesis report`: `data.py` (load run folder, downsample), `theme.py` (design tokens), `figures.py` (charts), `render.py` + `template.html` + `report.css` | Run simulations; read anything outside the run folder |
 | `cli.py` | `genesis run` arguments → `execute_run`; exit codes 0/1/2 | Contain logic |
@@ -210,6 +211,6 @@ Decisions: trade-off costs for sense range and speed; metabolic rate as a cost-f
 | 2.4 | Trade-off costs; positive control and neutral marker | Ledger balances; defaults = Milestone 1 | done |
 | 2.5 | Trait statistics per tick; genome snapshots | Matches a recount from raw data | done |
 | 2.6 | `genesis report`: Plotly HTML trait charts | Built from recorded files | done |
-| 2.7 | Permutation and sign tests | Known cases | |
+| 2.7 | Permutation and sign tests | Known cases | done |
 | 2.8 | E002 (machinery and controls), E003 (food scarcity), pre-registered | Reported against the drift baseline | |
 | 2.9 | Docs, curriculum, push, stop for review | | |

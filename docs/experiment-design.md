@@ -23,6 +23,15 @@ Formal experiments live in [experiments/](experiments/), one file per experiment
 
 - **H3 · Neutral drift.** With identical organisms, founder lineages are lost at random. Observed (seed 42, defaults): 30 → 22 at tick 1000 → 8 at tick 4999. Needs replicates to establish the typical rate and spread; this becomes the null model for Milestone 2's selection experiments.
 
+## Statistical tests (genesis.analytics.significance)
+
+- **Paired designs** (shared seeds): `paired_permutation_test` on per-seed differences (uses sizes); `sign_test` (direction only, robust to outliers). Exact for ≤ 16 pairs; otherwise sampled with a seeded generator and the +1 correction.
+- **Independent groups:** `permutation_test`.
+- **Several hypotheses in one experiment:** report Holm-adjusted p-values.
+- **Resolution limit:** with n pairs the smallest possible two-sided p is 2 / 2ⁿ (0.002 for 10, 0.000004 for 20). Choose n before running.
+- **Significant ≠ large:** always report the effect size (mean or median difference, and range) beside the p-value. A hypothesis about size ("within 10%") isn't tested by "is there a difference?".
+- **Drift isn't always centred:** under drift with reflection, a gene's mean tends toward the middle of its range. Predictions must state the drift expectation for each gene (e.g. metabolic_rate starts at 0.2, below its midpoint 0.26, so drift alone would push it *up*).
+
 ## Principles
 
 - **The run is the replicate.** Organisms within one population share a history and are not independent samples. Statistics compare runs, not organisms.

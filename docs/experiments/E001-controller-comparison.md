@@ -82,3 +82,22 @@ For each metric and seed: paired difference = seeker − random walk. Report the
 ### Limits
 
 Single parameter set (defaults). Lifespan is right-censored (organisms alive at tick 4999 excluded). Metrics like t90 depend on the definition of the settled period (2000–4999), fixed in advance.
+
+### Addendum (2026-10-18, increment 2.7): formal tests
+
+Added after the fact, using `genesis.analytics.significance` on the recorded per-run metrics. The pre-registered analysis was sign counting; these tests attach p-values to it. Two-sided, exact (all 1024 sign patterns).
+
+| metric | +/−/tie | sign test p | permutation p | mean difference | status |
+|---|---|---:|---:|---:|---|
+| capacity | 0/10/0 | 0.0020 | 0.0020 | −4.17 | pre-registered (H2a) |
+| t90 | 0/10/0 | 0.0020 | 0.0020 | −207.2 | pre-registered (H2b) |
+| standing_food | 0/10/0 | 0.0020 | 0.0020 | −158.4 | pre-registered (H2c) |
+| lifespan | 8/2/0 | 0.109 | 0.031 | +11.25 | exploratory |
+| lineages_end | 9/0/1 | 0.0039 | 0.0039 | +2.30 | exploratory |
+
+Holm-adjusted across H2a–c: 0.0059 each.
+
+- **H2b, H2c: supported** (adjusted p = 0.006).
+- **H2a** predicted a difference *smaller than 10%*. A test for "any difference" can't confirm a size limit: the difference is real (p = 0.002) but small, with all 10 paired differences between −2.7% and −4.2%, inside the predicted bound.
+- 0.0020 is the smallest p-value 10 pairs can produce; smaller would need more replicates.
+- Lifespan and lineages remain exploratory, whatever their p-values. Lineages (9/0/1) is a candidate for a pre-registered follow-up.

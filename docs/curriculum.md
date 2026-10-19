@@ -163,6 +163,17 @@ What has been covered, where it appears in the code, and what comes next.
 - **Precise tests:** "no font URL anywhere" failed on Plotly's own library code; the right check is our markup.
 - **A sanity check from theory:** the mean absolute mutation step should be size × √(2/π) ≈ 0.040; four genes matched. Metabolic rate (0.034) was lower because steps reflected at its lower bound.
 
+### 2.7 · Significance tests (`analytics/significance.py`)
+- **Null hypothesis and p-value:** assume "no difference", then ask how surprising the data would be. A p-value is not the probability that a hypothesis is true.
+- **Binomial distribution:** the number of heads in n fair flips; the sign test counts the ways to be at least as lopsided (`math.comb`).
+- **Permutation tests:** build chance's distribution by re-labelling the data many times; exact when every arrangement can be listed.
+- **Sampling with a seed:** large tests sample arrangements reproducibly; the "+1" correction avoids p = 0.
+- **Calibration:** when nothing is going on, a valid test raises false alarms at its stated rate (~5%).
+- **Statistical power:** how often a test detects a real effect (~70%+ for a 1-sd effect with 10 pairs).
+- **Multiple comparisons:** five tests at 5% give a ~23% chance of at least one false alarm; Holm's correction controls it.
+- **Effect size vs significance:** E001's capacity difference is significant yet only 3.7%.
+- **Resolution floor:** 10 pairs can't give p below 0.002; more evidence needs more replicates.
+
 
 ## Future learning objectives
 - **Milestone 2:** mutation and heredity, variation vs selection vs drift, lineage trees, trait distributions.

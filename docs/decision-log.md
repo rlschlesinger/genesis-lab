@@ -60,6 +60,12 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-024 · Hand-written permutation and sign tests (2026-10-18)
+
+**Decision:** `significance.py` implements an exact sign test, exact/sampled paired and two-group permutation tests, and the Holm correction, with NumPy and the standard library only.
+**Why:** few assumptions (no normality needed, suits 10–20 runs), every step is visible for learning, and no new dependency (SciPy stays in Milestone 3). Tested against hand-computed answers, and calibrated: under a true null, about 5% of p-values fall below 0.05.
+**Alternatives:** t-tests (assume roughly normal differences); SciPy's `permutation_test` / `binomtest` (equivalent, adopted later for cross-checking).
+
 ## D-023 · HTML run reports with Plotly (2026-10-18)
 
 **Decision:** `genesis report` writes one self-contained HTML file per run, using Plotly 7.1.0 (embedded once, ~6 MB), a custom dark "instrument" theme with system fonts, and fixed chart IDs for deterministic output. Charts are downsampled to ≤2000 points per line by fixed stride. Built only from recorded files.
