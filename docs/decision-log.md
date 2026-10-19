@@ -60,6 +60,13 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-025 · Neutral-twin controls instead of the neutral marker alone (2026-10-18)
+
+**Decision:** a per-gene `neutral` flag: the gene is inherited and mutates, but `express()` uses its initial value. Selection is judged by comparing normal runs with all-neutral runs on the same seeds.
+**Why:** under reflected drift, each gene's mean drifts toward the middle of *its own* range, and genes start at different places (reproduction_threshold 80 in [55, 250] would drift strongly upward). The neutral marker starts mid-range, so it can't give the drift expectation for other genes. Without this, the seed-42 rise in threshold (80 → 105) could have been misread as selection for higher thresholds, when drift alone might push it higher still.
+**Consequence:** E002 and E003 compare selection − neutral per seed; E003 uses a difference of differences.
+**Alternatives:** compare each gene with the marker after rescaling (doesn't fix the different starting points); start every gene mid-range (changes founders, breaks Milestone 1 continuity).
+
 ## D-024 · Hand-written permutation and sign tests (2026-10-18)
 
 **Decision:** `significance.py` implements an exact sign test, exact/sampled paired and two-group permutation tests, and the Holm correction, with NumPy and the standard library only.

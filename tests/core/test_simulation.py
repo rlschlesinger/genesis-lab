@@ -370,7 +370,7 @@ def test_every_organism_carries_a_genome_whose_expression_is_its_traits():
     sim = Simulation(make_config(**{"run.max_ticks": 500}))
     sim.run()
     for org in [*sim.organisms, *sim.dead]:
-        assert org.traits == express(org.genome)
+        assert org.traits == express(org.genome, sim.config.genome)
 
 
 def test_without_mutation_every_genome_equals_the_founders():
@@ -426,7 +426,7 @@ def test_lineage_integrity_every_genome_is_parent_plus_recorded_changes(mutated_
             assert e.before == getattr(parent.genome, e.gene)
         expected = parent.genome.as_dict() | {e.gene: e.after for e in events}
         assert org.genome.as_dict() == expected
-        assert org.traits == express(org.genome)
+        assert org.traits == express(org.genome, sim.config.genome)
 
 
 def test_mutation_creates_variation_within_bounds(mutated_run):
@@ -487,3 +487,38 @@ def test_ledger_balances_with_all_trade_offs_and_mutation():
     sim.run()  # step() checks the ledger every tick
     assert sim.ledger.sensing > 0
     assert len(sim.mutation_log) > 0
+
+
+# --- Neutral twins ------------------------------------------------------------------------
+
+EXPRESSED_GENES = ["speed", "sense_range", "max_turn", "metabolic_rate", "reproduction_threshold"]
+ALL_NEUTRAL = {f"genome.{g}.neutral": True for g in EXPRESSED_GENES}
+
+
+def test_neutral_genes_still_mutate_but_never_change_the_phenotype():
+    sim = Simulation(make_config(**MUTATING, **ALL_NEUTRAL, **{"run.max_ticks": 1200}))
+    sim.run()
+    founders = express(Genome.from_config(sim.config.genome))
+    everyone = [*sim.organisms, *sim.dead]
+    assert len({o.genome for o in everyone}) > 50  # genomes vary...
+    assert all(o.traits == founders for o in everyone)  # ...behaviour doesn't
+    assert any(e.gene == "metabolic_rate" for e in sim.mutation_log)
+
+
+def test_one_neutral_gene_leaves_the_others_expressed():
+    changes = {"genome.speed.neutral": True, "run.max_ticks": 1200}
+    sim = Simulation(make_config(**MUTATING, **changes))
+    sim.run()
+    everyone = [*sim.organisms, *sim.dead]
+    assert all(o.traits.speed == 1.5 for o in everyone)
+    assert any(o.traits.sense_range != 20.0 for o in everyone)
+    assert any(o.genome.speed != 1.5 for o in everyone)
+
+
+def test_neutral_twin_without_mutation_is_identical_to_a_normal_run():
+    # With no mutation, every genome is the founders', so neutral flags change nothing.
+    a = Simulation(make_config(**{"run.max_ticks": 600}))
+    b = Simulation(make_config(**ALL_NEUTRAL, **{"run.max_ticks": 600}))
+    a.run()
+    b.run()
+    assert a.state_digest() == b.state_digest()

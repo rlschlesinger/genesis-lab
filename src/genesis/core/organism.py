@@ -57,7 +57,7 @@ class Organism:
     generation: int  # parent's generation + 1; generations overlap (see architecture.md)
     birth_tick: int
     genome: Genome  # genotype: what is inherited
-    traits: Traits  # phenotype: express(genome), computed once at birth
+    traits: Traits  # phenotype: express(genome, config), computed once at birth
 
     # Physical state: changed by the simulation each tick.
     x: float

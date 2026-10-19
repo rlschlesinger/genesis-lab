@@ -47,6 +47,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `analytics/provenance.py` | Git commit/dirty flag, versions, platform | |
 | `analytics/recorder.py` | `RunRecorder.observe(sim, summary)` after each tick: tick rows, gene stats, genome snapshots | Change the simulation |
 | `analytics/significance.py` | Sign test, paired and two-group permutation tests (exact or seeded sampling), Holm correction | Use per-organism data as replicates |
+| `analytics/experiments.py` | Conditions (dotted config changes), `run_condition`, `settled_gene_means`, `paired`, `genomes_never_changed` | Decide hypotheses |
 | `analytics/runs.py` | `execute_run`: simulate + write run.json/ticks.csv/organisms.csv with status | |
 | `report/` | `genesis report`: `data.py` (load run folder, downsample), `theme.py` (design tokens), `figures.py` (charts), `render.py` + `template.html` + `report.css` | Run simulations; read anything outside the run folder |
 | `cli.py` | `genesis run` arguments → `execute_run`; exit codes 0/1/2 | Contain logic |
@@ -167,6 +168,8 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 | sense_range | `sense_cost_per_unit × sense_range` | `organisms.sense_cost_per_unit` (default 0) |
 | speed | `move_cost_per_distance × distance × (speed / founder speed) ^ speed_cost_exponent` | `organisms.speed_cost_exponent` (default 0) |
 | max_turn | none, so frozen in `evolution.yaml` | `genome.max_turn.mutable` |
+
+Any gene can be made `neutral: true`: still inherited and mutating, but expressed at its initial value. That's the drift-only "neutral twin" used as the control in E002/E003.
 | neutral_marker | none, and not expressed | — |
 
 Founders pay exactly the Milestone 1 movement price at any exponent. Defaults reproduce Milestone 1 bit for bit. `configs/evolution.yaml` = `default.yaml` + mutation on, drag exponent 1, sense cost 0.004, max_turn frozen, 20000 ticks (a test enforces that nothing else differs).
@@ -212,5 +215,6 @@ Decisions: trade-off costs for sense range and speed; metabolic rate as a cost-f
 | 2.5 | Trait statistics per tick; genome snapshots | Matches a recount from raw data | done |
 | 2.6 | `genesis report`: Plotly HTML trait charts | Built from recorded files | done |
 | 2.7 | Permutation and sign tests | Known cases | done |
-| 2.8 | E002 (machinery and controls), E003 (food scarcity), pre-registered | Reported against the drift baseline | |
+| 2.8a | Neutral-twin control; E002 + E003 pre-registered; experiment helpers | Smoke runs on throwaway seeds | done |
+| 2.8b | Run E002 + E003 and report (after review) | Results appended to definitions | |
 | 2.9 | Docs, curriculum, push, stop for review | | |

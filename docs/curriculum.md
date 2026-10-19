@@ -174,6 +174,15 @@ What has been covered, where it appears in the code, and what comes next.
 - **Effect size vs significance:** E001's capacity difference is significant yet only 3.7%.
 - **Resolution floor:** 10 pairs can't give p below 0.002; more evidence needs more replicates.
 
+### 2.8a · Designing the experiments (`docs/experiments/E002`, `E003`)
+- **Null models must match the question:** a neutral marker can't be the drift baseline for genes that start elsewhere in their ranges. A neutral twin of each gene can.
+- **Positive control:** test the method on an effect known to exist (free metabolism) before trusting it on unknowns.
+- **Factorial (2 × 2) designs and interactions:** "does scarcity change selection?" is a difference of differences, not a single comparison.
+- **Blind feasibility pilots:** check that runs survive using separate seeds, looking only at population and extinction.
+- **Pre-registration with review:** commit definitions, scripts and seeds before any run; a reviewer can then check them.
+- **Smoke tests:** run the full pipeline on throwaway inputs to test the code without peeking at results.
+- **Predicting null results honestly:** a floor effect (metabolic rate near 0.02) can hide real effects; a non-significant result isn't evidence of no effect.
+
 
 ## Future learning objectives
 - **Milestone 2:** mutation and heredity, variation vs selection vs drift, lineage trees, trait distributions.

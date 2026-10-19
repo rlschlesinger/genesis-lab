@@ -2,7 +2,7 @@
 
 Genotype: the heritable information an organism carries and passes to its offspring.
 Phenotype: what the organism actually is and does: how fast it moves, how far it sees.
-Expression: the mapping from one to the other, ``express(genome) -> Traits``.
+Expression: the mapping from one to the other, ``express(genome, config) -> Traits``.
 
 In Milestone 2 expression is nearly a copy, with one deliberate exception: the neutral marker
 is inherited but not expressed, so it never affects survival or reproduction. Any change in
@@ -73,12 +73,24 @@ def gene_names() -> list[str]:
     return [f.name for f in fields(Genome)]
 
 
-def express(genome: Genome) -> Traits:
-    """Genotype -> phenotype. Unexpressed genes (the neutral marker) are left out."""
+def express(genome: Genome, config: GenomeConfig | None = None) -> Traits:
+    """Genotype -> phenotype. Unexpressed genes (the neutral marker) are left out.
+
+    If ``config`` marks a gene ``neutral``, the phenotype uses that gene's *initial* value
+    instead of the organism's own: the gene keeps being inherited and mutated, but can't
+    affect survival or reproduction. A run with neutral genes shows exactly what drift alone
+    does to each gene, from its real starting point (the neutral-twin control, D-025).
+    """
+    values = genome.as_dict()
+    if config is not None:
+        for name in values:
+            gene = getattr(config, name)
+            if gene.neutral:
+                values[name] = gene.initial
     return Traits(
-        speed=genome.speed,
-        sense_range=genome.sense_range,
-        max_turn=genome.max_turn,
-        metabolic_rate=genome.metabolic_rate,
-        reproduction_threshold=genome.reproduction_threshold,
+        speed=values["speed"],
+        sense_range=values["sense_range"],
+        max_turn=values["max_turn"],
+        metabolic_rate=values["metabolic_rate"],
+        reproduction_threshold=values["reproduction_threshold"],
     )

@@ -129,7 +129,7 @@ class Simulation:
         # All founders share one genome (no initial variation): any variation that appears
         # later comes from mutation alone.
         genome = Genome.from_config(self.config.genome)
-        traits = express(genome)
+        traits = express(genome, self.config.genome)
         # Draw all positions, then all headings, as two vectorized calls on the setup stream.
         positions = self.rng.setup.uniform(0.0, [self.world.width, self.world.height], size=(n, 2))
         headings = self.rng.setup.uniform(-np.pi, np.pi, size=n)
@@ -296,7 +296,9 @@ class Simulation:
                 parent.genome, self.config.genome, self.config.mutation, self.rng.mutation
             )
             # Unchanged genome: reuse the parent's traits (identical, and frozen).
-            traits = parent.traits if genome is parent.genome else express(genome)
+            traits = (
+                parent.traits if genome is parent.genome else express(genome, self.config.genome)
+            )
             child_id = self._new_id()
             for change in changes:
                 self.mutation_log.append(

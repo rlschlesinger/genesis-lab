@@ -75,6 +75,14 @@ class GeneConfig(_Strict):
     mutable: bool = Field(
         default=True, description="False freezes this gene: offspring always copy it exactly."
     )
+    neutral: bool = Field(
+        default=False,
+        description=(
+            "True makes this gene a drift-only control: it is still inherited and still "
+            "mutates, but has no effect, since every organism behaves as if it had the "
+            "initial value. Used for neutral-twin control runs (D-025)."
+        ),
+    )
 
     @model_validator(mode="after")
     def _ordered(self) -> Self:
