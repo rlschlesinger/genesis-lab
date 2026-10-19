@@ -60,6 +60,12 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-019 · Mutation rule (2026-10-18)
+
+**Decision:** per gene, per birth: mutate with probability `rate`; step ~ Normal(0, `size × range`); reflect at the bounds. Every birth makes the same number of draws from a dedicated `mutation` stream (appended last). Per-gene `mutable` flag. Disabled by default.
+**Why:** a normal step with mean 0 has no built-in direction, so trends must come from selection or drift. Scaling to each gene's range makes one `size` meaningful for all genes. **Reflection, not clamping:** clamping parked 13% of 2000 neutral lineages exactly on a bound after 300 generations (demo, 2.2), a fake "selection for extremes"; reflection stayed flat with none on a bound. Constant draws per birth keep the stream independent of outcomes. `mutable` lets experiments isolate one gene.
+**Alternatives:** multiplicative/log-scale steps (suits strictly positive traits; consider if small values matter); resampling out-of-range steps (also unbiased, but a variable number of draws).
+
 ## D-018 · Genome representation (2026-10-18)
 
 **Decision:** `Genome` is a frozen dataclass with one float per gene, stored in trait units. `express()` maps it to `Traits`. Gene limits come from the config's `genome` section; units and descriptions live in `GENES`. All founders share one genome.

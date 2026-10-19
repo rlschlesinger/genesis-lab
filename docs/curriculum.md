@@ -116,6 +116,15 @@ What has been covered, where it appears in the code, and what comes next.
 - **Circular imports:** `typing.TYPE_CHECKING` lets two modules mention each other's types without importing each other at runtime.
 - **Single source of truth:** one gene list, plus a test that the three places naming genes agree.
 
+### 2.2 · Mutation (`evolution/mutation.py`)
+- **Bernoulli trial:** an event that happens with probability p; here, "does this gene mutate?".
+- **Normal distribution:** mean (centre) and standard deviation (typical size); about 68% of draws fall within ±1 sd.
+- **Unbiased mutation:** a mean-zero step means mutation itself has no preferred direction.
+- **Boundary artefacts:** clamping creates pile-ups that mimic selection; reflection doesn't. Always ask whether a pattern could come from the rules themselves.
+- **Drift saturates:** a neutral gene's spread grows (≈ step × √generations at first), then levels off at the uniform distribution's sd, (max − min)/√12 ≈ 0.289 for a 0–1 range.
+- **Frozen genes as experimental control:** letting only one gene vary isolates its effect.
+- **Testing randomness:** check rates and spreads against their expected values, with tolerances from the standard error.
+
 
 ## Future learning objectives
 - **Milestone 2:** mutation and heredity, variation vs selection vs drift, lineage trees, trait distributions.

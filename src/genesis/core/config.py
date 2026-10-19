@@ -72,6 +72,9 @@ class GeneConfig(_Strict):
     initial: float
     min: float
     max: float
+    mutable: bool = Field(
+        default=True, description="False freezes this gene: offspring always copy it exactly."
+    )
 
     @model_validator(mode="after")
     def _ordered(self) -> Self:
@@ -131,12 +134,23 @@ class OrganismConfig(_Strict):
         return self
 
 
+class MutationConfig(_Strict):
+    """How offspring genomes differ from their parent's (genesis.evolution.mutation)."""
+
+    enabled: bool = Field(description="False: offspring are exact copies (Milestone 1 behaviour).")
+    rate: float = Field(ge=0, le=1, description="Probability that each gene mutates at a birth.")
+    size: NonNegativeFloat = Field(
+        description="Standard deviation of a mutation, as a fraction of the gene's range."
+    )
+
+
 class SimulationConfig(_Strict):
     run: RunConfig
     world: WorldConfig
     food: FoodConfig
     organisms: OrganismConfig
     genome: GenomeConfig
+    mutation: MutationConfig
 
     @model_validator(mode="after")
     def _reproduction_affordable(self) -> Self:

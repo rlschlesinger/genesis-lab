@@ -174,3 +174,16 @@ def test_eat_radius_taller_than_narrow_world_rejected(raw):
     raw["food"]["eat_radius"] = 50.0  # fits the width, not the height
     with pytest.raises(pydantic.ValidationError, match="shortest side"):
         validate(raw)
+
+
+@pytest.mark.parametrize(("field", "bad"), [("rate", 1.5), ("rate", -0.1), ("size", -0.01)])
+def test_invalid_mutation_settings_rejected(raw, field, bad):
+    raw["mutation"][field] = bad
+    with pytest.raises(pydantic.ValidationError, match=field):
+        validate(raw)
+
+
+def test_default_config_has_mutation_off_and_all_genes_mutable():
+    config = load_config(DEFAULT_CONFIG)
+    assert config.mutation.enabled is False  # keeps Milestone 1 behaviour (regression tests)
+    assert all(getattr(config.genome, g).mutable for g in type(config.genome).model_fields)

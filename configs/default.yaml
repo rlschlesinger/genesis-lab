@@ -40,3 +40,10 @@ genome:
   # min must exceed offspring_energy + reproduction_overhead (50)
   reproduction_threshold: {initial: 80.0, min: 55.0, max: 250.0}
   neutral_marker:         {initial: 0.5,  min: 0.0,  max: 1.0}
+
+# How offspring genomes differ from their parent's. Off by default, so this config reproduces
+# Milestone 1 exactly (tests/test_regression.py). Evolution runs switch it on.
+mutation:
+  enabled: false
+  rate: 0.1     # probability that each gene mutates at a birth
+  size: 0.05    # standard deviation of a change, as a fraction of the gene's (max - min)

@@ -9,7 +9,7 @@ configs/default.yaml ──► core/config.py (Pydantic) ──► SimulationCon
                                                             │
 cli.py ──► core/simulation.py ──owns──► World       (core/world.py: bounds, food positions)
                 │                 ├──► Organisms   (core/organism.py: state + Traits)
-                │                 └──► RNG streams {setup, food, controller, reproduction, tiebreak}
+                │                 └──► RNG streams {setup, food, controller, reproduction, tiebreak, mutation}
                 │
            tick():
              1 world.regrow_food(rng.food)
@@ -38,6 +38,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `core/feeding.py` | Who eats what: closest-pair matching, random tie-break | Change energy itself |
 | `core/energy.py` | `EnergyLedger`: flows and the per-tick conservation check | |
 | `evolution/genome.py` | `GENES` (units, descriptions), `Genome` (genotype), `express()` → `Traits` (phenotype) | Import config at runtime from organism.py |
+| `evolution/mutation.py` | `mutate()` → child genome + `GeneChange` list; `reflect()` at bounds | Modify the parent genome |
 | `evolution/reproduction.py` | Who reproduces (random at the cap) and where offspring appear | Touch organisms |
 | `core/simulation.py` | Tick order, RNG streams, founders, deaths, `TickSummary`, `state_digest` | Do I/O |
 | `analytics/metrics.py` | Flat rows: `tick_row`, `organism_rows`; column lists | Mutate state |
@@ -141,9 +142,16 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 - **Retention:** every tick and every organism (~200 KB + ~130 KB at defaults). No per-event logs in Milestone 1.
 - **Lineage:** `founder_id` is inherited; `lineages` counts distinct founder IDs alive.
 
+## Mutation
+
+- Config: `mutation: {enabled, rate, size}`; each gene also has `mutable` (default true). Off by default.
+- Per birth, per gene: mutate if `uniform < rate` and the gene is mutable; step ~ Normal(0, `size × (max − min)`); result reflected into `[min, max]`.
+- Two vectorized draws per birth (6 uniforms, 6 normals) whatever the outcome; none at all when disabled.
+- Returns the child genome and a `GeneChange(gene, before, after)` for each changed gene. The parent's genome is never modified.
+
 ## Randomness
 
-One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`. New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
+One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`, `mutation` (added in 2.2; a test checks the first five are unchanged). New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
 
 ## Milestone 1 plan
 
@@ -168,7 +176,7 @@ Decisions: trade-off costs for sense range and speed; metabolic rate as a cost-f
 |---|---|---|---|
 | 2.0 | Golden digests lock in Milestone 1 behaviour | Default run unchanged | done |
 | 2.1 | Genome: gene definitions, bounds, expression to traits | Bounds validated; Milestone 1 unchanged | done |
-| 2.2 | Mutation: per-gene rate and size, reflection, own RNG stream, off switch | In bounds; no pile-up; off = exact copy | |
+| 2.2 | Mutation: per-gene rate and size, reflection, own RNG stream, off switch | In bounds; no pile-up; off = exact copy | done |
 | 2.3 | Inheritance wired in; `mutations.csv`; gene columns | Child = parent + recorded changes | |
 | 2.4 | Trade-off costs; positive control and neutral marker | Ledger balances; defaults = Milestone 1 | |
 | 2.5 | Trait statistics per tick; genome snapshots | Matches a recount from raw data | |

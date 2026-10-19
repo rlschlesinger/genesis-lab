@@ -47,6 +47,7 @@ class RngStreams:
     controller: np.random.Generator  # controller decisions
     reproduction: np.random.Generator  # who reproduces at the cap; newborn placement
     tiebreak: np.random.Generator  # food contention ties
+    mutation: np.random.Generator  # offspring genome mutation (added in Milestone 2, at the end)
 
     @classmethod
     def from_seed(cls, seed: int) -> RngStreams:

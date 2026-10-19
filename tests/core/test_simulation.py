@@ -378,3 +378,14 @@ def test_without_mutation_every_genome_equals_the_founders():
     founder_genome = sim.organisms[0].genome
     sim.run()
     assert all(o.genome == founder_genome for o in [*sim.organisms, *sim.dead])
+
+
+def test_adding_the_mutation_stream_left_earlier_streams_unchanged():
+    # SeedSequence.spawn hands out children by position, so appending a stream must not
+    # change any existing one (D-012). Compare against streams spawned the old way (5 children).
+    new = RngStreams.from_seed(42)
+    old_children = np.random.SeedSequence(42).spawn(5)
+    for name, child in zip(["setup", "food", "controller", "reproduction", "tiebreak"],
+                           old_children, strict=True):  # fmt: skip
+        expected = np.random.default_rng(child).uniform(size=3)
+        np.testing.assert_array_equal(getattr(new, name).uniform(size=3), expected)
