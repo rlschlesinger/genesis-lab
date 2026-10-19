@@ -232,16 +232,18 @@ class Simulation:
 
         # 6. Deaths: ask every organism first, then apply. Nobody dies mid-update.
         causes = [org.cause_of_death(cfg.max_age) for org in living]
-        survivors = []
+        survivors, lost = [], []
         for org, cause in zip(living, causes, strict=True):
             if cause is None:
                 survivors.append(org)
             else:
                 # Energy still held at death leaves the system (D-011). The organism's own
                 # record keeps the value, so analysis can see what it died with.
-                self.ledger.lost_at_death += org.energy
+                lost.append(org.energy)
                 org.die(self.tick, cause)
                 self.dead.append(org)
+        # Summed exactly and added to the ledger once per tick, like the living costs (D-026).
+        self.ledger.lost_at_death += math.fsum(lost)
 
         # 7. Reproduction. Only survivors are candidates, and newborns are added after them,
         #    so a newborn cannot act or reproduce in the tick it was born.
@@ -295,8 +297,6 @@ class Simulation:
         newborns = []
         for parent, (x, y), heading in zip(parents, positions, headings, strict=True):
             parent.pay_for_offspring(cfg.offspring_energy, cfg.reproduction_overhead)
-            # The transfer stays inside the organism account; only the overhead leaves.
-            self.ledger.reproduction_overhead += cfg.reproduction_overhead
 
             # Inheritance. With mutation disabled, mutate() returns the parent's own genome
             # and draws nothing, which is exactly Milestone 1's behaviour.
@@ -329,6 +329,9 @@ class Simulation:
                     energy=cfg.offspring_energy,
                 )
             )
+        # The transfer stays inside the organism account; only the overhead leaves. One
+        # multiplication per tick, not one addition per birth (D-026).
+        self.ledger.reproduction_overhead += len(newborns) * cfg.reproduction_overhead
         return newborns
 
     # --- Inspection ---------------------------------------------------------------------

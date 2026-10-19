@@ -133,11 +133,12 @@ def execute_run(
 
     stop_reason = "extinction" if not sim.organisms else "max_ticks"
     digest = sim.state_digest()
+    ticks_run = len(recorder.ticks)
     meta.update(
         status="completed",
         finished_at=_now(),
         duration_seconds=round(time.perf_counter() - started, 3),
-        ticks_run=len(recorder.ticks),
+        ticks_run=ticks_run,
         stop_reason=stop_reason,
         final_population=len(sim.organisms),
         organisms_ever=len(sim.organisms) + len(sim.dead),
@@ -145,7 +146,6 @@ def execute_run(
         final_state_digest=digest,
     )
     write_json(run_path, meta)
-    ticks_run = len(recorder.ticks)
     return RunResult(run_id, out_dir, ticks_run, stop_reason, len(sim.organisms), digest)
 
 

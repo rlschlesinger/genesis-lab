@@ -73,7 +73,7 @@ class Organism:
 
     # Lifetime totals, recorded for analysis (spec section 9, "Organism Records").
     energy_gained: float = 0.0  # from food only; starting energy is not "gained"
-    energy_spent: float = 0.0  # metabolism and movement only
+    energy_spent: float = 0.0  # living costs only: metabolism, sensing and movement
     energy_invested: float = 0.0  # given to offspring plus reproduction overhead
     food_eaten: int = 0
     offspring_count: int = 0

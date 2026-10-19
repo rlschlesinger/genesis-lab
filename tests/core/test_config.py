@@ -7,7 +7,7 @@ import pydantic
 import pytest
 import yaml
 
-from genesis.core.config import ConfigError, SimulationConfig, load_config
+from genesis.core.config import ConfigError, SimulationConfig, load_config, with_overrides
 
 DEFAULT_CONFIG = Path(__file__).parents[2] / "configs" / "default.yaml"
 
@@ -133,6 +133,22 @@ def test_valid_variation_accepted(raw):
     config = validate(variant)
     assert config.organisms.controller == "random_walk"
     assert config.organisms.max_age == 1000
+
+
+def test_with_overrides_replaces_only_what_was_asked():
+    config = load_config(DEFAULT_CONFIG)
+    changed = with_overrides(config, seed=7, max_ticks=10)
+    assert (changed.run.seed, changed.run.max_ticks) == (7, 10)
+    assert changed.model_dump() | {"run": config.run.model_dump()} == config.model_dump()
+    assert config.run.seed == 42  # the original is untouched (frozen)
+    assert with_overrides(config) == config
+
+
+@pytest.mark.parametrize(("field", "bad"), [("seed", -1), ("max_ticks", 0)])
+def test_with_overrides_revalidates(field, bad):
+    # model_copy(update=...) would let these through; with_overrides must not.
+    with pytest.raises(pydantic.ValidationError, match=field):
+        with_overrides(load_config(DEFAULT_CONFIG), **{field: bad})
 
 
 def test_non_mapping_file_rejected(tmp_path):

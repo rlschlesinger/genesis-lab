@@ -8,7 +8,8 @@ import numpy as np
 import pytest
 import yaml
 
-from genesis.core.config import SimulationConfig
+from genesis.analytics.experiments import apply_changes
+from genesis.core.config import SimulationConfig, load_config
 from genesis.core.energy import EnergyLedgerError
 from genesis.core.organism import DeathCause
 from genesis.core.simulation import RngStreams, Simulation
@@ -19,14 +20,7 @@ DEFAULT_CONFIG = Path(__file__).parents[2] / "configs" / "default.yaml"
 
 def make_config(**changes) -> SimulationConfig:
     """Default config with dotted-path overrides, e.g. make_config(**{"run.seed": 7})."""
-    raw = yaml.safe_load(DEFAULT_CONFIG.read_text())
-    for path, value in changes.items():
-        *parents, leaf = path.split(".")
-        section = raw
-        for key in parents:
-            section = section[key]
-        section[leaf] = value
-    return SimulationConfig.model_validate(raw)
+    return apply_changes(load_config(DEFAULT_CONFIG), changes)
 
 
 # Food that never appears: organisms can only starve. Used to test deaths and stopping.
@@ -227,6 +221,17 @@ def test_energy_left_at_old_age_death_is_recorded_as_lost():
     assert sim.ledger.lost_at_death > 0
 
 
+def test_energy_lost_at_death_is_summed_exactly_per_tick():
+    # All 30 founders die of old age on tick 5, each holding an inexact float (50 minus six
+    # payments of 0.2 metabolism and ~0.15 movement). Adding thirty such values one at a time
+    # drifts from the exact sum by ~1e-12 on this input; math.fsum does not (D-026).
+    sim = Simulation(make_config(**NO_FOOD, **{"organisms.max_age": 5}))
+    sim.run()
+    assert {o.death_tick for o in sim.dead} == {5}
+    assert all(o.death_cause is DeathCause.OLD_AGE for o in sim.dead)
+    assert sim.ledger.lost_at_death == math.fsum(o.energy for o in sim.dead)
+
+
 def test_determinism_holds_with_eating():
     a, b = Simulation(make_config()), Simulation(make_config())
     for _ in range(300):
@@ -258,6 +263,7 @@ def test_eligible_organism_produces_an_exact_copy():
     assert child.parent_id == parent.id
     assert child.generation == parent.generation + 1
     assert child.birth_tick == 0
+    assert child.genome == parent.genome  # mutation is off: an exact copy
     assert child.traits == parent.traits
     assert child.energy == cfg.offspring_energy
     assert parent.offspring_count == 1
@@ -357,10 +363,12 @@ def test_founder_lineage_is_inherited():
 
 def test_lineages_can_only_disappear_never_appear():
     # No mutation and no immigration: a lineage that dies out can never come back.
-    summaries = Simulation(make_config(**{"run.max_ticks": 2000})).run()
-    counts = [s.lineages for s in summaries]
-    assert counts[0] <= 30
+    sim = Simulation(make_config(**{"run.max_ticks": 2000}))
+    counts = [s.lineages for s in sim.run()]
+    # Every founder starts its own lineage, and none can die on tick 0 (50 EU, ~0.35 EU cost).
+    assert counts[0] == sim.config.organisms.initial_count
     assert all(later <= earlier for earlier, later in zip(counts, counts[1:], strict=False))
+    assert counts[-1] < counts[0]  # some lineages did die out, so the rule was exercised
 
 
 # --- Genome -------------------------------------------------------------------------------
