@@ -306,6 +306,6 @@ Decisions: Parquet files are the source of truth with DuckDB views over them; ru
 | 3.8 | Analysis notebook, executed in tests | Runs clean | done |
 | 3.9 | SQL exercises (hints, hidden answers) | Answers verified | done |
 | 3.10a | Experiments A, B, C: pilots, pre-registration, specs, analysis scripts | Analyses recover known answers | done |
-| 3.10b | Run E004–E006 and report (after review) | Results appended to definitions | |
+| 3.10b | Run E004–E006 and report (after review) | Results appended to definitions | done |
 | 3.11 | Wrap-up; stop before neural networks | | |
 

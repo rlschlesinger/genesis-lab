@@ -128,7 +128,7 @@ ORDER BY condition;""",
 EXERCISES = {
     1: (
         "Runs and extinctions",
-        "How many completed runs does each experiment (E001–E003) have, and how many of them went extinct?",
+        "How many completed runs does each experiment have, and how many of them went extinct?",
         "`completed_runs`, `GROUP BY`, and `count(*) FILTER (WHERE ...)` to count only some rows of each group. Leave out runs with no experiment (`experiment_id IS NOT NULL`).",
     ),
     2: (
@@ -178,8 +178,8 @@ EXERCISES = {
     ),
 }
 ANSWER_NOTES = {
-    1: "No run went extinct in any experiment so far. Experiment C (3.10) is designed to produce some.",
-    2: "Both top runs evolved under selection. A likely reason (not tested here): once metabolic rate evolves down, each organism costs less to keep alive, so the same food supports more of them, which is H1's formula with a smaller cost.",
+    1: "Only E006 has extinctions (162 of 250 runs), by design: its harsh world (no starting food, regrowth 0.1) was chosen by pilots so that extinction happens. Every other experiment kept all its runs.",
+    2: "All three come from E004's highest food level (4 items per tick), as E004 found: population is proportional to food, so four times the food supports about four times as many organisms. The question says \"across all experiments\", so the answer changes as experiments are added.",
     3: "Seekers lived through fewer organisms than random walkers, consistent with the slightly lower carrying capacity found in E001.",
     4: "Descriptively, organisms under selection live longer (399 and 376 ticks vs 365 and 358 under drift); this is not a pre-registered test. Averaging per run first matters: runs with more deaths would otherwise dominate the result.",
     5: "With mutation off there is no variation at all (0). Selection leaves less marker variation than drift alone: sweeps carry neutral genes along with selected ones (hitchhiking).",
@@ -194,7 +194,7 @@ con = connect(ROOT / "data" / "lake")
 out = [
     """# SQL exercises
 
-Ten questions about the simulated populations of E001–E003, from simple filters to window functions and recursion. Answers are at the bottom; each shows the query and the result it gives on the current lake.
+Ten questions about the simulated populations in the lake (E001–E006), from simple filters to window functions and recursion. Answers are at the bottom; each shows the query and the result it gives on the current lake.
 
 **Run a query:**
 

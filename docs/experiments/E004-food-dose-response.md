@@ -35,3 +35,27 @@ One controller, no evolution, one world size. Food spawning stops at `max_count`
 ---
 
 ## Results
+
+### Run
+
+Commit `8ea2000` (clean; all 40 runs `dirty: false`). 40/40 completed 5,000 ticks; no extinctions; no runs excluded. Analysis: `uv run python experiments/e004_food_dose_response.py --analyse-only`. Dashboard: `uv run genesis dashboard E004`.
+
+### Settled population (mean over ticks 3,000–4,999)
+
+| food regrowth | runs | mean | sd | median | range |
+|---:|---:|---:|---:|---:|---|
+| 0.5 | 10 | 27.70 | 0.98 | 27.59 | 26.41–29.79 |
+| 1 | 10 | 55.62 | 0.71 | 55.65 | 54.34–56.44 |
+| 2 | 10 | 110.57 | 1.23 | 110.73 | 109.20–113.27 |
+| 4 | 10 | 218.03 | 2.59 | 218.46 | 211.72–220.71 |
+
+### Hypotheses
+
+- **H8a: SUPPORTED.** Elasticity β = **0.992**, 95% CI **[0.982, 1.001]**, entirely within [0.9, 1.1]: the settled population is proportional to food within ±10% (in fact within about ±2%) across an 8-fold range.
+- **H8b (descriptive):** observed ÷ H1's prediction, median per level: 0.924 [0.900, 0.946] (food 0.5), 0.940 [0.932, 0.952] (1), 0.947 [0.935, 0.950] (2), 0.944 [0.938, 0.951] (4). As expected, slightly below 1: H1's formula leaves out the energy lost as reproduction overhead. Measured living cost per organism-tick rose slightly with food (0.334 → 0.346 EU/tick).
+
+### Interpretation
+
+H1, proposed after Milestone 1's seed-42 run, now has a pre-registered test: **in this ecosystem, with food below its cap, population scales in proportion to the food supply**, and H1's formula predicts the level to within about 6%.
+
+**Exploratory (not tested):** β's point estimate is slightly below 1 and its CI only just reaches 1. A plausible reason is the small rise in living cost with food (more organisms, more full-speed movement): a cost elasticity of about +0.017 would lower β by about that much. A larger experiment would be needed to show whether the deviation is real.

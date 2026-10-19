@@ -36,3 +36,21 @@ One mutation size; a finite horizon (variation may still be rising at tick 20,00
 ---
 
 ## Results
+
+### Run
+
+Commit `8ea2000` (clean; all 40 runs `dirty: false`). 40/40 completed 20,000 ticks; no extinctions. Analysis: `uv run python experiments/e005_mutation_diversity.py --analyse-only`. Dashboard: `uv run genesis dashboard E005`.
+
+### Results
+
+- **C5: PASS.** At rate 0 the marker's sd was exactly 0 in 10/10 runs.
+- Neutral marker sd (mean over ticks 19,000–19,999), median [range] per rate: 0.02 → **0.0296** [0.0214, 0.0625]; 0.1 → **0.0613** [0.0526, 0.0730]; 0.3 → **0.1007** [0.0646, 0.1728].
+- **H9: SUPPORTED.** Spearman ρ = **0.882**, permutation p = **0.00005** (none of 20,000 shuffles as extreme), medians increasing in rate order.
+- **Practical significance: meaningful.** Median sd at 0.3 minus 0.02 = **0.071**, 95% CI [0.043, 0.097], entirely above the SESOI of 0.02.
+- **Exploratory, all neutral genes** (median sd per rate 0 / 0.02 / 0.1 / 0.3): speed 0 / 0.124 / 0.258 / 0.455; sense_range 0 / 1.91 / 3.96 / 7.74; metabolic_rate 0 / 0.015 / 0.037 / 0.054; reproduction_threshold 0 / 3.60 / 10.67 / 18.17; max_turn 0 at every rate (it is frozen, `mutable: false`, in the base config). Every mutable gene shows the same ordering.
+
+### Interpretation
+
+Mutation–drift balance behaves as theory predicts: **more mutation maintains more neutral variation**, consistently across seeds and genes.
+
+**Exploratory (post hoc, not tested):** the sd grew 2.07× from rate 0.02 to 0.1 and 3.40× to 0.3, close to √(rate) scaling (2.24×, 3.87×) and far from linear (5×, 15×). That is what theory predicts if the *variance* is proportional to the mutation rate. Testing it properly (more rates, more seeds, and a stated model) would be a natural follow-up.

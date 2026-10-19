@@ -89,6 +89,9 @@ Each experiment is defined (question, hypotheses, seeds, analysis) and committed
 | [E001](docs/experiments/E001-controller-comparison.md) | Food seeker vs random walk | Seekers reach the population limit faster and leave less food; both settle at a similar size, set by the food supply |
 | [E002](docs/experiments/E002-selection-machinery.md) | Does the evolution machinery work? | Yes: the positive control (cost-free metabolism) evolved down in 20/20 seeds; selection raised speed and reproduction threshold relative to drift |
 | [E003](docs/experiments/E003-food-scarcity.md) | Does food scarcity change selection? | It raised selected sense range (adjusted p = 0.031; worth replicating); its control arm reproduced E002 |
+| [E004](docs/experiments/E004-food-dose-response.md) | Is population proportional to food? | Yes: elasticity 0.992 [0.982, 1.001]; H1's formula within ~6% |
+| [E005](docs/experiments/E005-mutation-diversity.md) | Does more mutation maintain more diversity? | Yes: ρ = 0.88, p ≈ 0.00005, meaningful; roughly √(rate) |
+| [E006](docs/experiments/E006-founders-extinction.md) | Do fewer founders mean more extinction? | No monotonic effect (p = 0.42); an exploratory U-shape to test next |
 
 ```bash
 uv run genesis experiment status experiments/specs/E002.yaml          # which runs exist / are stale

@@ -291,6 +291,12 @@ What has been covered, where it appears in the code, and what comes next.
 - **Testing the analysis before the data:** synthetic data with known answers (exponent 0.5, a trend, pure noise).
 - **Mistakes in your own queries:** `count(*)` after a join counts joined rows, not runs (the fan-out, made by me in a pilot query).
 
+### 3.10b · Results of Experiments A–C
+- **Equivalence supported:** E004's elasticity CI [0.982, 1.001] sits inside ±10%: proportional.
+- **Theory confirmed in a simulation:** E005's neutral diversity rises with mutation rate, roughly as √(rate), as mutation–drift balance predicts.
+- **A failed prediction is a result:** E006's monotonic founder effect wasn't there; the data suggest a U-shape instead, recorded as a new hypothesis, not a finding.
+- **Wide intervals with binary outcomes:** even 50 runs per level leaves ±0.13 on a proportion; differences between levels need many runs.
+
 ## Future learning objectives
 - **Milestone 3:** pandas, SQL with DuckDB, Parquet, significance tests and effect sizes with SciPy, batch experiment design.
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.

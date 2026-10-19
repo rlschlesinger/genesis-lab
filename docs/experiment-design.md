@@ -36,7 +36,10 @@ Formal experiments live in [experiments/](experiments/), one file per experiment
 
 - **E002:** machinery check passed; positive control detected (metabolic_rate, 20/20 seeds); selection raised speed (18/20) and reproduction_threshold relative to drift; no detectable selection on sense_range with plentiful food.
 - **E003:** scarcity raised selected sense_range relative to drift (H7a, adjusted p = 0.031; weakest confirmed result, worth replicating); no detectable interaction for speed, threshold, or metabolic rate. Its plentiful arm replicated E002 on new seeds.
-- **Leads for future pre-registered tests:** (1) selected speed ≈ the energy-per-distance optimum (~2.05); vary the drag exponent and predict the shift. (2) Replicate H7a with more seeds and several scarcity levels. (3) E001's lineage-retention lead.
+- **E004 (Experiment A): H1 confirmed.** Settled population is proportional to food (elasticity 0.992, CI [0.982, 1.001]); H1's formula predicts the level to within ~6%.
+- **E005 (Experiment B):** neutral diversity rises with mutation rate (ρ = 0.88, p ≈ 0.00005; meaningful); close to √(rate) scaling (exploratory).
+- **E006 (Experiment C):** no monotonic founder effect on extinction (p = 0.42); an exploratory U-shape (high at 2 and 20–40 founders, lowest at 5–10).
+- **Leads for future pre-registered tests:** (4) a U-shaped founder–extinction relationship, with and without starting food; (5) variance ∝ mutation rate; (1) selected speed ≈ the energy-per-distance optimum (~2.05); vary the drag exponent and predict the shift. (2) Replicate H7a with more seeds and several scarcity levels. (3) E001's lineage-retention lead.
 
 ## Statistical tests (genesis.analytics.significance)
 
