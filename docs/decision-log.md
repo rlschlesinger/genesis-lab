@@ -60,6 +60,17 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-039 · The organism brain: 7 inputs, 6 hidden, 2 outputs, one way of adding (2026-10-19)
+
+**Decision:** a fixed-topology feedforward network in NumPy: 7 inputs (designed in 4.2), one hidden layer of 6 tanh units, 2 outputs (turn via tanh, throttle via sigmoid), with separate bias vectors: 62 parameters. Parameters are stored as one flat vector in a fixed order (hidden weights row by row, hidden biases, output weights row by row, output biases). Inputs are clipped to [−1, 1]; NaN inputs raise. All weighted sums go through one function, `forward()`, written as multiply-then-`sum` over the last axis.
+**Why:**
+- **2 outputs, not 3:** eating is automatic whenever food is in reach (D-013), so a "forage" output would decide nothing. Chunk 04A allows this simplification if it is recorded.
+- **Small:** 62 parameters is enough to represent "turn toward food, slow down when full" and small enough to inspect by hand and evolve in a few thousand generations.
+- **tanh/sigmoid:** bounded and smooth. The sigmoid is computed as 0.5·(1 + tanh(z/2)), the same function in a form that never overflows.
+- **Clipping inputs and bounding weights (±4, in 4.3):** keeps every sum finite (at most 7·4 + 4), so outputs are always defined.
+- **One summation method:** `@`, `einsum` and multiply-then-`sum` add in different orders. Measured on the development Mac, about a third of values differ in the last bit between methods. One function plus a batch-equals-single test keeps the simulation and the inspector (4.6) bit-identical.
+**Alternatives:** a 3-output network with a forage decision and cost (adds a decision without a choice); PyTorch modules (hide the arithmetic; a large dependency); a larger or recurrent network (memory between ticks; harder to inspect and slower to evolve).
+
 ## D-038 · Per-tick work on arrays, organisms stay the source of truth (2026-10-19)
 
 **Problem:** at realistic populations (~100 organisms) the profile was not the distance maths but Python: `Organism.spend` was called three times per organism per tick (5.6 million calls in a 20,000-tick evolution run), each cost formula once more, `cause_of_death` and `can_reproduce` once each, and every position was written back one NumPy scalar at a time. The recorder added a quarter again: 24 tiny NumPy reductions per tick for gene statistics, six attribute lookups per organism, and `dataclasses.asdict` (a deep copy) for every tick row and event.

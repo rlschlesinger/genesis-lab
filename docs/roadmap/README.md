@@ -9,7 +9,7 @@ Approval still works the same way: **no milestone starts without the user's expl
 | Chunk | Genesis Lab milestone | Status |
 |---|---|---|
 | 00A–03B (discovery, scaffold, world, food, genomes, evolution, storage, statistics) | Milestones 1–3 | Done (not copied here; the work is in the code and docs) |
-| [04A Neural brains](04A_NEURAL_BRAINS.md) | Milestone 4, first half | Not started; plan awaiting approval |
+| [04A Neural brains](04A_NEURAL_BRAINS.md) | Milestone 4, first half | In progress (approved 2026-10-19; plan in [architecture.md](../architecture.md)) |
 | [04B Neuroevolution comparison](04B_NEUROEVOLUTION_COMPARISON.md) | Milestone 4, second half (experiment E007) | Not started |
 | [05A API and streaming](05A_API_STREAMING.md) | Milestone 5, backend | Not started |
 | [05B Browser lab](05B_BROWSER_LAB.md) | Milestone 5, frontend | Not started |

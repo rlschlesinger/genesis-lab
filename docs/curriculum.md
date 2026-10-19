@@ -308,6 +308,17 @@ What has been covered, where it appears in the code, and what comes next.
 
 ## Milestone 3 complete
 
+## Milestone 4: Evolving neural brains
+
+### 4.1 · The forward pass (`intelligence/neural.py`, [neural-networks.md](neural-networks.md))
+- **Vectors and matrices:** a sense vector in, a weight matrix per layer; row *k* of a matrix holds unit *k*'s weights.
+- **Weighted sum and bias:** `z = W·x + b`, worked by hand for a 2-2-2 network.
+- **Activation functions:** tanh for signed outputs (turn), sigmoid for fractions (throttle); why bounded functions keep outputs defined.
+- **Parameter counting:** 6×7 + 6 + 2×6 + 2 = 62 numbers describe one brain; the flat vector is the genome.
+- **Broadcasting a batch:** `(n, h, i)` weights times `(n, 1, i)` inputs, summed over the last axis, runs every organism's brain at once.
+- **Floating-point order matters:** `@`, `einsum` and `sum` disagree in the last bit; one code path keeps results bit-identical.
+- **Selection vs backpropagation:** no gradient, no right answers; variation plus differential reproduction.
+
 ## Future learning objectives
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

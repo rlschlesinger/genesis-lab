@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Milestones 1–3 complete** (2026-10-19). Milestone 4 (Evolving Neural Brains) not started; it needs the user's approval. Schema in [schema.md](schema.md), columns in [data-dictionary.md](data-dictionary.md).
+Status: **Milestones 1–3 complete** (2026-10-19). **Milestone 4 (Evolving Neural Brains) approved 2026-10-19, in progress** (plan below; scope in [roadmap/](roadmap/README.md)). Schema in [schema.md](schema.md), columns in [data-dictionary.md](data-dictionary.md).
 
 ## Component map
 
@@ -32,6 +32,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `core/resources.py` | Food positions `(n, 2)`, Poisson regrowth, removal | Create its own RNG |
 | `core/organism.py` | Per-organism state, `Traits`, energy bookkeeping, death rules | Draw random numbers, sense, or move itself |
 | `intelligence/sensors.py` | World snapshot → `Observations` (nearest food in range) | Mutate anything |
+| `intelligence/neural.py` | `Brain` (weights and biases, flat-vector layout), `BrainStack`, `forward()` → `Activations` (D-039) | Know about organisms or the world; use any other summation method |
 | `intelligence/controllers.py` | `Observations` → `Actions` (pure) | Mutate world state |
 | `core/movement.py` | Apply `Actions` within trait limits; walls; distance moved | Decide anything |
 | `core/geometry.py` | `wrap_angle` | |
@@ -337,3 +338,18 @@ Decisions: Parquet files are the source of truth with DuckDB views over them; ru
 | Data dictionary; updated documentation | data-dictionary.md; README, CLAUDE.md, curriculum, decision log D-026–D-035 |
 | Stop before neural-network controllers | none added |
 
+## Milestone 4 plan (approved 2026-10-19)
+
+Scope: [roadmap/04A](roadmap/04A_NEURAL_BRAINS.md) and [roadmap/04B](roadmap/04B_NEUROEVOLUTION_COMPARISON.md). Decisions: 7 inputs, 6 tanh hidden units, 2 outputs (turn, throttle; no "forage" output since eating is automatic); every founder gets its own seeded random weights; a noise input gives brains the same randomness the baselines use; no energy cost for having a brain (a stated limitation); PyTorch cross-check decided at 4.8.
+
+| # | Increment | Key test | Status |
+|---|---|---|---|
+| 4.1 | Forward pass in NumPy: `Brain`, parameter layout, worked example ([neural-networks.md](neural-networks.md)) | Hand-computed example; batch = one at a time, bit for bit | done |
+| 4.2 | Sensor vector: 7 normalised inputs including a wall sensor and noise | Every input in [−1, 1] for extreme states | |
+| 4.3 | Brains as inherited genes: `brain` RNG stream (appended), founder initialisation, bounded mutation, inheritance, digest | Golden values unchanged; child = parent + mutation | |
+| 4.4 | `controller: neural` in the tick; `configs/neural.yaml` | Rule-based runs byte-identical; ledger balances | |
+| 4.5 | Recording: brains at birth, behaviour summaries; schema v4; lake tables; report charts | Lake checks; recount | |
+| 4.6 | `genesis inspect`: inputs → hidden → outputs → action → state for one organism and tick | Replay = original run | |
+| 4.7 | Pre-register E007: random vs seeker vs evolved brains, train/evaluation seed groups | Smoke runs on throwaway seeds | |
+| 4.8 | Run E007 and report | Results appended to the definition | |
+| 4.9 | Wrap-up: docs, scope check; stop before Milestone 5 | | |

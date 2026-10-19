@@ -4,7 +4,7 @@ A local-first artificial life laboratory. Digital organisms live in a 2D world: 
 
 Built as a learning project: the [curriculum](docs/curriculum.md) tracks the concepts covered so far.
 
-**Status:** Milestones 1 (The Petri Dish), 2 (Genetics and Evolution) and 3 (The Science Lab) complete. Milestone 4 (Evolving Neural Brains) not started.
+**Status:** Milestones 1 (The Petri Dish), 2 (Genetics and Evolution) and 3 (The Science Lab) complete. Milestone 4 (Evolving Neural Brains) in progress.
 
 ## What it does
 
@@ -141,4 +141,5 @@ data/                      generated run output (ignored by Git)
 - [Database schema](docs/schema.md) and [data dictionary](docs/data-dictionary.md): tables, keys, every column
 - [SQL examples](docs/sql-examples.md) and [SQL exercises](docs/sql-exercises.md)
 - [Benchmarks](docs/benchmarks.md): recorded performance
+- [Neural networks, by hand](docs/neural-networks.md): what an organism's brain computes, with a worked example
 - [Roadmap](docs/roadmap/README.md): scope for Milestones 4–6 and how it maps onto this project
