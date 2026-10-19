@@ -20,8 +20,10 @@ An artificial life research platform built incrementally as a teaching project. 
 
 ```bash
 uv sync
-uv run pytest
+uv run pytest                                        # fast suite (~2 min); slow stress tests are skipped
+uv run pytest -m slow                                # the minute-long stress tests (tests/test_stress.py)
 uv run ruff check . && uv run ruff format --check .
+uv run python experiments/benchmark.py [--sizes 30,1000,3000] [--evolution]   # docs/benchmarks.md
 uv run genesis run --seed 42 --out data/runs/<name>   # one recorded run
 uv run genesis report data/runs/<name>               # HTML report (Plotly, offline)
 uv run genesis lake ingest data/runs data/experiments  # validate + convert runs to data/lake/ (Parquet)
@@ -39,6 +41,7 @@ uv run genesis lake export --experiment E00N --out data/exports/E00N   # + READM
 - **Energy ledger:** initial + inflow − outflow == current total within `EnergyLedger.tolerance` (scaled to gross flow), checked by `Simulation.step()` every tick (`EnergyLedgerError`). Every new energy flow must be recorded in `EnergyLedger`, summed per tick with `math.fsum` (D-026).
 - **Separation of concerns:** controllers are pure (observation → action) and never mutate the world; metrics are read-only.
 - **Boundaries:** hard walls (positions clamped), not wrap-around.
+- **Bit-identical optimizations only (D-036, D-038):** a speed-up may change *how* a value is computed only if every float comes out identical. The spatial grid (`core/spatial.py`) only proposes candidate pairs; the same `np.hypot` and `<=` decide. Array versions of scalar rules (`costs.living_costs`, `organism.spend_all`) must apply the same IEEE operations in the same order per element, and tests must assert equality with the scalar rule. Known traps: `math.hypot` ≠ `np.hypot`, `np.power` ≠ Python `**` (except exponents 0 and 1), reductions along a non-contiguous axis sum in a different order. Verify with `tests/test_regression.py` *and* a fresh digest comparison of long and large runs before merging.
 - **Run records:** CSV output must stay byte-identical for identical config + seed + environment. A new TickSummary/organism field goes into the metrics column lists; never write nondeterministic values (timestamps, run IDs) into the CSVs.
 
 ## Code conventions

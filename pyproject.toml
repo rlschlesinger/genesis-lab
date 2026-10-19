@@ -63,4 +63,7 @@ select = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers --strict-config --import-mode=importlib"
+# Slow stress tests (tests/test_stress.py, a minute or more each) are skipped by default;
+# run them with `uv run pytest -m slow`.
+addopts = "-ra --strict-markers --strict-config --import-mode=importlib -m 'not slow'"
+markers = ["slow: stress tests that take a minute or more (run with -m slow)"]
