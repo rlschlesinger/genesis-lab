@@ -136,6 +136,17 @@ def build_parser() -> argparse.ArgumentParser:
     inspect.add_argument("--organism", type=int, required=True, help="the organism's ID")
     inspect.add_argument("--weights", action="store_true", help="also print the brain's weights")
 
+    serve = commands.add_parser("serve", help="start the API server (docs/API.md)")
+    serve.add_argument(
+        "--host", default="127.0.0.1", help="address to listen on (default: %(default)s)"
+    )
+    serve.add_argument("--port", type=int, default=8765, help="port (default: %(default)s)")
+    serve.add_argument(
+        "--allow-remote",
+        action="store_true",
+        help="allow a non-local --host (the API has no login: anyone who can reach it controls it)",
+    )
+
     sql = commands.add_parser("sql", help="run a SQL query against the lake (docs/sql-examples.md)")
     sql.add_argument("query", help="the SQL query, in quotes")
     sql.add_argument("--lake", type=Path, default=DEFAULT_LAKE)
@@ -154,8 +165,29 @@ def main(argv: list[str] | None = None) -> int:
         "experiment": _experiment,
         "dashboard": _dashboard,
         "inspect": _inspect,
+        "serve": _serve,
     }
     return handlers[args.command](args)
+
+
+LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+
+def _serve(args: argparse.Namespace) -> int:
+    if args.host not in LOCAL_HOSTS and not args.allow_remote:
+        print(
+            f"error: {args.host} is reachable from other machines and the API has no login; "
+            "use --allow-remote if you really mean it",
+            file=sys.stderr,
+        )
+        return 2
+    import uvicorn  # imported here so other commands don't pay for loading the web stack
+
+    from genesis.api.app import create_app
+
+    print(f"Genesis Lab API on http://{args.host}:{args.port}  (docs: /docs; Ctrl+C to stop)")
+    uvicorn.run(create_app(), host=args.host, port=args.port, log_level="warning")
+    return 0
 
 
 def _inspect(args: argparse.Namespace) -> int:

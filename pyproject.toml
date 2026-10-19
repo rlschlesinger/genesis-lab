@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 # Runtime dependencies are added one at a time, in the increment that first needs them.
 dependencies = [
     "duckdb>=1.5.6",
+    "fastapi>=0.142.2",
     "numpy>=2.5",
     "pandas>=3.0.6",
     "plotly>=7.1",
@@ -17,6 +18,7 @@ dependencies = [
     "pydantic>=2.14",
     "pyyaml>=6.0.3",
     "scipy>=1.18.1",
+    "uvicorn>=0.54",
 ]
 
 [project.scripts]
@@ -25,6 +27,7 @@ genesis = "genesis.cli:main"
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.13.1",
     "hypothesis>=6.170.1",
     "ipykernel>=7.4",
     "nbclient>=0.11",

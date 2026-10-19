@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Milestones 1–4 complete** (2026-10-19). Milestone 5 (API and browser lab) has not been approved; scope in [roadmap/](roadmap/README.md). Schema in [schema.md](schema.md), columns in [data-dictionary.md](data-dictionary.md).
+Status: **Milestones 1–4 complete** (2026-10-19). **Milestone 5 (API and browser lab) approved 2026-10-19, in progress** (plan below; scope in [roadmap/](roadmap/README.md)). Schema in [schema.md](schema.md), columns in [data-dictionary.md](data-dictionary.md).
 
 ## Component map
 
@@ -64,6 +64,9 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `lake/` | ETL: `tables.py` (data dictionary as Arrow schemas), `ingest.py` (extract, transform, load), `validate.py` (the five checks) | Modify run folders |
 | `lake/export.py` | `export_experiment` (tables + README + manifest), `export_query`, `verify_export` | |
 | `lake/db.py` | `connect()`: in-memory DuckDB with a view per lake table, derived views, `settled_gene_means` macro, `experiments` from docs; `rebuild_db()` | Store data |
+| `api/schemas.py` | The API contract: request/response models, `RunState`, `API_VERSION` (D-047) | Contain logic |
+| `api/runs.py` | `RunManager`, `LiveRun`, the allowed state transitions (`ALLOWED`), config loading by name | Know about HTTP |
+| `api/app.py` | FastAPI routes over a `RunManager`; errors → status codes | Contain simulation logic |
 | `cli.py` | `genesis run` arguments → `execute_run`; exit codes 0/1/2 | Contain logic |
 
 The API (Milestone 5) will drive the same `Simulation` object as the CLI.
@@ -396,3 +399,21 @@ Chunk 04A's checklist is above. Chunk 04B:
 | Rule-based runs still work, unchanged | Golden values; byte-identical CSVs against `main` after every increment |
 
 Linux x86_64 neural golden values were recorded in the post-milestone review (D-045): the event digest matched the Mac's, the state digest is platform-specific as for rule-based runs (D-027). The same review re-ran E007 on Linux: every verdict agreed (H11 supported, H12 inconclusive, H13 equivalent, H14 lower cost per meal) although the numbers differ beyond the last bits, as expected when 20,000-tick runs diverge from last-bit differences.
+
+## Milestone 5 plan (approved 2026-10-19)
+
+Scope: [roadmap/05A](roadmap/05A_API_STREAMING.md) and [roadmap/05B](roadmap/05B_BROWSER_LAB.md). Decisions: the Python server is the only authority; the simulation steps in slices inside the event loop (no threads); snapshots are versioned, columnar JSON, sent at most ~15 per second with only the newest kept per client; local only; uPlot for charts; bundled fonts; Vitest plus a manual end-to-end checklist; live runs can be exported as normal run folders. The interface follows the user's design rules (no default Tailwind/shadcn look, no glassmorphism, no toasts, small components, Zustand for shared state, data outside components).
+
+| # | Increment | Key test | Status |
+|---|---|---|---|
+| 5.1 | FastAPI app, `genesis serve`, run manager with explicit states, create/list/get/delete runs, configs | Invalid configs rejected; state table | done |
+| 5.2 | Pause, resume, single step, reset by seed; playback speed | Run steered through the API = headless run (digest) | |
+| 5.3 | WebSocket snapshot stream: versioned payload, newest-only, bounded queues, many clients | Two clients see the same state; no unbounded growth | |
+| 5.4 | Organism details (genome, family, brain thought); saved runs; export to a run folder; `docs/API.md` and an example script | Export = a `genesis run` folder | |
+| 5.5 | Vite + React + TypeScript; design tokens, fonts, layout shell; API client, reconnecting WebSocket hook; Zustand store | Store and payload unit tests | |
+| 5.6 | Live World: PixiJS canvas, food, organisms, pan/zoom, selection, trails; 1,000+ organisms | Selection never changes the simulation | |
+| 5.7 | Controls and the organism inspector with a brain view | Out-of-range input rejected in place | |
+| 5.8 | Run Analytics: live charts with units, sample sizes, run IDs | Chart values = backend values | |
+| 5.9 | Experiment Comparison and Lineage Explorer from the lake | Two runs compared; tree correct | |
+| 5.10 | Hardening and wrap-up: reconnect, extinction, refresh, keyboard and accessibility, phone width; `genesis lab`; quickstart, manual E2E checklist, docs | Checklist passes | |
+

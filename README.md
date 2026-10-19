@@ -4,7 +4,7 @@ A local-first artificial life laboratory. Digital organisms live in a 2D world: 
 
 Built as a learning project: the [curriculum](docs/curriculum.md) tracks the concepts covered so far.
 
-**Status:** Milestones 1 (The Petri Dish), 2 (Genetics and Evolution), 3 (The Science Lab) and 4 (Evolving Neural Brains) complete. Next: Milestone 5 (an API and a browser lab), not yet started.
+**Status:** Milestones 1 (The Petri Dish), 2 (Genetics and Evolution), 3 (The Science Lab) and 4 (Evolving Neural Brains) complete. Milestone 5 (an API and a browser lab) in progress.
 
 ## What it does
 
@@ -32,6 +32,7 @@ uv run genesis run --seed 7 --out data/runs/first             # ecosystem, no ev
 uv run genesis run --config configs/evolution.yaml --out data/runs/evo   # with evolution (~6 s)
 uv run genesis run --config configs/neural.yaml --out data/runs/neural  # evolving neural brains (~10 s)
 uv run genesis inspect data/runs/neural --tick 5000 --organism 1027 --weights  # one organism's decision, step by step
+uv run genesis serve                                                   # the API (Milestone 5): http://127.0.0.1:8765/docs
 uv run genesis report data/runs/evo                           # writes data/runs/evo/report.html
 open data/runs/evo/report.html
 ```

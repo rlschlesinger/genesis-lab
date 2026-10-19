@@ -375,6 +375,16 @@ What has been covered, where it appears in the code, and what comes next.
 
 ## Milestone 4 complete
 
+## Milestone 5: An API and a browser lab
+
+### 5.1 · A web API (`genesis.api`, `genesis serve`)
+- **Client and server:** the server holds the simulation; clients send requests (HTTP) and get answers (JSON).
+- **HTTP methods and status codes:** GET reads, POST creates, DELETE removes; 201 created, 204 no content, 404, 409, 422, 429.
+- **An API contract:** request and response shapes as Pydantic models, validated on the way in, documented automatically (`/docs`).
+- **State machines:** a run's lifecycle as an explicit table of allowed moves; anything else is refused.
+- **Safe inputs:** names instead of paths, unknown fields refused, a limit on live runs, local-only by default.
+- **Testing a web app without a network:** a test client calls the app directly.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

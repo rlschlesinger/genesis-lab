@@ -60,6 +60,13 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-047 · The API: one authority, explicit run states, local only (2026-10-19)
+
+**Decision:** a FastAPI application (`genesis.api`, started by `genesis serve`) holds live runs in memory, each a `Simulation` driven by the server alone. Every run has an explicit state (idle, running, paused, completed, failed) and may only move along the transitions listed in `runs.ALLOWED`; any other request gets 409. Requests and responses are Pydantic models (the contract, versioned by `API_VERSION`); unknown fields are refused. Configs are chosen by name from `configs/` (never by path) and changed with the experiment specs' dotted paths, then validated like a config file. At most 4 live runs. The server listens on 127.0.0.1; a network address needs `--allow-remote`, because there is no login. Errors map to status codes in one place: 404 unknown run, 409 impossible in this state, 422 invalid request or config, 429 too many runs.
+**Dependencies:** `fastapi` and `uvicorn` (runtime): FastAPI turns typed Python functions into validated HTTP routes and documents them (OpenAPI at `/docs`); uvicorn is the server that runs it. `httpx2` (dev only): Starlette's test client, which lets tests make HTTP requests without a network port; Starlette 1.9 deprecated plain `httpx` for it. Each pinned in `uv.lock` to the newest release at least two weeks old at the time.
+**Why:** the roadmap's "state should have one authority": the browser (5.5 onwards) only views and requests, so the same seed gives the same run whoever is watching. A transition table makes the lifecycle readable and testable in one place. Names instead of paths, strict request models and a run limit bound what a request can do.
+**Alternatives:** Flask or plain Starlette (no typed validation or generated docs); Django (far more than an API needs); running the simulation in the browser (two implementations that could disagree, and the spec forbids it).
+
 ## D-046 · The optional PyTorch cross-check is deferred (2026-10-19)
 
 **Decision:** chunk 04B's optional learning task (re-implement one forward pass in PyTorch and show it matches NumPy) is not done in Milestone 4. PyTorch is not added.
