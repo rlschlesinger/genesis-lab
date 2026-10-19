@@ -82,8 +82,7 @@ def nearest_within_reach(
     if pairs is None:
         # Reference: (n, m) distances, out-of-reach ones set to inf, then the row minimum.
         # np.argmin returns the first minimum, so the lowest index wins exact ties.
-        offsets = targets[np.newaxis, :, :] - points[:, np.newaxis, :]
-        distances = np.hypot(offsets[..., 0], offsets[..., 1])
+        distances = _all_distances(points, targets)
         distances = np.where(distances <= reach[:, np.newaxis], distances, np.inf)
         nearest = np.argmin(distances, axis=1)
         return nearest, distances[np.arange(n), nearest]
@@ -104,13 +103,25 @@ def nearest_within_reach(
 def dense_pairs(
     points: FloatArray, reach: FloatArray, targets: FloatArray
 ) -> tuple[IntArray, IntArray, FloatArray]:
-    """The reference: every distance at once via broadcasting, (n, 1, 2) - (1, m, 2)."""
+    """The reference: every distance at once via broadcasting."""
     if len(points) == 0 or len(targets) == 0:
         return _no_pairs()
-    offsets = targets[np.newaxis, :, :] - points[:, np.newaxis, :]
-    distances = np.hypot(offsets[..., 0], offsets[..., 1])
+    distances = _all_distances(points, targets)
     i, j = np.nonzero(distances <= np.asarray(reach, dtype=np.float64)[:, np.newaxis])
     return i, j, distances[i, j]
+
+
+def _all_distances(points: FloatArray, targets: FloatArray) -> FloatArray:
+    """The (n, m) table of every point-to-target distance.
+
+    Broadcasting: a row of m target x's minus a column of n point x's gives an (n, m) table
+    of x offsets; the same for y; ``hypot`` combines them. Entry (i, j) is the offset from
+    point i to target j, exactly the subtraction the grid performs for its candidate pairs.
+    (Two 2-D tables are cheaper than one (n, m, 2) block that is then sliced in two.)
+    """
+    dx = targets[:, 0] - points[:, 0, np.newaxis]
+    dy = targets[:, 1] - points[:, 1, np.newaxis]
+    return np.hypot(dx, dy)
 
 
 def _no_pairs() -> tuple[IntArray, IntArray, FloatArray]:
