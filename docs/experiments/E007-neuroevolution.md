@@ -128,3 +128,16 @@ What this does **not** show: that the brains are "smarter". They turn toward foo
 - **The advantage is concentrated where the seeker does badly.** Across worlds, the seeker's own meal rate and the evolved − seeker difference correlate at r = −0.92: in the seeker's best worlds the two tie; in its worst (world 15: 0.0554 vs 0.0691) the brains are far ahead.
 - **A candidate mechanism: crowding.** Replaying the evaluation runs, seekers stood closer to their nearest neighbour than evolved brains in **24 of 24** worlds (mean 12.4 vs 16.6 units), and across worlds the seekers' spacing correlated with their meal rate (Spearman ρ = +0.48, p = 0.019). In the worst seeker worlds, seekers saw food more often than evolved brains (85% vs 80% of organism-ticks) but converted sightings into meals less (0.060 vs 0.084 meals per sighting-tick). A plausible reading: seekers all head for the nearest food, so several chase the same item and only one wins; evolved brains, turning toward food less reliably and with noise, stay spread out. Wall contact was ruled out as the main cause (seekers touched walls 4–6% of the time in both good and bad worlds). Testing this needs a pre-registered experiment that manipulates crowding (for example, food clustering or population density).
 - **Training dynamics.** Turning toward food plateaued at ~0.75 within about 2,000 ticks in nearly every run; throttle kept rising for the whole run and ended anywhere from ~0.6 to ~1.0 across runs (results page, section 3).
+
+### Replication on Linux (2026-10-19)
+
+During the Milestone 4 review (PR #3), the whole experiment was re-run independently on Linux x86_64 (NumPy 2.5.4, commit `5bfe976`; same specs, seeds and analysis script): 24 training and 120 evaluation runs, all completed, `git_dirty: false`. Every number above comes from the original run on macOS arm64 and stands; this section adds evidence, it changes nothing.
+
+| | macOS arm64 (above) | Linux x86_64 |
+|---|---|---|
+| H11 evolved − random brains | +0.0366, 24/24 worlds, p = 0.00002 → supported | +0.0363, 24/24 worlds, p = 0.00002 → supported |
+| H12 evolved − seeker | +0.00237 [+0.00136, +0.00371], +3.6%, 23/24 worlds → inconclusive | +0.00209 [+0.00097, +0.00350], +3.1%, 21/24 worlds → inconclusive |
+| H13 evolved − home | +0.00021 [−0.00063, +0.00106] → equivalent | +0.00018 [−0.00070, +0.00106] → equivalent |
+| H14 energy per meal, evolved − seeker | −0.40 [−0.55, −0.27] EU, p = 0.00005 | −0.40 [−0.56, −0.28] EU, p = 0.00005 |
+
+**All four verdicts agree.** The numbers differ by more than rounding (evolved mean 0.0688 vs 0.0685) because floating-point results differ in the last bit between platforms (D-027), and over 20,000 ticks of evolution such differences grow into different populations: the two platforms evolved different brains from the same seeds. That makes this a replication with genuinely different evolutionary histories, not a re-computation. The same review re-derived every macOS number from the lake with pandas and NumPy alone and found no analysis error.
