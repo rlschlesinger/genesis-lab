@@ -20,15 +20,17 @@ from __future__ import annotations
 import hashlib
 import math
 from dataclasses import dataclass, fields
+from itertools import compress
 
 import numpy as np
+from numpy.typing import NDArray
 
 from genesis.core.config import SimulationConfig
-from genesis.core.costs import metabolic_cost, movement_cost, sensing_cost
+from genesis.core.costs import living_costs
 from genesis.core.energy import EnergyLedger
 from genesis.core.feeding import resolve_feeding
 from genesis.core.movement import move
-from genesis.core.organism import Organism
+from genesis.core.organism import DeathCause, Organism, spend_all
 from genesis.core.world import World
 from genesis.evolution.genome import Genome, express
 from genesis.evolution.mutation import mutate
@@ -203,13 +205,23 @@ class Simulation:
         self.ledger.food_spawned += food_spawned * food_value
 
         # 2. Snapshot: copy the state into arrays *once*, before anyone moves. Every organism
-        #    senses this same frozen picture, so processing order cannot matter.
-        positions = np.array([[o.x, o.y] for o in living], dtype=np.float64).reshape(-1, 2)
+        #    senses this same frozen picture, so processing order cannot matter. The organisms
+        #    stay the source of truth; these arrays are this tick's working copy (D-038).
+        positions = np.column_stack(
+            [
+                np.array([o.x for o in living], dtype=np.float64),
+                np.array([o.y for o in living], dtype=np.float64),
+            ]
+        ).reshape(-1, 2)
         headings = np.array([o.heading for o in living], dtype=np.float64)
         energies = np.array([o.energy for o in living], dtype=np.float64)
-        speeds = np.array([o.traits.speed for o in living], dtype=np.float64)
-        max_turns = np.array([o.traits.max_turn for o in living], dtype=np.float64)
-        sense_ranges = np.array([o.traits.sense_range for o in living], dtype=np.float64)
+        energy_spent = np.array([o.energy_spent for o in living], dtype=np.float64)
+        traits = [o.traits for o in living]
+        speeds = np.array([t.speed for t in traits], dtype=np.float64)
+        max_turns = np.array([t.max_turn for t in traits], dtype=np.float64)
+        sense_ranges = np.array([t.sense_range for t in traits], dtype=np.float64)
+        metabolic_rates = np.array([t.metabolic_rate for t in traits], dtype=np.float64)
+        thresholds = np.array([t.reproduction_threshold for t in traits], dtype=np.float64)
 
         observations = sense_food(
             positions, headings, sense_ranges, energies, self.world.food.positions
@@ -218,10 +230,13 @@ class Simulation:
         # 3. Decide.
         actions = self.controller.decide(observations, self.rng.controller)
 
-        # 4. Move, then write the results back to each organism.
+        # 4. Move, then write the results back to each organism. tolist() hands back plain
+        #    Python floats with the same values; it is many times faster than converting one
+        #    NumPy scalar at a time.
         moved = move(positions, headings, actions, speeds, max_turns, self.world)
-        for org, (x, y), heading in zip(living, moved.positions, moved.headings, strict=True):
-            org.x, org.y, org.heading = float(x), float(y), float(heading)
+        xs, ys = moved.positions[:, 0].tolist(), moved.positions[:, 1].tolist()
+        for org, x, y, heading in zip(living, xs, ys, moved.headings.tolist(), strict=True):
+            org.x, org.y, org.heading = x, y, heading
 
         # 5a. Eat, using post-move positions. Eating is a transfer between the two energy
         #     accounts (food -> organism), so the ledger's in/out totals don't change.
@@ -236,48 +251,59 @@ class Simulation:
                 Event(self.tick, "meal", eater.id, None, food_value, eater.x, eater.y, None)
             )
         self.world.food.remove(meals.foods)
+        # The working copy gets the same meals: the same addition, so the same value.
+        energies[meals.eaters] += food_value
 
         # 5b. Pay costs *after* eating, so a nearly-empty organism that reaches food gets to
-        #     eat before its energy hits zero. spend() returns what was actually paid, and
+        #     eat before its energy hits zero. spend_all() returns what was actually paid, and
         #     that (not the amount requested) is what the ledger records.
-        #     Order matters only when energy runs out mid-payment (spend() never goes below
+        #     Order matters only when energy runs out mid-payment (spending never goes below
         #     zero): metabolism first, then sensing, then movement. See core/costs.py.
         #     Each flow's payments are summed exactly (math.fsum) and added to the ledger once
         #     per tick. Adding millions of small payments one by one to a running total of
         #     ~10^6 loses a sliver to rounding each time, and those slivers add up (D-026).
-        metabolism_paid, sensing_paid, movement_paid = [], [], []
-        for org, distance in zip(living, moved.distances, strict=True):
-            metabolism_paid.append(org.spend(metabolic_cost(org.traits)))
-            sensing_paid.append(org.spend(sensing_cost(org.traits, cfg)))
-            movement_paid.append(
-                org.spend(movement_cost(org.traits, float(distance), cfg, self._reference_speed))
-            )
-        self.ledger.metabolism += math.fsum(metabolism_paid)
-        self.ledger.sensing += math.fsum(sensing_paid)
-        self.ledger.movement += math.fsum(movement_paid)
+        costs = living_costs(
+            metabolic_rates, sense_ranges, speeds, moved.distances, cfg, self._reference_speed
+        )
+        paid, energies, energy_spent = spend_all(energies, energy_spent, *costs)
+        self.ledger.metabolism += math.fsum(paid[0].tolist())
+        self.ledger.sensing += math.fsum(paid[1].tolist())
+        self.ledger.movement += math.fsum(paid[2].tolist())
+        spent_each = energy_spent.tolist()
+        for org, energy, spent in zip(living, energies.tolist(), spent_each, strict=True):
+            org.energy, org.energy_spent = energy, spent
 
-        # 6. Deaths: ask every organism first, then apply. Nobody dies mid-update.
-        causes = [org.cause_of_death(cfg.max_age) for org in living]
-        survivors, lost = [], []
-        for org, cause in zip(living, causes, strict=True):
-            if cause is None:
-                survivors.append(org)
-            else:
-                # Energy still held at death leaves the system (D-011). The organism's own
-                # record keeps the value, so analysis can see what it died with.
-                lost.append(org.energy)
-                events.append(
-                    Event(self.tick, "death", org.id, None, org.energy, org.x, org.y, str(cause))
-                )
-                org.die(self.tick, cause)
-                self.dead.append(org)
+        # 6. Deaths: decide for every organism first, then apply. Nobody dies mid-update.
+        #    Same rule as Organism.cause_of_death: starvation first, then old age.
+        starved = energies <= 0.0
+        dying = starved
+        if cfg.max_age is not None:
+            ages = np.array([o.age for o in living], dtype=np.int64)
+            dying = starved | (ages >= cfg.max_age)
+        survivors = list(compress(living, ~dying))
+        lost = []
+        for i in np.flatnonzero(dying).tolist():
+            org = living[i]
+            cause = DeathCause.STARVATION if starved[i] else DeathCause.OLD_AGE
+            # Energy still held at death leaves the system (D-011). The organism's own
+            # record keeps the value, so analysis can see what it died with.
+            lost.append(org.energy)
+            events.append(
+                Event(self.tick, "death", org.id, None, org.energy, org.x, org.y, str(cause))
+            )
+            org.die(self.tick, cause)
+            self.dead.append(org)
         # Summed exactly and added to the ledger once per tick, like the living costs (D-026).
         self.ledger.lost_at_death += math.fsum(lost)
 
         # 7. Reproduction. Only survivors are candidates, and newborns are added after them,
-        #    so a newborn cannot act or reproduce in the tick it was born.
+        #    so a newborn cannot act or reproduce in the tick it was born. Eligibility is
+        #    Organism.can_reproduce evaluated on the arrays: alive (a survivor) and
+        #    energy >= threshold.
         logged_before = len(self.mutation_log)
-        newborns = self._reproduce(survivors)
+        alive = ~dying
+        eligible = energies[alive] >= thresholds[alive]
+        newborns = self._reproduce(survivors, eligible)
         mutations_this_tick = len(self.mutation_log) - logged_before
         self.organisms = survivors + newborns  # still ascending ID order: new IDs are larger
         for child in newborns:
@@ -313,10 +339,17 @@ class Simulation:
         self.tick += 1
         return summary
 
-    def _reproduce(self, candidates: list[Organism]) -> list[Organism]:
-        """Create this tick's offspring. Each eligible organism has at most one child."""
+    def _reproduce(
+        self, candidates: list[Organism], eligible: NDArray[np.bool_] | None = None
+    ) -> list[Organism]:
+        """Create this tick's offspring. Each eligible organism has at most one child.
+
+        ``eligible[i]`` says whether ``candidates[i]`` may reproduce; when omitted it is read
+        from each organism (``can_reproduce``).
+        """
         cfg = self.config.organisms
-        eligible = np.array([o.can_reproduce for o in candidates], dtype=bool)
+        if eligible is None:
+            eligible = np.array([o.can_reproduce for o in candidates], dtype=bool)
         room = cfg.max_population - len(candidates)
         chosen = select_parents(eligible, room, self.rng.reproduction)
         if len(chosen) == 0:

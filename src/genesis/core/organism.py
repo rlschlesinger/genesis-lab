@@ -12,6 +12,9 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
+import numpy as np
+from numpy.typing import NDArray
+
 if TYPE_CHECKING:
     # Imported only for type annotations. genome.py imports Traits from this module, so a
     # runtime import here would be circular.
@@ -156,3 +159,32 @@ class Organism:
         # the tick loop, and catching it here beats discovering corrupted totals later.
         if not self.alive:
             raise RuntimeError(f"organism {self.id} is dead and cannot {action}")
+
+
+FloatArray = NDArray[np.float64]
+
+
+def spend_all(
+    energy: FloatArray, energy_spent: FloatArray, *costs: FloatArray
+) -> tuple[list[FloatArray], FloatArray, FloatArray]:
+    """``Organism.spend`` for a whole population at once, one cost after another.
+
+    ``energy[i]`` and ``energy_spent[i]`` belong to organism i; each array in ``costs`` holds
+    one kind of cost for every organism, charged in the order given. Returns the amounts
+    actually paid for each cost, and the new energy and lifetime-spent arrays.
+
+    Element by element this does exactly what ``spend`` does: ``paid = min(cost, energy)``,
+    then ``energy - paid`` and ``energy_spent + paid``, in that order for each cost. The same
+    IEEE operations on the same numbers give the same bits, so the simulation can charge
+    3,000 organisms in three NumPy calls instead of 9,000 method calls and get the same
+    result (D-038). The inputs are not modified.
+    """
+    paid_each = []
+    for cost in costs:
+        if cost.size and cost.min() < 0:
+            raise ValueError("cannot spend negative energy; use eat() to gain")
+        paid = np.minimum(cost, energy)
+        energy = energy - paid
+        energy_spent = energy_spent + paid
+        paid_each.append(paid)
+    return paid_each, energy, energy_spent
