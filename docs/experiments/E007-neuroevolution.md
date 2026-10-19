@@ -93,7 +93,7 @@ Before this definition, a calibration pilot used throwaway seeds 99001–99006 (
 
 ### Run
 
-Commit `826a705` (clean; all 144 runs `git_dirty: false`). 24 training runs and 120 evaluation runs, all completed (34 s on 9 worker processes). Analysis: `uv run python experiments/e007_neuroevolution.py --analyse-only`; results page: add `--report` (writes `data/dashboards/E007-results.html`).
+Commit `826a705` (clean; all 144 runs `git_dirty: false`). 24 training runs and 120 evaluation runs, all completed (34 s on 9 worker processes). Analysis: `uv run python experiments/e007_neuroevolution.py --analyse-only`; results page: add `--report` (writes `data/dashboards/E007-results.html`). After the run, the script gained the `--report` option (and `analyse` now returns its numbers to it); every calculation is unchanged from the pre-registered version at `826a705` (see the diff in commit `7f87f51`), and re-running the analysis reproduces the numbers below exactly.
 
 ### Training
 
