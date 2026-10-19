@@ -38,7 +38,7 @@ def step_once(run: LiveRun) -> None:
         run.move_to(RunState.COMPLETED)
         return
     try:
-        run.sim.step()
+        run.last_summary = run.sim.step()
     except Exception as exc:  # noqa: BLE001 - recorded on the run and reported to the client
         run.error = f"{type(exc).__name__} at tick {run.sim.tick}: {exc}"
         run.move_to(RunState.FAILED)

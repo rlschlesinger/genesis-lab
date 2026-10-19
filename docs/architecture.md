@@ -67,6 +67,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `api/schemas.py` | The API contract: request/response models, `RunState`, `API_VERSION` (D-047) | Contain logic |
 | `api/runs.py` | `RunManager`, `LiveRun`, the allowed state transitions (`ALLOWED`), config loading by name | Know about HTTP |
 | `api/stepping.py` | `step`, `resume`, `pause`, `stop`, the background `run_loop` (slices, tick budget) (D-048) | Choose which tick comes next (only how many) |
+| `api/stream.py` | WebSocket snapshots: `hello`/`snapshot`/`gone`, `build_snapshot` (columnar, rounded), per-viewer sender and listener (D-049) | Queue messages; send exact state |
 | `api/app.py` | FastAPI routes over a `RunManager`; errors → status codes | Contain simulation logic |
 | `cli.py` | `genesis run` arguments → `execute_run`; exit codes 0/1/2 | Contain logic |
 
@@ -409,7 +410,7 @@ Scope: [roadmap/05A](roadmap/05A_API_STREAMING.md) and [roadmap/05B](roadmap/05B
 |---|---|---|---|
 | 5.1 | FastAPI app, `genesis serve`, run manager with explicit states, create/list/get/delete runs, configs | Invalid configs rejected; state table | done |
 | 5.2 | Pause, resume, single step, reset by seed; playback speed | Run steered through the API = headless run (digest) | done |
-| 5.3 | WebSocket snapshot stream: versioned payload, newest-only, bounded queues, many clients | Two clients see the same state; no unbounded growth | |
+| 5.3 | WebSocket snapshot stream: versioned payload, newest-only, bounded queues, many clients | Two clients see the same state; no unbounded growth | done |
 | 5.4 | Organism details (genome, family, brain thought); saved runs; export to a run folder; `docs/API.md` and an example script | Export = a `genesis run` folder | |
 | 5.5 | Vite + React + TypeScript; design tokens, fonts, layout shell; API client, reconnecting WebSocket hook; Zustand store | Store and payload unit tests | |
 | 5.6 | Live World: PixiJS canvas, food, organisms, pan/zoom, selection, trails; 1,000+ organisms | Selection never changes the simulation | |

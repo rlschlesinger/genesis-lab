@@ -15,11 +15,11 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, WebSocket, status
 from fastapi.responses import JSONResponse
 
 from genesis import __version__
-from genesis.api import stepping
+from genesis.api import stepping, stream
 from genesis.api.runs import (
     InvalidRunRequest,
     RunConflict,
@@ -113,6 +113,11 @@ def create_app(manager: RunManager | None = None) -> FastAPI:
         """A fingerprint of the full state (hashes every organism ever: not for polling)."""
         run = app.state.manager.get(run_id)
         return Digest(run_id=run.run_id, tick=run.sim.tick, digest=run.sim.state_digest())
+
+    @app.websocket("/api/runs/{run_id}/stream")
+    async def run_stream(websocket: WebSocket, run_id: str) -> None:
+        """Live snapshots (stream.py): hello, then the newest state at most ``fps`` per second."""
+        await stream.stream(websocket, app.state.manager, run_id)
 
     # --- Controls: each returns the run's state afterwards ---------------------------------
 

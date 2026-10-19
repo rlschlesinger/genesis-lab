@@ -75,6 +75,7 @@ class RunInfo(BaseModel):
     max_ticks: int
     population: int
     speed: float | None  # target ticks per second while running; None = as fast as possible
+    viewers: int  # open snapshot streams
     error: str | None = None  # why the run failed, when state is "failed"
 
 

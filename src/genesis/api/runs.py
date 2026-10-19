@@ -23,7 +23,7 @@ from genesis.analytics.experiments import apply_changes
 from genesis.analytics.runs import new_run_id
 from genesis.api.schemas import ConfigSummary, RunCreate, RunInfo, RunState
 from genesis.core.config import ConfigError, SimulationConfig, load_config, with_overrides
-from genesis.core.simulation import Simulation
+from genesis.core.simulation import Simulation, TickSummary
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 CONFIGS_DIR = PROJECT_ROOT / "configs"
@@ -73,6 +73,9 @@ class LiveRun:
     error: str | None = None
     speed: float | None = DEFAULT_SPEED  # ticks per second while running; None = flat out
     task: asyncio.Task | None = None  # the background loop while running (stepping.py)
+    last_summary: TickSummary | None = None  # the most recent tick's counts (for snapshots)
+    viewers: int = 0  # open WebSocket streams (stream.py)
+    snapshot_cache: tuple[tuple, str] | None = None  # (key, JSON): built once per tick
 
     def info(self) -> RunInfo:
         return RunInfo(
@@ -85,6 +88,7 @@ class LiveRun:
             max_ticks=self.config.run.max_ticks,
             population=len(self.sim.organisms),
             speed=self.speed,
+            viewers=self.viewers,
             error=self.error,
         )
 
@@ -99,6 +103,8 @@ class RunManager:
     configs_dir: Path = CONFIGS_DIR
     max_runs: int = MAX_LIVE_RUNS
     runs: dict[str, LiveRun] = field(default_factory=dict)  # insertion order = creation order
+    # Reset gives a run a new ID; viewers of the old ID are told where it went.
+    replaced: dict[str, str] = field(default_factory=dict)
 
     # --- Configs --------------------------------------------------------------------------
 
@@ -170,4 +176,5 @@ class RunManager:
         run = LiveRun(new_run_id(config.run.seed), old.config_name, config, Simulation(config))
         run.speed = old.speed
         self.runs[run.run_id] = run
+        self.replaced[run_id] = run.run_id
         return run

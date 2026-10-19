@@ -393,6 +393,13 @@ What has been covered, where it appears in the code, and what comes next.
 - **Determinism under control:** timing changes how many ticks happen per second, never which tick comes next; proven by digest.
 - **Tests caught a design gap:** "pause" was accepted on a run that never started.
 
+### 5.3 · Streaming with WebSockets (`api/stream.py`)
+- **HTTP vs WebSocket:** request-and-answer vs a connection the server can push through.
+- **Back-pressure and coalescing:** a slow reader must not slow the writer or grow memory; send only the newest state.
+- **A message protocol:** typed, versioned messages (`hello`, `snapshot`, `gone`) and close codes.
+- **Columnar data:** one array per field, the shape drawing code wants.
+- **Tests that bypass the real thing:** an in-process test client hid a missing WebSocket library; one end-to-end test with a real server closes that gap (and was shown to fail without it).
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.
