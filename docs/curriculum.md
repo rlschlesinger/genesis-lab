@@ -71,7 +71,14 @@ What has been covered, where it appears in the code, and what comes next.
 - **Mutation testing by hand:** plant a bug and confirm the safety net catches it.
 - **Feedback loops:** consumption changes how much food can spawn, so inflow depends on behaviour.
 
+### 1.7 · Reproduction (`evolution/reproduction.py`)
+- **Hidden selection pressure:** any rule that systematically favours some organisms (e.g. by ID) acts like selection. Use neutral randomness unless the bias is the thing being studied.
+- **Sampling without replacement:** `rng.choice(..., replace=False)`.
+- **Uniform points in a disc:** radius = R·√u, not R·u, because area grows with the square of the radius.
+- **Event timing:** when something is created mid-tick, define exactly when it first acts, and test it.
+- **Carrying capacity:** a population grows until it uses up the energy that comes in. Back-of-envelope: (spawn rate × energy per item) ÷ cost per organism per tick = 2 × 20 ÷ 0.35 ≈ 114. Observed ~112–116 (seed 42).
+- **Choosing metrics:** two controllers can reach the same population for different reasons; population size alone would hide the difference.
+
 ## Upcoming (Milestone 1)
-- Population dynamics and carrying capacity (1.7)
 - CLI design; CSV output (1.8)
 - Profiling and benchmarking (1.9)

@@ -136,11 +136,21 @@ def test_dead_are_never_processed_again():
     assert sim.tick == sim.config.run.max_ticks
 
 
-def test_old_age_kills_at_max_age():
-    sim = Simulation(make_config(**{"organisms.max_age": 10}))
-    summaries = sim.run()
-    assert all(o.death_cause is DeathCause.OLD_AGE and o.death_tick == 10 for o in sim.dead)
-    assert summaries[10].deaths == sim.config.organisms.initial_count
+def first_active_tick(org) -> int:
+    # Founders act from tick 0. Newborns are created during tick birth_tick, after the
+    # acting steps, so their first active tick is the next one.
+    return 0 if org.parent_id is None else org.birth_tick + 1
+
+
+def test_old_age_kills_after_exactly_max_age_active_ticks():
+    max_age = 10
+    sim = Simulation(make_config(**{"organisms.max_age": max_age, "run.max_ticks": 300}))
+    sim.run()
+    old = [o for o in sim.dead if o.death_cause is DeathCause.OLD_AGE]
+    assert any(o.parent_id is not None for o in old)  # covers newborns, not only founders
+    for org in old:
+        assert org.age == max_age
+        assert org.death_tick == first_active_tick(org) + max_age
 
 
 # --- Stopping -----------------------------------------------------------------------------
@@ -221,4 +231,108 @@ def test_determinism_holds_with_eating():
     for _ in range(300):
         a.step()
         b.step()
+    assert a.state_digest() == b.state_digest()
+
+
+# --- Reproduction -------------------------------------------------------------------------
+
+
+def sim_with_one_rich_organism(energy=200.0, **changes):
+    """A simulation where organism 0 can afford to reproduce on tick 0 and nobody else can."""
+    sim = Simulation(make_config(**NO_FOOD, **changes))
+    for org in sim.organisms:
+        org.energy = 10.0
+    sim.organisms[0].energy = energy
+    sim.ledger.initial_stock = sim.energy_stock()  # we edited the state, so restate the books
+    return sim
+
+
+def test_eligible_organism_produces_an_exact_copy():
+    sim = sim_with_one_rich_organism()
+    cfg = sim.config.organisms
+    parent = sim.organisms[0]
+    summary = sim.step()
+    assert summary.births == 1
+    child = sim.organisms[-1]
+    assert child.parent_id == parent.id
+    assert child.generation == parent.generation + 1
+    assert child.birth_tick == 0
+    assert child.traits == parent.traits
+    assert child.energy == cfg.offspring_energy
+    assert parent.offspring_count == 1
+    assert parent.energy_invested == cfg.offspring_energy + cfg.reproduction_overhead
+
+
+def test_parent_pays_transfer_plus_overhead():
+    sim = sim_with_one_rich_organism(energy=200.0)
+    cfg = sim.config.organisms
+    parent = sim.organisms[0]
+    sim.step()
+    # 200 - this tick's living costs - (offspring_energy + overhead)
+    expected = 200.0 - parent.energy_spent - cfg.offspring_energy - cfg.reproduction_overhead
+    assert parent.energy == pytest.approx(expected)
+
+
+def test_below_threshold_no_reproduction():
+    sim = sim_with_one_rich_organism(energy=60.0)  # threshold is 80
+    assert sim.step().births == 0
+
+
+def test_at_most_one_child_per_parent_per_tick():
+    sim = sim_with_one_rich_organism(energy=10_000.0)
+    assert sim.step().births == 1
+
+
+def test_newborn_does_not_act_on_its_birth_tick():
+    sim = sim_with_one_rich_organism()
+    sim.step()
+    child = sim.organisms[-1]
+    born_at = (child.x, child.y, child.heading)
+    assert child.age == 0
+    assert child.energy_spent == 0.0  # paid no costs: it didn't live through tick 0
+    sim.step()
+    assert (child.x, child.y, child.heading) != born_at  # acts from the next tick
+    assert child.age == 1
+
+
+def test_newborns_keep_population_in_id_order():
+    sim = Simulation(make_config(**{"run.max_ticks": 400}))
+    sim.run()
+    ids = [o.id for o in sim.organisms]
+    assert ids == sorted(ids)
+
+
+def test_population_never_exceeds_cap():
+    # Food-rich world with a small cap, so the cap is actually reached.
+    sim = Simulation(
+        make_config(**{"organisms.max_population": 40, "food.regrowth_per_tick": 20.0,
+                       "run.max_ticks": 600})
+    )  # fmt: skip
+    summaries = sim.run()
+    assert max(s.population for s in summaries) == 40
+    assert all(s.population <= 40 for s in summaries)
+
+
+def test_births_are_counted_and_generations_accumulate():
+    sim = Simulation(make_config(**{"run.max_ticks": 1500}))
+    summaries = sim.run()
+    everyone = [*sim.organisms, *sim.dead]
+    born = [o for o in everyone if o.parent_id is not None]
+    assert sum(s.births for s in summaries) == len(born) > 0
+    assert max(o.generation for o in everyone) >= 2  # grandchildren exist
+
+
+def test_reproduction_overhead_is_recorded_in_the_ledger():
+    sim = Simulation(make_config(**{"run.max_ticks": 1000}))
+    summaries = sim.run()
+    births = sum(s.births for s in summaries)
+    overhead = sim.config.organisms.reproduction_overhead
+    assert sim.ledger.reproduction_overhead == pytest.approx(births * overhead)
+
+
+def test_ledger_and_determinism_hold_with_reproduction():
+    a = Simulation(make_config(**{"run.max_ticks": 1500}))
+    b = Simulation(make_config(**{"run.max_ticks": 1500}))
+    a.run()  # step() checks the ledger every tick
+    b.run()
     assert a.state_digest() == b.state_digest()

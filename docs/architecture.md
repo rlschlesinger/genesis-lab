@@ -18,7 +18,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
              4 apply movement, clamp to walls
              5 eat (closest pairs first, rng.tiebreak), then pay energy costs; ledger records flows
              6 process deaths
-             7 process reproduction; newborns queued, active next tick
+             7 reproduction: eligible survivors clone once; newborns join, first act next tick
              8 ledger.check(stock); metrics.record(state)  read-only
              9 tick += 1
 ```
@@ -37,6 +37,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `core/geometry.py` | `wrap_angle` | |
 | `core/feeding.py` | Who eats what: closest-pair matching, random tie-break | Change energy itself |
 | `core/energy.py` | `EnergyLedger`: flows and the per-tick conservation check | |
+| `evolution/reproduction.py` | Who reproduces (random at the cap) and where offspring appear | Touch organisms |
 | `core/simulation.py` | Tick order, RNG streams, founders, deaths, `TickSummary`, `state_digest` | Do I/O |
 | `analytics/metrics.py` *(planned)* | Per-tick measurements | Mutate state |
 | `cli.py` *(planned)* | Arguments, file output | Contain simulation rules |
@@ -109,6 +110,14 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
   - `step()` raises `EnergyLedgerError` if `initial + in - out` differs from the actual stock (tolerance: relative 1e-9, absolute 1e-6 EU).
 - **Feedback:** spawning is blocked at `max_count`, so inflow depends on how much the population eats.
 
+## Reproduction
+
+- **Eligible:** survivors of this tick's deaths with `energy >= traits.reproduction_threshold`. At most one child per parent per tick.
+- **Cap:** room = `max_population - survivors`. If more are eligible than there is room for, parents are chosen uniformly at random from the reproduction stream (never by ID).
+- **Cost:** the parent pays `offspring_energy + reproduction_overhead`; the child starts with `offspring_energy`; the overhead is a ledger outflow. Recorded on the parent as `energy_invested` (separate from `energy_spent`, which is living costs only).
+- **Child:** exact copy of the parent's `Traits` (shared frozen object), `generation = parent + 1`, `birth_tick = current tick`, placed uniformly in a disc of radius `parent.traits.speed` around the parent (clamped), random heading.
+- **Timing:** newborns are appended after survivors (IDs stay ascending), are not aged at step 9, and first act on tick `birth_tick + 1`. Founders act from tick 0. With `max_age = A`, everyone gets exactly `A` active ticks.
+
 ## Randomness
 
 One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`. New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
@@ -124,6 +133,6 @@ One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one
 | 1.4 | Controllers, movement, wall clamping | Walls hold; seeker approaches food | done |
 | 1.5 | `simulation.py`: tick loop, RNG streams | Determinism | done |
 | 1.6 | Eating, tie rule, energy ledger | Tie rule; ledger balances | done |
-| 1.7 | Cloning, population cap, newborn delay | Newborns inactive on birth tick | |
+| 1.7 | Cloning, population cap, newborn delay | Newborns inactive on birth tick | done |
 | 1.8 | Metrics, CLI, CSV output | Identical files from repeated runs | |
 | 1.9 | Benchmark, seeker-vs-random observation, docs | Numbers recorded | |

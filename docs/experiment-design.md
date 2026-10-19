@@ -14,6 +14,11 @@ How formal experiments in Genesis Lab are specified and analyzed. This document 
 - Simulation duration and stopping conditions (including extinction)
 - Analysis method
 
+## Working hypotheses (from observation, not yet tested)
+
+- **H1 · Energy-limited carrying capacity.** When food is below its cap, the long-run population ≈ `regrowth_per_tick × energy_value ÷ cost per organism per tick`. Derived *after* observing ~112–116 for both controllers with defaults (seed 42), so it needs an independent test: vary `regrowth_per_tick` across seeds and check whether population scales as predicted.
+- **H2 · Controllers differ in speed and food left over, not in carrying capacity**, under default settings. Metrics that would show the difference: ticks to reach 90% of capacity, standing food stock, mean lifespan.
+
 ## Principles
 
 - **The run is the replicate.** Organisms within one population share a history and are not independent samples. Statistics compare runs, not organisms.

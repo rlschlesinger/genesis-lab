@@ -175,3 +175,25 @@ def test_dead_organisms_cannot_act(action):
     org.die(tick=1, cause=DeathCause.STARVATION)
     with pytest.raises(RuntimeError, match="is dead"):
         action(org)
+
+
+# --- Reproduction cost --------------------------------------------------------------------
+
+
+def test_can_reproduce_at_threshold():
+    assert make_organism(energy=80.0).can_reproduce  # threshold is 80: "at or above"
+    assert not make_organism(energy=79.9).can_reproduce
+
+
+def test_pay_for_offspring_deducts_and_records_separately_from_spending():
+    org = make_organism(energy=100.0)
+    org.pay_for_offspring(transfer=40.0, overhead=10.0)
+    assert org.energy == 50.0
+    assert org.energy_invested == 50.0
+    assert org.energy_spent == 0.0  # living costs and offspring costs are kept apart
+    assert org.offspring_count == 1
+
+
+def test_unaffordable_offspring_raises_instead_of_clamping():
+    with pytest.raises(RuntimeError, match="cannot afford"):
+        make_organism(energy=30.0).pay_for_offspring(transfer=40.0, overhead=10.0)

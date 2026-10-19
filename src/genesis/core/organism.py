@@ -79,8 +79,9 @@ class Organism:
     death_cause: DeathCause | None = None
 
     # Lifetime totals, recorded for analysis (spec section 9, "Organism Records").
-    energy_gained: float = 0.0
-    energy_spent: float = 0.0
+    energy_gained: float = 0.0  # from food only; starting energy is not "gained"
+    energy_spent: float = 0.0  # metabolism and movement only
+    energy_invested: float = 0.0  # given to offspring plus reproduction overhead
     food_eaten: int = 0
     offspring_count: int = 0
 
@@ -110,6 +111,28 @@ class Organism:
         self.energy += energy_value
         self.energy_gained += energy_value
         self.food_eaten += 1
+
+    @property
+    def can_reproduce(self) -> bool:
+        return self.alive and self.energy >= self.traits.reproduction_threshold
+
+    def pay_for_offspring(self, transfer: float, overhead: float) -> None:
+        """Deduct the cost of one child: ``transfer`` goes to the child, ``overhead`` is lost.
+
+        Kept separate from ``spend`` so that lifetime statistics distinguish energy burned on
+        living (``energy_spent``) from energy invested in offspring (``energy_invested``).
+        Raises rather than clamping at zero: the config guarantees the threshold exceeds the
+        cost, so an organism that can't afford a child here means the caller has a bug.
+        """
+        self._require_alive("reproduce")
+        cost = transfer + overhead
+        if cost > self.energy:
+            raise RuntimeError(
+                f"organism {self.id} cannot afford offspring: has {self.energy}, needs {cost}"
+            )
+        self.energy -= cost
+        self.energy_invested += cost
+        self.offspring_count += 1
 
     def cause_of_death(self, max_age: int | None) -> DeathCause | None:
         """Return why this organism should die now, or None if it survives.

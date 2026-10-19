@@ -60,12 +60,19 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-014 · Reproduction details (2026-10-18)
+
+**Decision:** one child per parent per tick; random parent choice when the population cap binds; offspring placed uniformly within one step (`speed`) of the parent.
+**Why:** the list is in ID order, so "first come first served" at the cap would always favour the oldest lineages, a hidden selection pressure that would distort Milestone 2. Uniform-in-disc placement (via a square root on the radius) avoids clustering births at the parent's exact position.
+**Alternatives at the cap:** highest energy first (a deliberate selection rule; could be an experimental condition later).
+
 ## D-013 · Feeding rules (2026-10-18)
 
 **Decision:** one meal per organism per tick; in-reach pairs resolved closest-first with random tie-breaking; eating happens before costs are paid.
 **Why:** one meal per tick bounds the rate of energy intake. Closest-pair matching implements "closest wins" while still feeding every organism it can. Eating first means an organism that reaches food doesn't die from a cost paid an instant earlier.
 **Alternatives:** split contested food between contenders (no winner, but fractional food complicates the ledger); an optimal assignment to maximize meals eaten (harder to explain, and no biological reason).
 **Observed consequence (seed 42, no reproduction yet):** energy accumulates without bound (mean ~5000 EU by tick 5000 for seekers). Expected to be absorbed by reproduction in 1.7. If it isn't, consider a maximum energy trait.
+**Update (1.7):** confirmed resolved. With reproduction, mean energy settles around 35 EU (seed 42, both controllers).
 
 ## D-012 · A fifth RNG stream for setup; streams are append-only (2026-10-18)
 

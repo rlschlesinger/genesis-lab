@@ -4,10 +4,9 @@ Energy lives in two "accounts": living organisms, and uneaten food. It enters an
 only through recorded flows:
 
     in:    food spawned after the start (initial food is part of the starting stock)
-    out:   metabolism, movement, energy still held at death (D-011), and
-           reproduction overhead (from increment 1.7)
-    moves: eating (food -> organism) and, from 1.7, parent -> offspring. Transfers between
-           accounts change neither total.
+    out:   metabolism, movement, energy still held at death (D-011), reproduction overhead
+    moves: eating (food -> organism) and parent -> offspring. Transfers between accounts,
+           or within one, change neither in nor out.
 
 Every tick the simulation checks: initial stock + in - out == actual stock. A mismatch means
 a bug created or destroyed energy, and the run stops instead of producing corrupt data.
@@ -30,6 +29,7 @@ class EnergyLedger:
     metabolism: float = 0.0
     movement: float = 0.0
     lost_at_death: float = 0.0
+    reproduction_overhead: float = 0.0
 
     @property
     def inflow(self) -> float:
@@ -38,7 +38,9 @@ class EnergyLedger:
     @property
     def outflow(self) -> float:
         # math.fsum adds floats with less rounding error than repeated +.
-        return math.fsum([self.metabolism, self.movement, self.lost_at_death])
+        return math.fsum(
+            [self.metabolism, self.movement, self.lost_at_death, self.reproduction_overhead]
+        )
 
     @property
     def expected_stock(self) -> float:

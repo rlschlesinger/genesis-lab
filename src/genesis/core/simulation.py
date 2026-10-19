@@ -1,6 +1,6 @@
 """The simulation: owns the world and organisms, and runs the tick sequence.
 
-Tick order (docs/architecture.md). Steps marked *later* are wired in by the named increment:
+Tick order (docs/architecture.md):
 
     1. regrow food
     2. sense: every organism observes the same snapshot
@@ -8,9 +8,10 @@ Tick order (docs/architecture.md). Steps marked *later* are wired in by the name
     4. move
     5. eat (closest pairs first), then pay energy costs (metabolism + movement)
     6. deaths, all decided first and then applied
-    7. reproduction *later: 1.7*
-    8. check the energy ledger; record a TickSummary (full metrics *later: 1.8*)
-    9. survivors age by one tick; the clock advances
+    7. reproduction: eligible survivors each produce one exact copy; newborns join the
+       population but have not acted, and will first act next tick
+    8. check the energy ledger; record a TickSummary (full metrics in increment 1.8)
+    9. organisms that were alive at the start of the tick age by one; the clock advances
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ from genesis.core.feeding import resolve_feeding
 from genesis.core.movement import move
 from genesis.core.organism import Organism, Traits
 from genesis.core.world import World
+from genesis.evolution.reproduction import place_offspring, select_parents
 from genesis.intelligence.controllers import make_controller
 from genesis.intelligence.sensors import sense_food
 
@@ -42,8 +44,8 @@ class RngStreams:
     setup: np.random.Generator  # founder placement
     food: np.random.Generator  # initial food and regrowth
     controller: np.random.Generator  # controller decisions
-    reproduction: np.random.Generator  # newborn placement (1.7)
-    tiebreak: np.random.Generator  # food contention ties (1.6)
+    reproduction: np.random.Generator  # who reproduces at the cap; newborn placement
+    tiebreak: np.random.Generator  # food contention ties
 
     @classmethod
     def from_seed(cls, seed: int) -> RngStreams:
@@ -62,7 +64,8 @@ class TickSummary:
     """What happened in one tick. Population and energy are measured at the end of the tick."""
 
     tick: int
-    population: int
+    population: int  # includes this tick's newborns
+    births: int
     deaths: int
     food_count: int
     food_spawned: int
@@ -196,27 +199,71 @@ class Simulation:
                 self.ledger.lost_at_death += org.energy
                 org.die(self.tick, cause)
                 self.dead.append(org)
-        self.organisms = survivors
 
-        # 7. Reproduction is added here in increment 1.7.
+        # 7. Reproduction. Only survivors are candidates, and newborns are added after them,
+        #    so a newborn cannot act or reproduce in the tick it was born.
+        newborns = self._reproduce(survivors)
+        self.organisms = survivors + newborns  # still ascending ID order: new IDs are larger
 
         # 8. Check conservation, then record. A failed check raises EnergyLedgerError.
         self.ledger.check(self.energy_stock(), self.tick)
+        population = self.organisms
         summary = TickSummary(
             tick=self.tick,
-            population=len(survivors),
+            population=len(population),
+            births=len(newborns),
             deaths=len(living) - len(survivors),
             food_count=self.world.food.count,
             food_spawned=food_spawned,
             food_eaten=len(meals),
-            mean_energy=(float(np.mean([o.energy for o in survivors])) if survivors else math.nan),
+            mean_energy=(
+                float(np.mean([o.energy for o in population])) if population else math.nan
+            ),
         )
 
-        # 9. Advance time.
+        # 9. Advance time. Newborns stay at age 0: they have not lived through a tick yet.
         for org in survivors:
             org.age += 1
         self.tick += 1
         return summary
+
+    def _reproduce(self, candidates: list[Organism]) -> list[Organism]:
+        """Create this tick's offspring. Each eligible organism has at most one child."""
+        cfg = self.config.organisms
+        eligible = np.array([o.can_reproduce for o in candidates], dtype=bool)
+        room = cfg.max_population - len(candidates)
+        chosen = select_parents(eligible, room, self.rng.reproduction)
+        if len(chosen) == 0:
+            return []
+
+        parents = [candidates[i] for i in chosen]
+        positions, headings = place_offspring(
+            np.array([[p.x, p.y] for p in parents], dtype=np.float64),
+            np.array([p.traits.speed for p in parents], dtype=np.float64),
+            self.world,
+            self.rng.reproduction,
+        )
+        newborns = []
+        for parent, (x, y), heading in zip(parents, positions, headings, strict=True):
+            parent.pay_for_offspring(cfg.offspring_energy, cfg.reproduction_overhead)
+            # The transfer stays inside the organism account; only the overhead leaves.
+            self.ledger.reproduction_overhead += cfg.reproduction_overhead
+            newborns.append(
+                Organism(
+                    id=self._new_id(),
+                    parent_id=parent.id,
+                    generation=parent.generation + 1,
+                    birth_tick=self.tick,
+                    # Exact copy (Milestone 1). Traits are frozen, so sharing one object
+                    # between parent and child is safe: neither can change it.
+                    traits=parent.traits,
+                    x=float(x),
+                    y=float(y),
+                    heading=float(heading),
+                    energy=cfg.offspring_energy,
+                )
+            )
+        return newborns
 
     # --- Inspection ---------------------------------------------------------------------
 
