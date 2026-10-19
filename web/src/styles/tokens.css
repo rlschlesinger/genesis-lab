@@ -1,0 +1,59 @@
+/* Design tokens: brightfield microscopy (docs/ui-design.md).
+ *
+ * Cultures are examined on a lit glass slide, stained so cells stand out: crystal violet
+ * (the Gram stain) for the organisms, safranin (its counter-stain) for whatever needs the
+ * eye now, iodine brown for food. Text is a violet-black, as ink on a stained slide.
+ * Everything is defined here once; components only ever use these names.
+ */
+:root {
+  /* Colour */
+  --slide: #e3eae6; /* the page: cool glass, lit from below */
+  --field: #f2f6f4; /* panels and the plate's clear field */
+  --graticule: #c3cfc9; /* grid lines, borders */
+  --graticule-strong: #9fb0a8;
+  --stain-ink: #221c30; /* text */
+  --stain-ink-soft: #57506a; /* secondary text */
+  --violet: #56399a; /* crystal violet: organisms, primary actions */
+  --violet-deep: #3f2878;
+  --safranin: #be3768; /* counter-stain: the selected organism, deaths, errors */
+  --iodine: #a9741a; /* food */
+  --focus: #be3768;
+
+  /* Type: one variable family. Sans for the interface; the same letters with the mono axis
+     on for numbers that change (ticks, energies), so digits don't jitter. */
+  --font: "Recursive Variable", ui-sans-serif, system-ui, sans-serif;
+  --mono-on: "MONO" 1, "CASL" 0;
+  --mono-off: "MONO" 0, "CASL" 0.25;
+
+  /* Scale: ratio 1.25 from a 16 px base */
+  --size-small: 0.8rem; /* 12.8 px */
+  --size-body: 1rem; /* 16 px */
+  --size-lead: 1.25rem; /* 20 px */
+  --size-title: 1.5625rem; /* 25 px */
+  --size-display: 1.953rem; /* 31 px */
+  --leading: 1.5;
+
+  /* Space: a 4 px step */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+
+  /* Shape: the plate is a dish, round at the corners like the real thing; everything else is
+     cut glass, square. No other radius is used. */
+  --plate-radius: 1.25rem;
+  --edge: 1px solid var(--graticule);
+
+  /* Motion: only state changes the user caused; one curve, quick to settle. */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --quick: 140ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --quick: 0ms;
+  }
+}

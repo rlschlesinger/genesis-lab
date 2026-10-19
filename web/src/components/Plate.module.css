@@ -1,0 +1,26 @@
+/* A culture plate on the slide: clear field, a faint graticule, round dish corners. */
+.plate {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  background-color: var(--field);
+  background-image:
+    linear-gradient(to right, var(--graticule) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--graticule) 1px, transparent 1px);
+  background-size: var(--cell-x) var(--cell-y);
+  border: 1px solid var(--graticule-strong);
+  border-radius: var(--plate-radius);
+  overflow: hidden;
+}
+
+/* A label slip laid on the plate: it covers the graticule on purpose, so it gets an edge. */
+.empty,
+.placeholder {
+  max-width: 80%;
+  padding: var(--space-3) var(--space-6);
+  background: var(--field);
+  border: var(--edge);
+  color: var(--stain-ink-soft);
+  text-align: center;
+}

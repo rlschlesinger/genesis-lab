@@ -75,6 +75,27 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 
 The API (Milestone 5) will drive the same `Simulation` object as the CLI.
 
+## Browser lab (`web/`, Milestone 5)
+
+A separate TypeScript project that only views and requests; the Python API is the authority (D-047, D-051). Design system: [ui-design.md](ui-design.md).
+
+| Folder | Owns | Must not |
+|---|---|---|
+| `src/api/` | `types.ts` (docs/API.md as types), `client.ts` (one function per route, `ApiError`), `parse.ts` (runtime checks on stream messages), `__fixtures__/` (real server output, generated) | Hold state |
+| `src/stream/` | `connection.ts` (`StreamConnection`: one subscription, reconnection rules; no React), `useRunStream.ts` (starts/stops it) | Touch the DOM |
+| `src/store/` | `labStore.ts`: the one Zustand store (view, watched run, latest snapshot, status, selection) | Send anything to the server |
+| `src/data/` | Labels and copy (`views.ts`, `status.ts`) | Contain logic |
+| `src/components/` | Small components, one CSS module each | Fetch or open sockets directly |
+| `src/styles/` | `tokens.css` (every colour, size, radius), `base.css` | |
+
+```bash
+cd web && npm ci          # install exactly what package-lock.json says
+npm run dev               # http://127.0.0.1:5173 (needs `uv run genesis serve` for /api)
+npm test                  # Vitest
+npm run typecheck         # TypeScript, including the contract tests' compile-time checks
+npm run build             # production build in web/dist
+```
+
 ## Configuration
 
 `load_config(path)` → `SimulationConfig` with sections `run`, `world`, `food`, `organisms`, `genome`, `mutation`, `recording` (optional, defaults) and `brain` (optional; required by `controller: neural`, omitted from the dump when absent so older config hashes are unchanged). Models forbid unknown keys and are frozen. Cross-field rules:
@@ -414,7 +435,7 @@ Scope: [roadmap/05A](roadmap/05A_API_STREAMING.md) and [roadmap/05B](roadmap/05B
 | 5.2 | Pause, resume, single step, reset by seed; playback speed | Run steered through the API = headless run (digest) | done |
 | 5.3 | WebSocket snapshot stream: versioned payload, newest-only, bounded queues, many clients | Two clients see the same state; no unbounded growth | done |
 | 5.4 | Organism details (genome, family, brain thought); saved runs; export to a run folder; `docs/API.md` and an example script | Export = a `genesis run` folder | done |
-| 5.5 | Vite + React + TypeScript; design tokens, fonts, layout shell; API client, reconnecting WebSocket hook; Zustand store | Store and payload unit tests | |
+| 5.5 | Vite + React + TypeScript; design tokens, fonts, layout shell; API client, reconnecting WebSocket hook; Zustand store | Store and payload unit tests | done |
 | 5.6 | Live World: PixiJS canvas, food, organisms, pan/zoom, selection, trails; 1,000+ organisms | Selection never changes the simulation | |
 | 5.7 | Controls and the organism inspector with a brain view | Out-of-range input rejected in place | |
 | 5.8 | Run Analytics: live charts with units, sample sizes, run IDs | Chart values = backend values | |

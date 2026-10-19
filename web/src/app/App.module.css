@@ -1,0 +1,15 @@
+.lab {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+}
+
+.main {
+  padding: var(--space-6) var(--space-8) var(--space-8);
+}
+
+@media (max-width: 40rem) {
+  .main {
+    padding: var(--space-4);
+  }
+}

@@ -407,6 +407,16 @@ What has been covered, where it appears in the code, and what comes next.
 - **Documentation that can't drift:** a test fails if a route is missing from `docs/API.md`.
 - **Friendly failures:** a client that can't connect says what to do, not a 40-line traceback.
 
+### 5.5 · A typed frontend (`web/`)
+- **Frontend vs backend:** the browser renders and asks; the server decides.
+- **TypeScript:** types for every message; strict mode makes "this might be missing" a compile error, not a blank on screen.
+- **Types vanish at runtime:** so stream messages are also checked as they arrive (`parse.ts`).
+- **A contract across two languages:** real server output as fixtures, checked from both sides.
+- **Reconnection with backoff:** wait 0.5, 1, 2, 4, 8 s; tested with a fake socket and a fake clock.
+- **One store, explicit actions:** what a message does to the lab's state is written in one place.
+- **A design system from the subject:** brightfield microscopy instead of a dashboard kit; tokens as the only source of colour and size.
+- **Checking the real thing:** a screenshot exposed a stretched plate that every test passed.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

@@ -1,0 +1,51 @@
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-8);
+  padding: var(--space-4) var(--space-8);
+  background: var(--field);
+  border-bottom: var(--edge);
+}
+
+/* The one playful piece of type: Recursive's casual axis, like a label hand-written on a
+   culture plate. */
+.wordmark {
+  font-size: var(--size-title);
+  font-weight: 760;
+  font-variation-settings: "MONO" 0, "CASL" 1, "slnt" -6;
+  color: var(--violet-deep);
+  letter-spacing: -0.01em;
+}
+
+.run {
+  margin-left: auto;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  font-size: var(--size-small);
+  color: var(--stain-ink-soft);
+}
+
+.skip {
+  position: absolute;
+  left: var(--space-4);
+  top: -3rem;
+  padding: var(--space-2) var(--space-3);
+  background: var(--violet);
+  color: var(--field);
+}
+
+.skip:focus {
+  top: var(--space-2);
+}
+
+@media (max-width: 40rem) {
+  .masthead {
+    padding: var(--space-3) var(--space-4);
+  }
+  .run {
+    margin-left: 0;
+    width: 100%;
+  }
+}

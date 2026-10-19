@@ -12,7 +12,7 @@ Approval still works the same way: **no milestone starts without the user's expl
 | [04A Neural brains](04A_NEURAL_BRAINS.md) | Milestone 4, first half | Done (scope check in [architecture.md](../architecture.md)) |
 | [04B Neuroevolution comparison](04B_NEUROEVOLUTION_COMPARISON.md) | Milestone 4, second half (experiment E007) | Done ([E007](../experiments/E007-neuroevolution.md)); PyTorch check deferred (D-046) |
 | [05A API and streaming](05A_API_STREAMING.md) | Milestone 5, backend | Done ([API.md](../API.md); scope check in [architecture.md](../architecture.md)) |
-| [05B Browser lab](05B_BROWSER_LAB.md) | Milestone 5, frontend | Not started |
+| [05B Browser lab](05B_BROWSER_LAB.md) | Milestone 5, frontend | In progress (`web/`; [ui-design.md](../ui-design.md)) |
 | [06A Predator and prey](06A_PREDATOR_PREY.md) | Milestone 6, first half | Not started |
 | [06B One advanced extension](06B_ONE_ADVANCED_EXTENSION.md) | Milestone 6, second half | Not started |
 

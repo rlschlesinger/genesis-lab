@@ -1,0 +1,21 @@
+{
+  "run": {
+    "config_name": "neural",
+    "controller": "neural",
+    "error": null,
+    "max_ticks": 500,
+    "population": 34,
+    "run_id": "fixture-run",
+    "seed": 1,
+    "speed": 30.0,
+    "state": "paused",
+    "tick": 50,
+    "viewers": 1
+  },
+  "type": "hello",
+  "version": 1,
+  "world": {
+    "height": 200.0,
+    "width": 200.0
+  }
+}

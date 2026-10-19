@@ -20,3 +20,7 @@ data/*
 
 # hypothesis example database (D-037)
 .hypothesis/
+
+# Browser lab (web/): installed packages and build output. package-lock.json IS committed.
+web/node_modules/
+web/dist/

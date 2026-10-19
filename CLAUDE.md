@@ -31,6 +31,9 @@ uv run genesis lake ingest data/runs data/experiments  # validate + convert runs
 uv run genesis sql "SELECT ..."                      # query the lake (views: docs/schema.md)
 uv run genesis serve                                 # API on http://127.0.0.1:8765 (docs/API.md; OpenAPI at /docs)
 uv run python scripts/api_example.py                 # drive the API from Python (server must be running)
+cd web && npm ci && npm run dev                      # browser lab on http://127.0.0.1:5173 (with genesis serve)
+cd web && npm run typecheck && npm test              # web checks (run both: some contract checks are compile-time)
+uv run python scripts/build_api_fixtures.py          # after any API change: refresh web/src/api/__fixtures__
 uv run genesis dashboard E00N [--compare T:C]       # experiment dashboard from the lake
 uv run genesis lake export --experiment E00N --out data/exports/E00N   # + README + manifest
 uv run python experiments/e007_neuroevolution.py --analyse-only --report   # E007 verdicts + results page
@@ -55,4 +58,5 @@ uv run python experiments/e007_neuroevolution.py --analyse-only --report   # E00
 - Python 3.12, ruff (line length 100), type hints on public functions.
 - Tests live in `tests/`, mirroring the module they cover.
 - Generated data goes in `data/` (Git-ignored).
-- UI work (Milestone 5) follows the user's global anti-vibe-code design rules.
+- UI work (Milestone 5) follows the user's global anti-vibe-code design rules and docs/ui-design.md (brightfield-microscopy tokens in web/src/styles/tokens.css; nothing hard-coded in components).
+- `web/`: TypeScript strict; npm with `web/.npmrc` `legacy-peer-deps=true` (npm 10 peer crash, D-051); use `npx --no-install` so npx never downloads a stray package.

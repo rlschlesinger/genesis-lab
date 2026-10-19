@@ -63,6 +63,17 @@ uv run genesis lake verify data/exports/E003
 uv run python experiments/independent_reanalysis.py data/exports/E003    # pandas + SciPy only
 ```
 
+## Browser lab (in progress, Milestone 5)
+
+Watch a run live in your browser. Two terminals, from the project folder:
+
+```bash
+uv run genesis serve                     # the API
+cd web && npm ci && npm run dev          # the lab: http://127.0.0.1:5173
+```
+
+Requires Node 22. For now, create a run on http://127.0.0.1:8765/docs and open `http://127.0.0.1:5173/?run=<run_id>`; a run picker, the drawn world and the organism inspector are being built ([docs/ui-design.md](docs/ui-design.md), [docs/API.md](docs/API.md)).
+
 ## What a run writes
 
 | File | Contents |
@@ -148,5 +159,6 @@ data/                      generated run output (ignored by Git)
 - [SQL examples](docs/sql-examples.md) and [SQL exercises](docs/sql-exercises.md)
 - [Benchmarks](docs/benchmarks.md): recorded performance
 - [Neural networks, by hand](docs/neural-networks.md): what an organism's brain computes, with a worked example
+- [Browser lab design](docs/ui-design.md): the lab's visual system
 - [API](docs/API.md): the HTTP and WebSocket API (`genesis serve`), with a Python example in `scripts/api_example.py`
 - [Roadmap](docs/roadmap/README.md): scope for Milestones 4–6 and how it maps onto this project

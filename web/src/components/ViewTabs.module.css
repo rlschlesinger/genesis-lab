@@ -1,0 +1,23 @@
+.tabs {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.tab {
+  padding: var(--space-1) 0;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--stain-ink-soft);
+  transition: color var(--quick) var(--ease), border-color var(--quick) var(--ease);
+}
+
+.tab:hover {
+  color: var(--stain-ink);
+}
+
+.tab[aria-current="page"] {
+  color: var(--violet-deep);
+  border-bottom-color: var(--violet);
+  font-weight: 600;
+}

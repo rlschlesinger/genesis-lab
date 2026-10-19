@@ -1,0 +1,25 @@
+/* Asymmetric: the bench (plate and stage bar) as large as the window allows without
+   distorting the world; the specimen panel a fixed narrow column beside it. */
+.world {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+}
+
+.bench {
+  display: grid;
+  gap: var(--space-4);
+  /* The plate's height may use the window minus the masthead and stage bar; its width
+     follows from the world's proportions, and never exceeds the space beside the panel. */
+  width: min(100%, calc((100vh - 12rem) * var(--aspect)));
+  flex: 0 1 auto;
+}
+
+@media (max-width: 56rem) {
+  .world {
+    flex-direction: column;
+  }
+  .bench {
+    width: 100%;
+  }
+}

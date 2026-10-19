@@ -1,0 +1,25 @@
+.specimen {
+  flex: 0 0 19rem;
+  width: 19rem;
+  padding: var(--space-4) var(--space-6);
+  background: var(--field);
+  border: var(--edge);
+}
+
+.title {
+  font-size: var(--size-lead);
+  color: var(--stain-ink);
+  margin-bottom: var(--space-2);
+}
+
+.hint {
+  color: var(--stain-ink-soft);
+  font-size: var(--size-small);
+}
+
+@media (max-width: 56rem) {
+  .specimen {
+    flex-basis: auto;
+    width: 100%;
+  }
+}
