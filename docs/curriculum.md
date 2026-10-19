@@ -211,6 +211,16 @@ What has been covered, where it appears in the code, and what comes next.
 - **Canonical hashing:** sorting keys before hashing makes identical settings give identical fingerprints.
 - **Format versioning:** a version number in each record lets old and new data be read correctly together.
 
+### 3.2 · ETL into a Parquet lake (`src/genesis/lake/`)
+- **Extract, transform, load:** read raw records, convert them to a fixed schema, check, then write.
+- **Schemas as code:** the data dictionary becomes Arrow schemas, so writer and checker can't disagree.
+- **Stated vs inferred types:** declare every column's type; never let a reader guess.
+- **Validation before loading:** primary keys, foreign keys, row counts, ranges, types; refuse the whole record on any failure.
+- **All-or-nothing writes:** stage every file, then rename them into place.
+- **Columnar storage and compression:** Parquet stored this data ~9.5× smaller than CSV.
+- **Damage testing:** break copies of real data in specific ways, and confirm each is caught with the right reason.
+- **Format limits show up as test failures:** Parquet's smallest timestamp unit is ms; the schema test caught the silent widening.
+
 ## Future learning objectives
 - **Milestone 3:** pandas, SQL with DuckDB, Parquet, significance tests and effect sizes with SciPy, batch experiment design.
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.

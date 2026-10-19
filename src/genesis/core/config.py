@@ -257,7 +257,16 @@ def config_hash(config: SimulationConfig) -> str:
     produce the same text, whatever order a YAML file listed them in. The seed is included:
     two runs with the same hash should produce the same results (on the same platform).
     """
-    text = json.dumps(config.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+    return hash_config_dict(config.model_dump(mode="json"))
+
+
+def hash_config_dict(raw: dict) -> str:
+    """``config_hash`` for a config already in JSON form (e.g. read back from run.json).
+
+    Works for configs from older code that no longer validate against today's schema, so
+    every recorded run can be fingerprinted the same way.
+    """
+    text = json.dumps(raw, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 

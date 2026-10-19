@@ -1,10 +1,10 @@
 # Data dictionary
 
-Status: run-folder fields for schema version 3 implemented (3.1); database tables become binding when the ETL is implemented (3.2). See [schema.md](schema.md) for how the tables relate.
+Status: **implemented.** Run-folder fields (3.1) and lake tables (3.2, `src/genesis/lake/tables.py`) follow this dictionary; the ETL enforces it. See [schema.md](schema.md) for how the tables relate.
 
 **Conventions**
 
-- **Types** are DuckDB types: `INTEGER` (whole number), `DOUBLE` (64-bit decimal number), `BOOLEAN`, `VARCHAR` (text), `TIMESTAMP`, `JSON`.
+- **Types** are DuckDB types: `INTEGER` (whole number), `DOUBLE` (64-bit decimal number), `BOOLEAN`, `VARCHAR` (text), `TIMESTAMP` (microseconds, UTC), `JSON` (stored in Parquet as text; read with DuckDB's JSON functions). The Arrow equivalents are in `src/genesis/lake/tables.py`.
 - **Units:** `tick` (simulation time step), `wu` (world unit of distance), `EU` (energy unit), `rad` (radians), `—` (count or no unit).
 - **NULL** means "no value / unknown". The *Null when* column says when a NULL is legitimate; anywhere else, the ETL rejects the run.
 - **PK** = part of the primary key. **FK** = refers to another table.

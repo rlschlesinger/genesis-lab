@@ -60,6 +60,13 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-029 · ETL design (2026-10-19)
+
+**Decision:** pyarrow reads each CSV with stated column types (never inferred), writes one zstd Parquet file per run per table, and only after every check passes. Failed runs get a `runs` row only. Timestamps are microseconds (UTC). A run failing any check is refused whole and nothing of it is written; a bug inside a check crashes the batch rather than being skipped.
+**Why:** stated types make "a count read as text" impossible; per-run files make ingestion repeatable and incremental; all-or-nothing loading means the lake never holds half a run. Parquet has no second-precision timestamp (pyarrow silently widened "s" to "ms", caught by the schema test), and microseconds match DuckDB. A checker that quietly skipped on error would look exactly like one that passed.
+**Measured:** 165 runs back-filled in 8.7 s, 206 MB from ~1.94 GB of CSV, none refused.
+**Alternatives:** pandas `to_parquet` (type inference, less control); DuckDB `COPY ... TO` (checks written in SQL before SQL is taught); one large file per table (re-ingesting a run would rewrite everything).
+
 ## D-028 · Sampled tick rows sum flows; optional event log (2026-10-19)
 
 **Decision:** `recording.ticks_every` keeps every n-th tick (plus the final tick) in ticks.csv and gene_stats.csv. Stock columns are snapshots of the recorded tick; flow columns are totals since the previous recorded row. `recording.events` logs births, deaths and/or meals to events.csv. run.json gains `schema_version` (3), `condition`, `config_hash`, `ticks_every`, `events_recorded`.

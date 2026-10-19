@@ -50,6 +50,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `analytics/experiments.py` | Conditions (dotted config changes), `run_condition`, `settled_gene_means`, `paired`, `genomes_never_changed` | Decide hypotheses |
 | `analytics/runs.py` | `execute_run`: simulate + write run.json/ticks.csv/organisms.csv with status | |
 | `report/` | `genesis report`: `data.py` (load run folder, downsample), `theme.py` (design tokens), `figures.py` (charts), `render.py` + `template.html` + `report.css` | Run simulations; read anything outside the run folder |
+| `lake/` | ETL: `tables.py` (data dictionary as Arrow schemas), `ingest.py` (extract, transform, load), `validate.py` (the five checks) | Modify run folders |
 | `cli.py` | `genesis run` arguments → `execute_run`; exit codes 0/1/2 | Contain logic |
 
 The API (Milestone 5) will drive the same `Simulation` object as the CLI.
@@ -185,6 +186,14 @@ Founders pay exactly the Milestone 1 movement price at any exponent. Defaults re
 - Self-contained and offline: Plotly embedded once, system fonts, no external links. Deterministic: fixed chart `div_id`s give byte-identical output.
 - Refuses runs whose status isn't `completed`.
 
+## Data lake (`genesis lake ingest PATH...`)
+
+- Reads run folders (any schema version), converts each CSV to its table's exact Arrow schema, validates, and writes `data/lake/<table>/<run_id>.parquet` (zstd). Run folders are never modified.
+- Checks (refuse the whole run, naming the check): primary keys, foreign keys, row counts (incl. events vs flow totals), ranges, types.
+- Failed runs: a `runs` row only. Version 1–2 runs: `condition` derived from the folder name, `config_hash` computed from the stored config; missing columns are NULL.
+- Re-ingesting replaces a run's files (all written to `.tmp` first, then renamed).
+- Back-fill 2026-10-19: 165 runs, 25.2 M rows, 206 MB (from ~1.94 GB of CSV), 8.7 s.
+
 ## Randomness
 
 One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`, `mutation` (added in 2.2; a test checks the first five are unchanged). New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
@@ -251,7 +260,7 @@ Decisions: Parquet files are the source of truth with DuckDB views over them; ru
 |---|---|---|---|
 | 3.0 | Schema document and data dictionary; stop for review | — | done |
 | 3.1 | Tick sampling, optional event log, schema version, condition, config hash in run.json | Defaults give identical results | done |
-| 3.2 | ETL: run folder → Parquet with validation; back-fill E001–E003 | Rows and values match the CSVs | |
+| 3.2 | ETL: run folder → Parquet with validation; back-fill E001–E003 | Rows and values match the CSVs | done |
 | 3.3 | DuckDB views; `genesis sql`; join and lineage examples | SQL = pandas answers | |
 | 3.4 | Batch runner: experiment file → parallel, resumable runs | Parallel = sequential, byte for byte | |
 | 3.5 | pandas + SciPy analysis: descriptive stats, bootstrap/Wilson CIs, effect sizes; cross-check hand-written tests | Known answers | |

@@ -67,3 +67,19 @@ def test_failure_during_the_run_exits_1_and_points_at_the_record(tmp_path, capsy
     err = capsys.readouterr().err
     assert "run failed: boom" in err and "run.json" in err
     assert json.loads((out / "run.json").read_text())["status"] == "failed"
+
+
+def test_lake_ingest_command(tmp_path, capsys):
+    run = tmp_path / "run"
+    assert main(["run", "--config", DEFAULT_CONFIG, "--ticks", "30", "--out", str(run),
+                 "--quiet"]) == 0  # fmt: skip
+    capsys.readouterr()
+    assert main(["lake", "ingest", str(tmp_path), "--lake", str(tmp_path / "lake")]) == 0
+    out = capsys.readouterr().out
+    assert "ingested 1 of 1 runs" in out and "ticks" in out
+    assert (tmp_path / "lake" / "ticks").is_dir()
+
+
+def test_lake_ingest_with_no_runs_is_an_error(tmp_path, capsys):
+    assert main(["lake", "ingest", str(tmp_path)]) == 2
+    assert "no run folders" in capsys.readouterr().err

@@ -23,6 +23,7 @@ uv run pytest
 uv run ruff check . && uv run ruff format --check .
 uv run genesis run --seed 42 --out data/runs/<name>   # one recorded run
 uv run genesis report data/runs/<name>               # HTML report (Plotly, offline)
+uv run genesis lake ingest data/runs data/experiments  # validate + convert runs to data/lake/ (Parquet)
 ```
 
 ## Simulation invariants (do not break)

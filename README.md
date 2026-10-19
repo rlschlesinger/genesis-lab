@@ -34,6 +34,12 @@ open data/runs/evo/report.html
 
 `uv run genesis run --help` lists every option.
 
+To query runs together, convert them into the Parquet **data lake** (validated, ~10× smaller than the CSVs; see [docs/schema.md](docs/schema.md)):
+
+```bash
+uv run genesis lake ingest data/runs data/experiments    # writes data/lake/<table>/<run_id>.parquet
+```
+
 ## What a run writes
 
 | File | Contents |
@@ -88,6 +94,7 @@ src/genesis/intelligence/  sensing and controllers
 src/genesis/evolution/     genome, mutation, reproduction
 src/genesis/analytics/     run recording, provenance, experiments, significance tests
 src/genesis/report/        HTML run reports
+src/genesis/lake/          ETL into the Parquet data lake
 tests/                     automated tests (pytest)
 configs/                   YAML run configurations
 experiments/               experiment and benchmark scripts
@@ -101,4 +108,5 @@ data/                      generated run output (ignored by Git)
 - [Decision log](docs/decision-log.md): each design decision, why, and the alternatives
 - [Experiment design](docs/experiment-design.md): methodology and statistical rules
 - [Curriculum](docs/curriculum.md): concepts covered, milestone by milestone
+- [Database schema](docs/schema.md) and [data dictionary](docs/data-dictionary.md): tables, keys, every column
 - [Benchmarks](docs/benchmarks.md): recorded performance
