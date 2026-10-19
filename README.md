@@ -141,3 +141,4 @@ data/                      generated run output (ignored by Git)
 - [Database schema](docs/schema.md) and [data dictionary](docs/data-dictionary.md): tables, keys, every column
 - [SQL examples](docs/sql-examples.md) and [SQL exercises](docs/sql-exercises.md)
 - [Benchmarks](docs/benchmarks.md): recorded performance
+- [Roadmap](docs/roadmap/README.md): scope for Milestones 4–6 and how it maps onto this project
