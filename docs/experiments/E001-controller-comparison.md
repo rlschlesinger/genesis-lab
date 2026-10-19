@@ -40,7 +40,7 @@ For each metric and seed: paired difference = seeker − random walk. Report the
 
 ## Results
 
-**Run:** 2026-10-18, commit `b30b460` (clean, all 20 runs `dirty: false`), Python 3.12.13, NumPy 2.5.4, arm64 macOS. 20 of 20 runs completed 5000 ticks; no extinctions. Raw files: `data/experiments/E001/<controller>-s<seed>/` (not in Git; regenerate with `uv run python experiments/e001_controller_comparison.py`).
+**Run:** 2026-10-18, first at the pre-registration commit (now `0ff8e07`). Re-run at `5c37894` after the history was rewritten to replace the author email; every metric was identical. The recorded run files (all `dirty: false`) point to `5c37894`. Python 3.12.13, NumPy 2.5.4, arm64 macOS. 20 of 20 runs completed 5000 ticks; no extinctions. Raw files: `data/experiments/E001/<controller>-s<seed>/` (not in Git; regenerate with `uv run python experiments/e001_controller_comparison.py`).
 
 ### Per-seed values (random walk | seeker)
 

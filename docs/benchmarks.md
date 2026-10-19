@@ -2,7 +2,7 @@
 
 Recorded results of `uv run python experiments/benchmark.py`. Re-run and add a dated section after performance-relevant changes; never edit old entries.
 
-## 2026-10-18 · commit `b651a66` (end of increment 1.8)
+## 2026-10-18 · commit `b7ca35c` (end of increment 1.8)
 
 Apple Silicon (arm64) macOS, Python 3.12.13, NumPy 2.5.4. 200 ticks per repeat, best of 3. Population held near N (initial_count = max_population = N; food scaled with N).
 
