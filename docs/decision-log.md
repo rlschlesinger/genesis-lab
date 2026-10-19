@@ -60,6 +60,13 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-034 · Self-describing, verifiable exports (2026-10-19)
+
+**Decision:** exports carry their own documentation (README cut from the data dictionary) and a manifest with row counts and SHA-256 checksums; Parquet by default, CSV on request; rows sorted by primary key.
+**Why:** "reloadable and independently analysable" needs more than files: a reader without Genesis Lab must know what each column means and be able to prove the files are complete and unchanged. Cutting the README from the dictionary means it can't drift.
+**Evidence:** a pure pandas/NumPy/SciPy script (no Genesis Lab import) reproduced E003's H7a from the export: median interaction +5.12, 14/6, sign p 0.115, permutation p 0.0082 vs published 0.0077 (different random samples of 20,000 sign patterns; difference within one standard error).
+**Alternatives:** a DuckDB database file (one file, but needs DuckDB to read); CSV only (universal, ~10× larger, loses types).
+
 ## D-033 · Experiment dashboards show runs and summaries separately (2026-10-19)
 
 **Decision:** one HTML dashboard per experiment from the lake. Runs are faint lines and small dots; summaries are bold medians with a middle-50% band, or medians and mean differences with 95% bootstrap CIs. Median-over-time points carry their run count.

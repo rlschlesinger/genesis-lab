@@ -55,6 +55,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `report/dashboard*.py` | `genesis dashboard EXP`: `dashboard_data.py` (SQL loaders), `dashboard_figures.py` (runs vs summaries), `dashboard.py` + template | Read run folders |
 | `report/` | `genesis report`: `data.py` (load run folder, downsample), `theme.py` (design tokens), `figures.py` (charts), `render.py` + `template.html` + `report.css` | Run simulations; read anything outside the run folder |
 | `lake/` | ETL: `tables.py` (data dictionary as Arrow schemas), `ingest.py` (extract, transform, load), `validate.py` (the five checks) | Modify run folders |
+| `lake/export.py` | `export_experiment` (tables + README + manifest), `export_query`, `verify_export` | |
 | `lake/db.py` | `connect()`: in-memory DuckDB with a view per lake table, derived views, `settled_gene_means` macro, `experiments` from docs; `rebuild_db()` | Store data |
 | `cli.py` | `genesis run` arguments → `execute_run`; exit codes 0/1/2 | Contain logic |
 
@@ -209,6 +210,13 @@ Founders pay exactly the Milestone 1 movement price at any exponent. Defaults re
 - Results are ingested into the lake afterwards (`--no-ingest` to skip).
 - E001–E003 have spec files; their existing runs show as **stale** because configs gained fields since (recording settings; for E001 the whole genome section). Their configs otherwise match the specs exactly (checked).
 
+## Exports (`genesis lake export`, `genesis lake verify`)
+
+- `--experiment E003 --out DIR [--format parquet|csv] [--tables a,b]`: one file per table with rows (sorted by primary key; `runs` includes failed runs; config as JSON text), `README.md` (conventions and table sections cut from the data dictionary) and `manifest.json` (source commit, row counts, SHA-256 per file).
+- `--query "SELECT ..." --out file.csv|.parquet` saves any query result.
+- `genesis lake verify DIR` recomputes checksums against the manifest.
+- E003: 13.7 M rows exported in 1.7 s (91 MB Parquet). `experiments/independent_reanalysis.py` (pandas, NumPy, SciPy only; asserts no Genesis Lab import) reproduced H7a from the export.
+
 ## Experiment dashboards (`genesis dashboard EXP [--compare T:C] [--window A B]`)
 
 - Built from the lake (completed runs only; failed and extinct runs are counted in the header). Output `data/dashboards/<EXP>.html`: self-contained, offline, deterministic (fixed chart IDs and bootstrap seed).
@@ -288,7 +296,7 @@ Decisions: Parquet files are the source of truth with DuckDB views over them; ru
 | 3.4 | Batch runner: experiment file → parallel, resumable runs | Parallel = sequential, byte for byte | done |
 | 3.5 | pandas + SciPy analysis: descriptive stats, bootstrap/Wilson CIs, effect sizes; cross-check hand-written tests | Known answers; SciPy agreement | done |
 | 3.6 | Experiment dashboards: individual runs vs aggregates | Built from the database | done |
-| 3.7 | Export to CSV/Parquet; reload and re-analyse | Round trip | |
+| 3.7 | Export to CSV/Parquet; reload and re-analyse | Round trip; independent re-analysis | done |
 | 3.8 | Analysis notebook, executed in tests | Runs clean | |
 | 3.9 | SQL exercises (hints, hidden answers) | Answers verified | |
 | 3.10 | Experiments A, B, C: blind pilots, pre-registration, runs, reports | Defined before running | |

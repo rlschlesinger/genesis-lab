@@ -23,6 +23,7 @@ from genesis.analytics.runs import execute_run, new_run_id
 from genesis.analytics.spec import load_spec
 from genesis.core.config import ConfigError, load_config, with_overrides
 from genesis.lake.db import DEFAULT_DB, connect, rebuild_db
+from genesis.lake.export import export_experiment, export_query, verify_export
 from genesis.lake.ingest import DEFAULT_LAKE, ingest_paths
 from genesis.report import write_report
 from genesis.report.dashboard import write_dashboard
@@ -65,6 +66,18 @@ def build_parser() -> argparse.ArgumentParser:
     ingest.add_argument(
         "--lake", type=Path, default=DEFAULT_LAKE, help="lake directory (default: %(default)s)"
     )
+    export = lake_commands.add_parser(
+        "export", help="export an experiment's tables, or a query's result, as Parquet or CSV"
+    )
+    what = export.add_mutually_exclusive_group(required=True)
+    what.add_argument("--experiment", help="experiment ID, e.g. E003")
+    what.add_argument("--query", help="a SQL query; --out must end in .parquet or .csv")
+    export.add_argument("--out", type=Path, required=True, help="folder (experiment) or file")
+    export.add_argument("--format", choices=["parquet", "csv"], default="parquet")
+    export.add_argument("--tables", help="comma-separated tables (default: all with rows)")
+    export.add_argument("--lake", type=Path, default=DEFAULT_LAKE)
+    verify = lake_commands.add_parser("verify", help="check an export against its manifest")
+    verify.add_argument("export_dir", type=Path)
     rebuild = lake_commands.add_parser(
         "rebuild-db", help="write the SQL views into a DuckDB file for other tools"
     )
@@ -143,6 +156,28 @@ def _dashboard(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(f"dashboard written to {path}")
+    return 0
+
+
+def _export(args: argparse.Namespace) -> int:
+    try:
+        if args.query:
+            rows = export_query(args.query, args.out, args.lake)
+            print(f"wrote {rows:,} rows to {args.out}")
+            return 0
+        tables = args.tables.split(",") if args.tables else None
+        if args.format == "csv":
+            print(
+                "note: CSV is much larger than Parquet (E003's gene_stats: ~800 MB vs ~70 MB)",
+                file=sys.stderr,
+            )
+        manifest = export_experiment(args.experiment, args.out, args.format, tables, args.lake)
+    except (ValueError, duckdb.Error) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    for name, info in manifest["files"].items():
+        print(f"  {name:<22} {info['rows']:>12,} rows")
+    print(f"exported {args.experiment} to {args.out} (README.md and manifest.json included)")
     return 0
 
 
@@ -242,6 +277,14 @@ def format_table(columns: list[str], rows: list[tuple]) -> str:
 
 
 def _lake(args: argparse.Namespace) -> int:
+    if args.lake_command == "export":
+        return _export(args)
+    if args.lake_command == "verify":
+        problems = verify_export(args.export_dir)
+        for problem in problems:
+            print(f"problem: {problem}", file=sys.stderr)
+        print("export intact" if not problems else f"{len(problems)} problem(s) found")
+        return 1 if problems else 0
     if args.lake_command == "rebuild-db":
         path = rebuild_db(args.db, args.lake)
         print(f"wrote views to {path} (absolute paths: rebuild if the project folder moves)")

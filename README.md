@@ -50,6 +50,14 @@ uv run genesis dashboard E003 --compare S_plenty:N_plenty --compare S_scarce:N_s
 open data/dashboards/E003.html
 ```
 
+Export an experiment (tables + column documentation + checksums) for analysis anywhere, then check it:
+
+```bash
+uv run genesis lake export --experiment E003 --out data/exports/E003    # Parquet; --format csv also works
+uv run genesis lake verify data/exports/E003
+uv run python experiments/independent_reanalysis.py data/exports/E003    # pandas + SciPy only
+```
+
 ## What a run writes
 
 | File | Contents |
