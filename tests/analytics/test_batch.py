@@ -113,6 +113,41 @@ def test_seed_range_form(tmp_path):
 # --- Running ------------------------------------------------------------------------------
 
 
+def test_a_condition_can_have_its_own_seeds_and_per_seed_changes(tmp_path):
+    """E007's evaluation: each evolved population runs in its own world, with its own brains."""
+    spec = ExperimentSpec.model_validate(
+        spec_dict(
+            tmp_path,
+            conditions=[
+                {"label": "plenty", "changes": {}},
+                {
+                    "label": "special",
+                    "seeds": [21, 22, 23],
+                    "per_seed": {22: {"food.regrowth_per_tick": 0.5}},
+                },
+            ],
+        )
+    )
+    assert spec.run_count() == 2 + 3
+    configs = spec.configs()
+    assert sorted(configs) == [
+        ("plenty", 11), ("plenty", 12), ("special", 21), ("special", 22), ("special", 23)
+    ]  # fmt: skip
+    assert configs[("special", 22)].food.regrowth_per_tick == 0.5
+    assert configs[("special", 21)].food.regrowth_per_tick == 2.0  # unchanged elsewhere
+    assert configs[("special", 22)].run.seed == 22
+    assert {t.out_dir.name for t in plan(spec)} >= {"special-s21", "special-s22", "special-s23"}
+
+
+def test_per_seed_changes_for_a_seed_the_condition_does_not_run_are_rejected(tmp_path):
+    bad = spec_dict(
+        tmp_path,
+        conditions=[{"label": "x", "seeds": [1, 2], "per_seed": {3: {"run.max_ticks": 5}}}],
+    )
+    with pytest.raises(pydantic.ValidationError, match="per_seed names seeds it doesn't run"):
+        ExperimentSpec.model_validate(bad)
+
+
 def csv_bytes(out: Path) -> dict[str, bytes]:
     return {
         f"{d.name}/{f.name}": f.read_bytes()

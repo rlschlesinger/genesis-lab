@@ -353,6 +353,14 @@ What has been covered, where it appears in the code, and what comes next.
 - **Reading weights:** which inputs each hidden unit listens to, and how each hidden unit pushes the outputs.
 - **Trust but verify:** the replay checks itself against the recording and flags another platform.
 
+### 4.7 · Designing E007 (`docs/experiments/E007-neuroevolution.md`)
+- **Choosing an endpoint that can move:** settled population is pinned by food supply; meals per organism-tick in a fixed, well-fed population measures foraging itself.
+- **Train/test separation:** brains are evaluated in worlds (seeds) they never lived in; a "home" condition checks for specialisation.
+- **Positive controls as gates:** if selection didn't beat random brains (H11), the main comparison isn't interpretable.
+- **Equivalence as a result:** a CI inside ±SESOI supports "as good as", which a non-significant p-value never does.
+- **Pre-registering a rule, not a list:** the evaluation's brains don't exist until training ends, so the rule that will pick them is fixed and tested in advance.
+- **Fixing the tools you find broken:** the smoke run exposed a hashing bug in the batch runner.
+
 ## Future learning objectives
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

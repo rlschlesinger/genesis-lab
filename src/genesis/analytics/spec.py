@@ -37,6 +37,15 @@ class SeedRange(_Strict):
 class ConditionSpec(_Strict):
     label: Label
     changes: dict[str, object] = Field(default_factory=dict)  # dotted config paths
+    # Optional (E007): this condition's own seeds instead of the experiment's, and extra
+    # changes for particular seeds (e.g. the brains evolved for that world).
+    seeds: SeedRange | list[Annotated[int, Field(ge=0)]] | None = None
+    per_seed: dict[int, dict[str, object]] = Field(default_factory=dict)
+
+    def seed_list(self) -> list[int] | None:
+        if self.seeds is None:
+            return None
+        return self.seeds.seeds() if isinstance(self.seeds, SeedRange) else list(self.seeds)
 
 
 class ExperimentSpec(_Strict):
@@ -54,13 +63,27 @@ class ExperimentSpec(_Strict):
         labels = [c.label for c in self.conditions]
         if len(set(labels)) != len(labels):
             raise ValueError(f"condition labels must be distinct: {labels}")
-        seeds = self.seed_list()
-        if len(set(seeds)) != len(seeds):
-            raise ValueError("seeds must be distinct")
+        for c in self.conditions:
+            seeds = self.seeds_for(c)
+            if len(set(seeds)) != len(seeds):
+                raise ValueError(f"seeds must be distinct (condition {c.label})")
+            unknown = sorted(set(c.per_seed) - set(seeds))
+            if unknown:
+                raise ValueError(
+                    f"condition {c.label}: per_seed names seeds it doesn't run: {unknown}"
+                )
         return self
 
     def seed_list(self) -> list[int]:
+        """The experiment's seeds (conditions may override them, see ``seeds_for``)."""
         return self.seeds.seeds() if isinstance(self.seeds, SeedRange) else list(self.seeds)
+
+    def seeds_for(self, condition: ConditionSpec) -> list[int]:
+        own = condition.seed_list()
+        return own if own is not None else self.seed_list()
+
+    def run_count(self) -> int:
+        return sum(len(self.seeds_for(c)) for c in self.conditions)
 
     def output_dir(self, root: Path = PROJECT_ROOT) -> Path:
         return root / (self.output or f"data/experiments/{self.experiment_id}")
@@ -87,9 +110,11 @@ class ExperimentSpec(_Strict):
         """Every run's validated config, keyed by (condition label, seed)."""
         base = self.base(root)
         return {
-            (c.label, seed): apply_changes(base, {**c.changes, "run.seed": seed})
+            (c.label, seed): apply_changes(
+                base, {**c.changes, **c.per_seed.get(seed, {}), "run.seed": seed}
+            )
             for c in self.conditions
-            for seed in self.seed_list()
+            for seed in self.seeds_for(c)
         }
 
 

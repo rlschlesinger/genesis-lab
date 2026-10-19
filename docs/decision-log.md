@@ -60,6 +60,16 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-045 · E007's machinery: given founder brains, per-condition seeds, neural golden values (2026-10-19)
+
+**Decision:**
+- `brain.founder_weights`: an optional list of 62-number vectors, one per founder (validated: count = `initial_count`, length 62, finite, within ±`weight_limit`). Founders take exactly these brains and nothing is drawn from the brain stream. The weights live in the config, so `config_hash` and run.json identify the exact brains.
+- Experiment specs: a condition may have its own `seeds` and `per_seed` changes (validated: only for seeds it runs). E007 uses this to give each evolved population its own evaluation world and its own brains.
+- The batch runner keeps task statuses as a list of pairs instead of a dict keyed by task: a config holding lists can't be hashed (found by E007's smoke run).
+- Golden values for `configs/neural.yaml` (seed 42, 1,000 ticks): Darwin arm64 state and event digests recorded. The event test runs only where confirmed (`NEURAL_EVENTS_CONFIRMED`): unlike the rule-based runs, neural runs depend on `tanh` from the platform's maths library, so cross-platform event agreement is not assumed. Linux x86_64 values are to be recorded in a Linux session.
+**Why:** E007's evaluation must run brains evolved elsewhere, reproducibly and identifiably; a file reference would leave the config hash blind to the brains. Per-condition seeds keep one spec (and one batch run, resumable and parallel) for the whole evaluation. Golden values lock E007's code before it runs.
+**Alternatives:** a path to a brains file in the config (hash doesn't cover the content); one spec per evaluation world (dozens of files); assuming neural event digests are portable (untested).
+
 ## D-044 · Inspecting a decision by replay (2026-10-19)
 
 **Decision:** `genesis inspect RUN_DIR --tick T --organism ID [--weights]` (or `--config FILE --seed S`) replays the run to the start of tick T, lets the simulation take that tick, and prints the organism's decision from the simulation's own record: what it sensed, the 7 inputs, the 6 hidden sums and activations, the 2 outputs and how they became a turn and throttle, and the result (heading, position, energy, whether it ate or died). The simulation keeps the controller's `Thought` in `last_decision` (it already computed it). The replay is checked against the recorded ticks.csv row for that tick, and a run recorded on another OS family or machine is flagged.

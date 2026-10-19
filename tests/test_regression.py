@@ -127,3 +127,48 @@ def test_milestone_1_state_is_unchanged(controller):
         "passes, only float rounding changed (a NumPy or CPU difference, D-027); "
         "if it fails too, simulation behaviour changed"
     )
+
+
+# --- Neural organisms (Milestone 4) ---------------------------------------------------------
+#
+# configs/neural.yaml, seed 42, TICKS ticks: brains drawn, inherited, mutated and used. Locks
+# in E007's code before it runs (4.7). Recorded on Darwin arm64 at the commit after 4b777b0
+# (4.7a). tanh and the other transcendental functions come from the platform's maths
+# library, so unlike the rule-based event digests these are not yet known to hold on Linux:
+# the event test runs only on platforms listed in NEURAL_EVENTS_CONFIRMED, until a Linux run
+# records and confirms its values (D-045).
+
+NEURAL_CONFIG = Path(__file__).parents[1] / "configs" / "neural.yaml"
+
+GOLDEN_NEURAL_STATE = {
+    ("Darwin", "arm64"): "9e3edc8b9cba8cc363505e4cbc2735b183014c579043c04065c11836cd46b124",
+}
+GOLDEN_NEURAL_EVENTS = "e800207b96172bcb53d0a30de4e4a37a762cd610cdce159d26c57b70c008757c"
+NEURAL_EVENTS_CONFIRMED = {("Darwin", "arm64")}
+
+
+def run_neural() -> tuple[Simulation, list[TickSummary]]:
+    raw = yaml.safe_load(NEURAL_CONFIG.read_text())
+    raw["run"]["max_ticks"] = TICKS
+    sim = Simulation(SimulationConfig.model_validate(raw))
+    return sim, sim.run()
+
+
+def test_neural_events_are_unchanged():
+    this_platform = (platform.system(), platform.machine())
+    if this_platform not in NEURAL_EVENTS_CONFIRMED:
+        pytest.skip(f"neural event digest not yet confirmed on {this_platform} (D-045)")
+    _, summaries = run_neural()
+    assert event_digest(summaries) == GOLDEN_NEURAL_EVENTS, (
+        "neural runs: the sequence of births, deaths and meals changed"
+    )
+
+
+def test_neural_state_is_unchanged():
+    this_platform = (platform.system(), platform.machine())
+    if this_platform not in GOLDEN_NEURAL_STATE:
+        pytest.skip(f"no neural state digest recorded for {this_platform} (D-027, D-045)")
+    sim, _ = run_neural()
+    assert sim.state_digest() == GOLDEN_NEURAL_STATE[this_platform], (
+        "neural runs: the final state (positions, energies, genes, brain weights) changed"
+    )

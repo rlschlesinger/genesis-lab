@@ -38,7 +38,7 @@ from genesis.evolution.mutation import mutate
 from genesis.evolution.reproduction import place_offspring, select_parents
 from genesis.intelligence.brain_inputs import wall_distance_ahead
 from genesis.intelligence.controllers import Actions, Thought, make_controller
-from genesis.intelligence.neural import BrainStack
+from genesis.intelligence.neural import Brain, BrainStack
 from genesis.intelligence.sensors import BodySenses, Observations, sense_food
 
 
@@ -180,9 +180,13 @@ class Simulation:
         positions = self.rng.setup.uniform(0.0, [self.world.width, self.world.height], size=(n, 2))
         headings = self.rng.setup.uniform(-np.pi, np.pi, size=n)
         brain_cfg = self.config.brain
-        brains = (
-            founder_brains(n, brain_cfg, self.rng.brain) if brain_cfg is not None else [None] * n
-        )
+        if brain_cfg is None:
+            brains = [None] * n
+        elif brain_cfg.founder_weights is not None:
+            # Given brains (e.g. evolved elsewhere, E007): nothing is drawn from the stream.
+            brains = [Brain.from_vector(w) for w in brain_cfg.founder_weights]
+        else:
+            brains = founder_brains(n, brain_cfg, self.rng.brain)
         founders = []
         for (x, y), h, brain in zip(positions, headings, brains, strict=True):
             new_id = self._new_id()

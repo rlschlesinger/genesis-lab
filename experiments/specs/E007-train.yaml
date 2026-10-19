@@ -1,0 +1,13 @@
+# E007 · Neuroevolution, phase 1: training. Definition: docs/experiments/E007-neuroevolution.md
+# Phase 2 (evaluation) is built from these runs' results by experiments/e007_neuroevolution.py.
+experiment_id: E007
+title: Do evolved brains forage as well as the hand-written rule?
+definition: docs/experiments/E007-neuroevolution.md
+base_config: configs/neural.yaml
+base_changes:
+  run.max_ticks: 20000
+  recording.ticks_every: 10            # nothing analysed needs every tick of training
+  recording.genome_snapshot_every: 1000
+seeds: {first: 7000, count: 24}
+conditions:
+  - {label: train}

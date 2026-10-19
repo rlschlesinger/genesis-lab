@@ -26,6 +26,10 @@ NonNegativeFloat = Annotated[float, Field(ge=0)]
 PositiveInt = Annotated[int, Field(gt=0)]
 NonNegativeInt = Annotated[int, Field(ge=0)]
 
+# Parameters in one brain: 7 inputs x 6 hidden + 6 + 6 x 2 outputs + 2 (D-039). Kept here as a
+# number so config validation doesn't import the network code; a test checks it matches.
+BRAIN_PARAMETERS = 62
+
 ControllerName = Literal["random_walk", "nearest_food_seeker", "neural"]
 EventKind = Literal["birth", "death", "meal"]
 
@@ -183,6 +187,31 @@ class BrainConfig(_Strict):
     mutation_size: NonNegativeFloat = Field(
         default=0.2, description="Standard deviation of one weight's mutation step."
     )
+    founder_weights: list[list[float]] | None = Field(
+        default=None,
+        description=(
+            "Explicit brains for the founders, one 62-number vector per founder (in "
+            "Brain.to_vector() order), e.g. brains evolved in another run (E007). None: draw "
+            "random brains. Stored in the config so its hash identifies the exact brains."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _founder_weights_valid(self) -> Self:
+        if self.founder_weights is None:
+            return self
+        for k, vector in enumerate(self.founder_weights):
+            if len(vector) != BRAIN_PARAMETERS:
+                raise ValueError(
+                    f"founder_weights[{k}] has {len(vector)} numbers; "
+                    f"a brain has {BRAIN_PARAMETERS}"
+                )
+            if not all(math.isfinite(w) and abs(w) <= self.weight_limit for w in vector):
+                raise ValueError(
+                    f"founder_weights[{k}] has a value that is not finite or exceeds "
+                    f"weight_limit ({self.weight_limit})"
+                )
+        return self
 
 
 class RecordingConfig(_Strict):
@@ -243,6 +272,17 @@ class SimulationConfig(_Strict):
         # mutated but never used, a no-selection control for brain weights.
         if self.organisms.controller == "neural" and self.brain is None:
             raise ValueError("controller 'neural' needs a brain: section (it may be empty: {})")
+        return self
+
+    @model_validator(mode="after")
+    def _one_brain_per_founder(self) -> Self:
+        if self.brain is not None and self.brain.founder_weights is not None:
+            given, needed = len(self.brain.founder_weights), self.organisms.initial_count
+            if given != needed:
+                raise ValueError(
+                    f"brain.founder_weights has {given} brains for {needed} founders "
+                    "(organisms.initial_count)"
+                )
         return self
 
     @model_validator(mode="after")

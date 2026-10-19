@@ -87,11 +87,13 @@ def run_experiment(
     combine results from two different experiments.
     """
     tasks = plan(spec, root)
-    statuses = {t: task_status(t) for t in tasks}
-    stale = [t for t, s in statuses.items() if s == STALE]
+    # A list of pairs, not a dict keyed by Task: a Task holds its config, and a config with
+    # list values (brain.founder_weights, E007) can't be hashed.
+    statuses = [(t, task_status(t)) for t in tasks]
+    stale = [t for t, s in statuses if s == STALE]
     if stale and not rerun_stale:
         raise StaleRunsError(stale)
-    todo = [t for t, s in statuses.items() if s != COMPLETED]
+    todo = [t for t, s in statuses if s != COMPLETED]
 
     outcomes: list[TaskOutcome] = []
     if todo:

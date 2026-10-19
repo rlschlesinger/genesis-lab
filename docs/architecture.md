@@ -354,7 +354,7 @@ Scope: [roadmap/04A](roadmap/04A_NEURAL_BRAINS.md) and [roadmap/04B](roadmap/04B
 | 4.4 | `controller: neural` in the tick; `configs/neural.yaml` | Rule-based runs byte-identical; ledger balances | done |
 | 4.5 | Recording: brains at birth, behaviour summaries; schema v4; lake tables; report charts | Lake checks; recount | done |
 | 4.6 | `genesis inspect`: inputs → hidden → outputs → action → state for one organism and tick | Replay = original run | done |
-| 4.7 | Pre-register E007: random vs seeker vs evolved brains, train/evaluation seed groups; neural golden values (both platforms) | Smoke runs on throwaway seeds | |
+| 4.7 | Pre-register E007: random vs seeker vs evolved brains, train/evaluation seed groups; neural golden values (Darwin done; Linux pending) | Smoke runs on throwaway seeds | done |
 | 4.8 | Run E007 and report | Results appended to the definition | |
 | 4.9 | Wrap-up: docs, scope check; stop before Milestone 5 | | |
 

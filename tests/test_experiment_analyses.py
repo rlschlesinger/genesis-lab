@@ -1,4 +1,4 @@
-"""The pre-registered E004-E006 analyses, checked on synthetic data with known answers.
+"""The pre-registered E004-E007 analyses, checked on synthetic data with known answers.
 
 A bug in an analysis is as damaging as a bug in the simulation, so each statistical helper is
 tested before any real run is analysed.
@@ -25,6 +25,7 @@ def load(name: str):
 e004 = load("e004_food_dose_response")
 e005 = load("e005_mutation_diversity")
 e006 = load("e006_founders_extinction")
+e007 = load("e007_neuroevolution")
 
 
 @pytest.mark.parametrize("power", [1.0, 0.5, 1.3])
@@ -82,3 +83,73 @@ def test_smoke_copy_is_isolated_from_the_real_experiment():
     assert smoke.base_changes["food.regrowth_per_tick"] == 0.1  # keeps the experiment's settings
     assert smoke.output_dir() != spec.output_dir()
     assert not set(smoke.seed_list()) & set(spec.seed_list())
+
+
+# --- E007: the evaluation rule and the verdicts ---------------------------------------------
+
+
+def test_e007_training_spec_plans_24_runs_on_fresh_seeds():
+    spec = load_spec(EXPERIMENTS / "specs" / "E007-train.yaml")
+    assert spec.seed_list() == list(range(7000, 7024))
+    assert spec.run_count() == 24
+    assert (PROJECT_ROOT / spec.definition).exists()
+    earlier = ["E001", "E002", "E003", "E004", "E005", "E006"]
+    used_before = {
+        s for name in earlier for s in load_spec(EXPERIMENTS / "specs" / f"{name}.yaml").seed_list()
+    }
+    evaluation = {s + e007.EVAL_OFFSET for s in spec.seed_list()}
+    assert not (set(spec.seed_list()) | evaluation) & used_before
+
+
+@pytest.mark.parametrize(
+    "category, estimate, expected",
+    [
+        ("negligible", 0.001, "EQUIVALENT"),
+        ("meaningful", 0.01, "BETTER"),
+        ("meaningful", -0.01, "WORSE"),
+        ("inconclusive", 0.01, "INCONCLUSIVE"),
+    ],
+)
+def test_e007_verdicts_follow_the_definition(category, estimate, expected):
+    assert e007.verdict(category, estimate) == expected
+
+
+@pytest.fixture(scope="module")
+def e007_trained(tmp_path_factory):
+    """Two short training runs (throwaway seeds) in a private folder and lake."""
+    from genesis.analytics.batch import run_experiment
+
+    out = tmp_path_factory.mktemp("e007")
+    train = load_spec(EXPERIMENTS / "specs" / "E007-train.yaml").smoke_copy([9100, 9101], 1500)
+    train = train.model_copy(update={"output": str(out / "runs")})
+    lake = out / "lake"
+    run_experiment(train, workers=1, lake=lake)
+    return train, lake
+
+
+def test_e007_evaluation_follows_the_pre_registered_rule(e007_trained):
+    train, lake = e007_trained
+    evaluation = e007.evaluation_spec(train, lake, eval_ticks=50)
+    labels = [c.label for c in evaluation.conditions]
+    assert labels == ["random_walk", "seeker", "random_brains", "evolved", "home"]
+    assert evaluation.seed_list() == [9200, 9201]  # training seed + 100
+    home = evaluation.conditions[4]
+    assert home.seed_list() == [9100, 9101]  # the training runs' own seeds
+    configs = evaluation.configs()
+    for seed in (9100, 9101):
+        away = configs[("evolved", seed + 100)]
+        # Independently re-derive the sample: survivors by ID, default_rng(eval seed).choice.
+        survivors = e007.query_df(
+            "SELECT b.* EXCLUDE (run_id, organism_id) FROM brains b JOIN organisms o "
+            "USING (run_id, organism_id) JOIN runs r USING (run_id) "
+            "WHERE r.seed = $s AND o.alive ORDER BY b.organism_id",
+            lake,
+            {"s": seed},
+        ).to_numpy()
+        picks = np.random.default_rng(seed + 100).choice(len(survivors), 30, replace=False)
+        assert away.brain.founder_weights == survivors[picks].tolist()
+        assert configs[("home", seed)].brain.founder_weights == away.brain.founder_weights
+        assert away.organisms.max_population == away.organisms.initial_count == 30
+        assert not away.mutation.enabled
+    assert configs[("seeker", 9200)].organisms.controller == "nearest_food_seeker"
+    assert configs[("random_brains", 9200)].brain.founder_weights is None

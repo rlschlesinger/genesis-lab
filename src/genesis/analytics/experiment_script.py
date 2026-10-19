@@ -43,7 +43,7 @@ def experiment_main(
         spec = spec.smoke_copy(SMOKE_SEEDS, smoke_ticks)
         lake = spec.output_dir() / "lake"
     if not args.analyse_only:
-        planned = len(spec.seed_list()) * len(spec.conditions)
+        planned = spec.run_count()
         print(f"{spec.experiment_id}: {planned} runs planned; running what isn't complete ...")
         outcomes = run_experiment(spec, rerun_stale=args.rerun_stale, lake=lake)
         print(f"ran {len(outcomes)}, failed {sum(not o.ok for o in outcomes)}\n")

@@ -183,3 +183,50 @@ def test_brain_runs_are_deterministic_and_the_digest_sees_weights():
     vector[0] += 1e-9
     c.organisms[0].brain = Brain.from_vector(vector)
     assert Simulation(with_brains()).state_digest() != c.state_digest()
+
+
+# --- founders given specific brains (E007's evaluation worlds) -------------------------------
+
+
+def given_weights(n: int, seed: int = 11) -> list[list[float]]:
+    return np.random.default_rng(seed).uniform(-4, 4, (n, PARAMETER_COUNT)).tolist()
+
+
+def test_config_brain_size_matches_the_network():
+    from genesis.core.config import BRAIN_PARAMETERS
+
+    assert BRAIN_PARAMETERS == PARAMETER_COUNT
+
+
+def test_founders_get_exactly_the_given_brains_and_draw_nothing():
+    weights = given_weights(30)
+    sim = Simulation(with_brains(founder_weights=weights))
+    for org, vector in zip(sim.organisms, weights, strict=True):
+        assert org.brain.to_vector().tolist() == vector
+    # The brain stream is untouched: its next number is its first.
+    fresh = RngStreams.from_seed(sim.config.run.seed).brain
+    assert sim.rng.brain.random() == fresh.random()
+
+
+def test_given_brains_survive_a_trip_through_run_json():
+    """Weights are stored in the config as JSON; Python's float repr makes that exact."""
+    import json
+
+    config = with_brains(founder_weights=given_weights(30))
+    again = SimulationConfig.model_validate(json.loads(json.dumps(config.model_dump(mode="json"))))
+    assert again.brain.founder_weights == config.brain.founder_weights
+    assert config_hash(again) == config_hash(config)
+
+
+@pytest.mark.parametrize(
+    "weights, message",
+    [
+        (given_weights(29), "29 brains for 30 founders"),
+        ([[0.0] * 61] * 30, "has 61 numbers"),
+        ([[4.5] * 62] * 30, "exceeds weight_limit"),
+        ([[float("nan")] * 62] * 30, "not finite"),
+    ],
+)
+def test_bad_founder_weights_are_rejected(weights, message):
+    with pytest.raises(ValueError, match=message):
+        with_brains(founder_weights=weights)

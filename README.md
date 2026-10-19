@@ -96,6 +96,7 @@ Each experiment is defined (question, hypotheses, seeds, analysis) and committed
 | [E004](docs/experiments/E004-food-dose-response.md) | Is population proportional to food? | Yes: elasticity 0.992 [0.982, 1.001]; H1's formula within ~6% |
 | [E005](docs/experiments/E005-mutation-diversity.md) | Does more mutation maintain more diversity? | Yes: ρ = 0.88, p ≈ 0.00005, meaningful; roughly √(rate) |
 | [E006](docs/experiments/E006-founders-extinction.md) | Do fewer founders mean more extinction? | No monotonic effect (p = 0.42); an exploratory U-shape to test next |
+| [E007](docs/experiments/E007-neuroevolution.md) | Do evolved brains forage as well as the hand-written rule? | Defined and pre-registered; not yet run |
 
 ```bash
 uv run genesis experiment status experiments/specs/E002.yaml          # which runs exist / are stale
