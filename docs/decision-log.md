@@ -60,6 +60,16 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-048 · Stepping live runs: one thread, wall time decides how many ticks, never which (2026-10-19)
+
+**Decision:** controls `resume`, `pause`, `step` (1–10,000 ticks, idle or paused only), `speed` (ticks per second, or null for flat out; default 30) and `reset` (a fresh run from tick 0 with the same config and, unless given, the same seed; it gets a new run ID). While running, an asyncio task steps in slices of at most 10 ms, then yields so requests are answered; with a target speed it keeps a tick budget (elapsed time × speed, fractions carried over, backlog capped at 0.25 s). Every route is `async def`, so routes and the stepping loop share the event loop thread and never touch a simulation at the same time. A failing tick marks the run `failed` with the reason. `pause` requires a running run (the state table's idle → paused move exists only for stepping). `GET /runs/{id}/digest` returns `state_digest()`.
+**Why:**
+- **Determinism through the API:** each tick is the next of the seed's sequence whatever the timing; a test steers runs with steps, pauses, speed changes and flat-out running, and checks the final digest equals a headless run (rule-based and neural).
+- **No locks:** asyncio switches tasks only at `await`, and a tick contains none, so a tick always finishes before anything else runs. Plain `def` routes would run on FastAPI's thread pool, concurrently with the loop.
+- **Responsive while busy:** measured on the Mac, status requests answered in 3–5 ms while a neural run stepped at 200 ticks/s; flat out, 5,000 ticks in 2.0 s.
+- **A new ID on reset:** a run ID names one history; reusing it would let an export or a chart mix two runs.
+**Alternatives:** a thread per run with locks (true parallelism, but locking bugs are the hardest kind to reproduce); a separate process per run (isolation, but every snapshot would have to be copied between processes); time-based ticks (non-deterministic: the spec forbids it).
+
 ## D-047 · The API: one authority, explicit run states, local only (2026-10-19)
 
 **Decision:** a FastAPI application (`genesis.api`, started by `genesis serve`) holds live runs in memory, each a `Simulation` driven by the server alone. Every run has an explicit state (idle, running, paused, completed, failed) and may only move along the transitions listed in `runs.ALLOWED`; any other request gets 409. Requests and responses are Pydantic models (the contract, versioned by `API_VERSION`); unknown fields are refused. Configs are chosen by name from `configs/` (never by path) and changed with the experiment specs' dotted paths, then validated like a config file. At most 4 live runs. The server listens on 127.0.0.1; a network address needs `--allow-remote`, because there is no login. Errors map to status codes in one place: 404 unknown run, 409 impossible in this state, 422 invalid request or config, 429 too many runs.

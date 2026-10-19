@@ -15,6 +15,7 @@ scattered if-statements, makes the whole lifecycle readable in one place and tes
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -27,6 +28,7 @@ from genesis.core.simulation import Simulation
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 CONFIGS_DIR = PROJECT_ROOT / "configs"
 MAX_LIVE_RUNS = 4  # each live run holds its whole history in memory
+DEFAULT_SPEED = 30.0  # ticks per second: slow enough to watch; the client can change it
 
 # (from, to) pairs a run may move along. Anything else is a conflict.
 ALLOWED: frozenset[tuple[RunState, RunState]] = frozenset(
@@ -69,6 +71,8 @@ class LiveRun:
     sim: Simulation
     state: RunState = RunState.IDLE
     error: str | None = None
+    speed: float | None = DEFAULT_SPEED  # ticks per second while running; None = flat out
+    task: asyncio.Task | None = None  # the background loop while running (stepping.py)
 
     def info(self) -> RunInfo:
         return RunInfo(
@@ -80,6 +84,7 @@ class LiveRun:
             tick=self.sim.tick,
             max_ticks=self.config.run.max_ticks,
             population=len(self.sim.organisms),
+            speed=self.speed,
             error=self.error,
         )
 
@@ -151,5 +156,18 @@ class RunManager:
             raise RunNotFound(f"no live run {run_id!r}") from None
 
     def delete(self, run_id: str) -> None:
-        self.get(run_id)
+        run = self.get(run_id)
+        if run.task is not None and not run.task.done():
+            run.task.cancel()
         del self.runs[run_id]
+
+    def reset(self, run_id: str, seed: int | None = None) -> LiveRun:
+        """A fresh run from tick 0 with the same config (and seed, unless one is given). It
+        replaces the old run and gets a new ID: a run ID always names one history."""
+        old = self.get(run_id)
+        config = with_overrides(old.config, seed=seed)
+        self.delete(run_id)
+        run = LiveRun(new_run_id(config.run.seed), old.config_name, config, Simulation(config))
+        run.speed = old.speed
+        self.runs[run.run_id] = run
+        return run

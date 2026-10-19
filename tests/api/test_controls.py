@@ -1,0 +1,197 @@
+"""Tests for run controls: pause, resume, step, speed, reset; and the key promise that a run
+steered through the API passes through exactly the states of a headless run."""
+
+import time
+
+import pytest
+from fastapi.testclient import TestClient
+
+from genesis.analytics.experiments import apply_changes
+from genesis.api.app import create_app
+from genesis.api.runs import RunManager
+from genesis.core.config import load_config
+from genesis.core.simulation import Simulation
+
+
+@pytest.fixture
+def client():
+    # The context manager keeps the app's event loop alive between requests, so a run's
+    # background loop really runs while the test waits.
+    with TestClient(create_app(RunManager())) as c:
+        yield c
+
+
+def create(client, **body) -> dict:
+    response = client.post("/api/runs", json=body)
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def post(client, run_id: str, action: str, body: dict | None = None) -> dict:
+    response = client.post(f"/api/runs/{run_id}/{action}", json=body)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def wait_for(client, run_id: str, state: str, timeout: float = 30.0) -> dict:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        run = client.get(f"/api/runs/{run_id}").json()
+        if run["state"] == state:
+            return run
+        time.sleep(0.01)
+    raise AssertionError(f"run never became {state}: {run}")
+
+
+def headless_digest(config_name: str, seed: int, ticks: int) -> str:
+    config = apply_changes(
+        load_config(f"configs/{config_name}.yaml"), {"run.seed": seed, "run.max_ticks": ticks}
+    )
+    sim = Simulation(config)
+    sim.run()
+    return sim.state_digest()
+
+
+# --- the promise: the API never changes what happens -----------------------------------------
+
+
+@pytest.mark.parametrize("config", ["evolution", "neural"])
+def test_a_run_steered_through_the_api_is_bit_identical_to_a_headless_run(client, config):
+    """Steps, pauses, speed changes and running flat out, in any mix: same final state."""
+    ticks = 400
+    run = create(client, config=config, seed=11, max_ticks=ticks)
+    rid = run["run_id"]
+    post(client, rid, "step")  # 1 tick from idle
+    post(client, rid, "step", {"ticks": 25})
+    client.put(f"/api/runs/{rid}/speed", json={"ticks_per_second": 2000})
+    post(client, rid, "resume")
+    time.sleep(0.03)
+    paused = post(client, rid, "pause")
+    assert paused["state"] == "paused" and 26 < paused["tick"] < ticks
+    post(client, rid, "step", {"ticks": 7})
+    client.put(f"/api/runs/{rid}/speed", json={"ticks_per_second": None})  # flat out
+    post(client, rid, "resume")
+    done = wait_for(client, rid, "completed")
+    assert done["tick"] == ticks
+    digest = client.get(f"/api/runs/{rid}/digest").json()
+    assert digest["tick"] == ticks
+    assert digest["digest"] == headless_digest(config, 11, ticks)
+
+
+# --- each control ---------------------------------------------------------------------------
+
+
+def test_step_takes_exactly_the_requested_ticks_and_leaves_the_run_paused(client):
+    rid = create(client, max_ticks=100)["run_id"]
+    assert post(client, rid, "step")["tick"] == 1
+    after = post(client, rid, "step", {"ticks": 9})
+    assert after["tick"] == 10 and after["state"] == "paused"
+
+
+def test_stepping_past_the_end_completes_the_run(client):
+    rid = create(client, max_ticks=50)["run_id"]
+    done = post(client, rid, "step", {"ticks": 10_000})
+    assert done["tick"] == 50 and done["state"] == "completed"
+
+
+def test_pause_holds_the_run_still(client):
+    rid = create(client, max_ticks=100_000)["run_id"]
+    client.put(f"/api/runs/{rid}/speed", json={"ticks_per_second": None})
+    post(client, rid, "resume")
+    time.sleep(0.05)
+    tick = post(client, rid, "pause")["tick"]
+    assert tick > 0
+    time.sleep(0.1)
+    assert client.get(f"/api/runs/{rid}").json()["tick"] == tick  # nothing moved
+
+
+def test_speed_spaces_ticks_out_in_time(client):
+    rid = create(client, max_ticks=100_000)["run_id"]
+    client.put(f"/api/runs/{rid}/speed", json={"ticks_per_second": 100})
+    post(client, rid, "resume")
+    time.sleep(0.5)
+    tick = post(client, rid, "pause")["tick"]
+    # About 50 ticks; generous bounds because CI machines and laptops are busy.
+    assert 15 <= tick <= 80, tick
+
+
+def test_impossible_controls_are_409_and_change_nothing(client):
+    rid = create(client, max_ticks=20)["run_id"]
+    assert client.post(f"/api/runs/{rid}/pause").status_code == 409  # idle can't pause
+    post(client, rid, "step", {"ticks": 20})  # completed
+    for action in ("resume", "pause", "step"):
+        response = client.post(f"/api/runs/{rid}/{action}")
+        assert response.status_code == 409, action
+        assert "completed" in response.json()["detail"]
+    assert client.get(f"/api/runs/{rid}").json()["tick"] == 20
+
+
+def test_stepping_a_running_run_is_refused(client):
+    rid = create(client, max_ticks=100_000)["run_id"]
+    post(client, rid, "resume")
+    response = client.post(f"/api/runs/{rid}/step")
+    assert response.status_code == 409 and "pause it before stepping" in response.json()["detail"]
+    post(client, rid, "pause")
+
+
+def test_a_failing_tick_marks_the_run_failed_with_the_reason(client):
+    rid = create(client, max_ticks=100)["run_id"]
+    run = client.app.state.manager.get(rid)
+
+    def broken_step():
+        raise RuntimeError("energy went missing")
+
+    run.sim.step = broken_step
+    failed = post(client, rid, "step")
+    assert failed["state"] == "failed"
+    assert "RuntimeError at tick 0: energy went missing" in failed["error"]
+    assert client.post(f"/api/runs/{rid}/resume").status_code == 409
+
+
+def test_reset_starts_over_with_a_new_id_keeping_speed(client):
+    old = create(client, config="neural", seed=3, max_ticks=500)
+    client.put(f"/api/runs/{old['run_id']}/speed", json={"ticks_per_second": 77})
+    post(client, old["run_id"], "step", {"ticks": 40})
+    fresh = post(client, old["run_id"], "reset")
+    assert fresh["run_id"] != old["run_id"] and fresh["tick"] == 0 and fresh["state"] == "idle"
+    assert fresh["seed"] == 3 and fresh["speed"] == 77
+    assert client.get(f"/api/runs/{old['run_id']}").status_code == 404
+    reseeded = post(client, fresh["run_id"], "reset", {"seed": 8})
+    assert reseeded["seed"] == 8 and "-s8-" in reseeded["run_id"]
+
+
+def test_deleting_a_running_run_stops_its_loop(client):
+    rid = create(client, max_ticks=1_000_000)["run_id"]
+    post(client, rid, "resume")
+    task = client.app.state.manager.get(rid).task
+    assert client.delete(f"/api/runs/{rid}").status_code == 204
+    deadline = time.monotonic() + 5
+    while not task.done() and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert task.cancelled()
+
+
+def test_shutting_the_server_down_stops_every_loop():
+    manager = RunManager()
+    with TestClient(create_app(manager)) as client:
+        rid = create(client, max_ticks=1_000_000)["run_id"]
+        post(client, rid, "resume")
+        task = manager.get(rid).task
+    assert task.done()
+
+
+@pytest.mark.parametrize(
+    "path, body",
+    [
+        ("speed", {"ticks_per_second": 0}),
+        ("speed", {"ticks_per_second": -5}),
+        ("speed", {"ticks_per_second": 1e9}),
+        ("step", {"ticks": 0}),
+        ("step", {"ticks": 50_000}),
+        ("reset", {"seed": -1}),
+    ],
+)
+def test_out_of_range_controls_are_422(client, path, body):
+    rid = create(client)["run_id"]
+    method = client.put if path == "speed" else client.post
+    assert method(f"/api/runs/{rid}/{path}", json=body).status_code == 422

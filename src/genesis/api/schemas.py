@@ -74,7 +74,33 @@ class RunInfo(BaseModel):
     tick: int  # ticks completed so far
     max_ticks: int
     population: int
+    speed: float | None  # target ticks per second while running; None = as fast as possible
     error: str | None = None  # why the run failed, when state is "failed"
+
+
+class Digest(BaseModel):
+    """The run's state fingerprint (Simulation.state_digest): equal digests at equal ticks mean
+    bit-identical states, so an API-driven run can be checked against a headless one."""
+
+    run_id: str
+    tick: int
+    digest: str
+
+
+class StepRequest(_Strict):
+    ticks: int = Field(default=1, ge=1, le=10_000)
+
+
+class SpeedRequest(_Strict):
+    """Target ticks per second while running; null runs as fast as the machine allows."""
+
+    ticks_per_second: float | None = Field(gt=0, le=100_000)
+
+
+class ResetRequest(_Strict):
+    """Start the run again from tick 0: same config, and the same seed unless one is given."""
+
+    seed: int | None = Field(default=None, ge=0, le=2**32 - 1)
 
 
 class ErrorBody(BaseModel):

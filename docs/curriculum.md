@@ -385,6 +385,14 @@ What has been covered, where it appears in the code, and what comes next.
 - **Safe inputs:** names instead of paths, unknown fields refused, a limit on live runs, local-only by default.
 - **Testing a web app without a network:** a test client calls the app directly.
 
+### 5.2 · Controls and concurrency (`api/stepping.py`)
+- **Asynchronous code:** an event loop runs many tasks on one thread, switching only at `await`; a tick has no `await`, so it can't be interrupted.
+- **Why not threads:** two threads changing one simulation at once is a race condition; avoiding shared access beats locking it.
+- **Time slicing:** step for 10 ms, yield, repeat: the server stays responsive while busy.
+- **Rate control with a budget:** elapsed time × speed ticks are due; carry fractions; cap the backlog.
+- **Determinism under control:** timing changes how many ticks happen per second, never which tick comes next; proven by digest.
+- **Tests caught a design gap:** "pause" was accepted on a run that never started.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.
