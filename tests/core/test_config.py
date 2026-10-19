@@ -187,3 +187,32 @@ def test_default_config_has_mutation_off_and_all_genes_mutable():
     config = load_config(DEFAULT_CONFIG)
     assert config.mutation.enabled is False  # keeps Milestone 1 behaviour (regression tests)
     assert all(getattr(config.genome, g).mutable for g in type(config.genome).model_fields)
+
+
+def flatten(d: dict, prefix: str = "") -> dict:
+    out = {}
+    for key, value in d.items():
+        path = f"{prefix}{key}"
+        out |= flatten(value, f"{path}.") if isinstance(value, dict) else {path: value}
+    return out
+
+
+def test_evolution_config_differs_only_where_intended():
+    # evolution.yaml is a full copy of default.yaml; this keeps the copies from drifting apart.
+    default = flatten(load_config(DEFAULT_CONFIG).model_dump())
+    evolution = flatten(load_config(DEFAULT_CONFIG.with_name("evolution.yaml")).model_dump())
+    differing = {key for key in default if default[key] != evolution[key]}
+    assert differing == {
+        "run.max_ticks",
+        "organisms.speed_cost_exponent",
+        "organisms.sense_cost_per_unit",
+        "genome.max_turn.mutable",
+        "mutation.enabled",
+    }
+
+
+@pytest.mark.parametrize("field", ["speed_cost_exponent", "sense_cost_per_unit"])
+def test_negative_costs_rejected(raw, field):
+    raw["organisms"][field] = -0.1
+    with pytest.raises(pydantic.ValidationError, match=field):
+        validate(raw)

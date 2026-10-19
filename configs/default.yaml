@@ -24,6 +24,8 @@ organisms:
   initial_energy: 50.0
   max_age: null              # null = no age limit
   move_cost_per_distance: 0.1
+  speed_cost_exponent: 0.0    # drag: >0 makes faster movement cost more per unit (0 = off)
+  sense_cost_per_unit: 0.0    # EU/tick per unit of sense range (0 = off)
   offspring_energy: 40.0     # transferred parent -> child
   reproduction_overhead: 10.0  # lost by parent on top of the transfer
   controller: nearest_food_seeker   # or: random_walk

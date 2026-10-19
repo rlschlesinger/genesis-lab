@@ -118,6 +118,13 @@ class OrganismConfig(_Strict):
     initial_energy: PositiveFloat
     max_age: PositiveInt | None = Field(default=None, description="Ticks; None means no limit.")
     move_cost_per_distance: NonNegativeFloat = Field(description="EU spent per unit moved.")
+    speed_cost_exponent: NonNegativeFloat = Field(
+        default=0.0,
+        description="Drag: movement cost is scaled by (speed / founder speed) ** this. 0 = off.",
+    )
+    sense_cost_per_unit: NonNegativeFloat = Field(
+        default=0.0, description="EU per tick per unit of sense range (sensory upkeep). 0 = off."
+    )
     offspring_energy: PositiveFloat = Field(description="EU transferred from parent to child.")
     reproduction_overhead: NonNegativeFloat = Field(
         description="EU lost by the parent when reproducing, beyond the transfer."

@@ -134,6 +134,15 @@ What has been covered, where it appears in the code, and what comes next.
 - **Selective sweeps and hitchhiking:** when one family takes over, every gene it carries rises with it, neutral ones included (seed-42 demo: neutral marker sd only 0.031).
 - **Observation vs adaptation:** directional change in one unreplicated run, without trade-offs or a drift comparison, isn't evidence of adaptation.
 
+### 2.4 · Trade-offs (`core/costs.py`, `configs/evolution.yaml`)
+- **Trade-offs create optima:** a benefit with a rising cost has a best value; a free benefit just runs to its limit.
+- **Nonlinear costs:** with drag, cost per tick grows with speed squared, so doubling speed quadruples the cost.
+- **Relative costs:** scaling drag by speed ÷ founder speed leaves founders' costs unchanged.
+- **Positive controls:** keep one known free lunch to prove selection can be detected at all.
+- **Spotting hidden free lunches:** max_turn had no cost, so it was frozen rather than left as a confound.
+- **Config copies with a guard test:** a test lists exactly which settings may differ.
+- **Fresh seeds:** don't test a hypothesis on the data that suggested it.
+
 
 ## Future learning objectives
 - **Milestone 2:** mutation and heredity, variation vs selection vs drift, lineage trees, trait distributions.

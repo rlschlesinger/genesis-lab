@@ -60,6 +60,13 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-021 · Trade-off costs and the evolution config (2026-10-18)
+
+**Decision:** a sensing upkeep (`sense_cost_per_unit × sense_range` per tick) and drag on movement (`× (speed / founder speed) ^ exponent`). Metabolic rate stays cost-free as the positive control. `max_turn` is frozen in `evolution.yaml` because turning has no cost and would be a second free lunch. Evolution settings live in `configs/evolution.yaml`, a full copy of `default.yaml` with a test restricting the differences.
+**Why:** without costs, every beneficial gene slides to its bound, which is an artefact, not a finding. Costs create optima that can depend on the environment. Making drag relative to the founders' speed keeps founders' costs identical to Milestone 1, so only mutants feel the change.
+**Values:** exponent 1 (cost/tick at full speed ∝ speed²); sense cost 0.004 (founders +0.08/tick, +23%). Chosen to be noticeable but not dominant; not tuned to produce any particular outcome.
+**Alternatives:** a turning cost (would let max_turn evolve; more mechanism to justify); YAML includes/inheritance instead of a copy (less duplication; adds a config feature).
+
 ## D-020 · Genes in the state digest; how golden values were updated (2026-10-18)
 
 **Decision:** `state_digest()` now includes every organism's genes.

@@ -23,6 +23,7 @@ from dataclasses import dataclass, fields
 import numpy as np
 
 from genesis.core.config import SimulationConfig
+from genesis.core.costs import metabolic_cost, movement_cost, sensing_cost
 from genesis.core.energy import EnergyLedger
 from genesis.core.feeding import resolve_feeding
 from genesis.core.movement import move
@@ -103,6 +104,8 @@ class Simulation:
         self.rng = RngStreams.from_seed(config.run.seed)
         self.world = World.from_config(config, self.rng.food)
         self.controller = make_controller(config.organisms.controller)
+        # Founders' speed: the drag cost is relative to it (core/costs.py).
+        self._reference_speed = config.genome.speed.initial
         self.tick = 0
         self._next_id = 0
         self.organisms: list[Organism] = self._make_founders()
@@ -210,9 +213,14 @@ class Simulation:
         # 5b. Pay costs *after* eating, so a nearly-empty organism that reaches food gets to
         #     eat before its energy hits zero. spend() returns what was actually paid, and
         #     that (not the amount requested) is what the ledger records.
+        #     Order matters only when energy runs out mid-payment (spend() never goes below
+        #     zero): metabolism first, then sensing, then movement. See core/costs.py.
         for org, distance in zip(living, moved.distances, strict=True):
-            self.ledger.metabolism += org.spend(org.traits.metabolic_rate)
-            self.ledger.movement += org.spend(cfg.move_cost_per_distance * float(distance))
+            self.ledger.metabolism += org.spend(metabolic_cost(org.traits))
+            self.ledger.sensing += org.spend(sensing_cost(org.traits, cfg))
+            self.ledger.movement += org.spend(
+                movement_cost(org.traits, float(distance), cfg, self._reference_speed)
+            )
 
         # 6. Deaths: ask every organism first, then apply. Nobody dies mid-update.
         causes = [org.cause_of_death(cfg.max_age) for org in living]

@@ -35,6 +35,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `intelligence/controllers.py` | `Observations` → `Actions` (pure) | Mutate world state |
 | `core/movement.py` | Apply `Actions` within trait limits; walls; distance moved | Decide anything |
 | `core/geometry.py` | `wrap_angle` | |
+| `core/costs.py` | Per-tick living costs: metabolism, sensing, movement with drag | Touch organisms |
 | `core/feeding.py` | Who eats what: closest-pair matching, random tie-break | Change energy itself |
 | `core/energy.py` | `EnergyLedger`: flows and the per-tick conservation check | |
 | `evolution/genome.py` | `GENES` (units, descriptions), `Genome` (genotype), `express()` → `Traits` (phenotype) | Import config at runtime from organism.py |
@@ -112,7 +113,7 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 - **Eat, then pay costs** (metabolism, movement), so a nearly-empty organism that reaches food survives.
 - **Ledger:** stock = energy in living organisms + `food.count * energy_value`.
   - In: food spawned after the start.
-  - Out: metabolism, movement, energy held at death.
+  - Out: metabolism, sensing, movement, energy held at death, reproduction overhead.
   - Transfers: eating.
   - `step()` raises `EnergyLedgerError` if `initial + in - out` differs from the actual stock (tolerance: relative 1e-9, absolute 1e-6 EU).
 - **Feedback:** spawning is blocked at `max_count`, so inflow depends on how much the population eats.
@@ -152,6 +153,18 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 - **Inheritance (step 7):** child genome = `mutate(parent.genome)`, traits = `express(genome)` (the parent's traits are reused when nothing changed). Each change is appended to `sim.mutation_log` as a `MutationEvent(tick, parent_id, child_id, gene, before, after)`.
 - **Lineage integrity** (tested over every organism in a run): genome = parent's genome + exactly the logged changes.
 
+## Trade-offs (core/costs.py)
+
+| Gene | Cost per tick | Config |
+|---|---|---|
+| metabolic_rate | `metabolic_rate` (no trade-off: positive control) | — |
+| sense_range | `sense_cost_per_unit × sense_range` | `organisms.sense_cost_per_unit` (default 0) |
+| speed | `move_cost_per_distance × distance × (speed / founder speed) ^ speed_cost_exponent` | `organisms.speed_cost_exponent` (default 0) |
+| max_turn | none, so frozen in `evolution.yaml` | `genome.max_turn.mutable` |
+| neutral_marker | none, and not expressed | — |
+
+Founders pay exactly the Milestone 1 movement price at any exponent. Defaults reproduce Milestone 1 bit for bit. `configs/evolution.yaml` = `default.yaml` + mutation on, drag exponent 1, sense cost 0.004, max_turn frozen, 20000 ticks (a test enforces that nothing else differs).
+
 ## Randomness
 
 One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`, `mutation` (added in 2.2; a test checks the first five are unchanged). New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
@@ -181,7 +194,7 @@ Decisions: trade-off costs for sense range and speed; metabolic rate as a cost-f
 | 2.1 | Genome: gene definitions, bounds, expression to traits | Bounds validated; Milestone 1 unchanged | done |
 | 2.2 | Mutation: per-gene rate and size, reflection, own RNG stream, off switch | In bounds; no pile-up; off = exact copy | done |
 | 2.3 | Inheritance wired in; `mutations.csv`; gene columns | Child = parent + recorded changes | done |
-| 2.4 | Trade-off costs; positive control and neutral marker | Ledger balances; defaults = Milestone 1 | |
+| 2.4 | Trade-off costs; positive control and neutral marker | Ledger balances; defaults = Milestone 1 | done |
 | 2.5 | Trait statistics per tick; genome snapshots | Matches a recount from raw data | |
 | 2.6 | `genesis report`: Plotly HTML trait charts | Built from recorded files | |
 | 2.7 | Permutation and sign tests | Known cases | |

@@ -1,0 +1,53 @@
+# Genesis Lab evolution configuration (Milestone 2).
+# Identical to default.yaml except for the settings marked EVOLUTION below
+# (tests/core/test_config.py::test_evolution_config_differs_only_where_intended).
+# Units: distance = world units, time = ticks, energy = EU (abstract), angle = radians.
+# Values are provisional starting points; they get tuned and recorded in increment 1.9.
+
+run:
+  seed: 42
+  max_ticks: 20000          # EVOLUTION: 4x the default run, for more generations
+  stop_on_extinction: true
+
+world:
+  width: 200.0
+  height: 200.0
+
+food:
+  initial_count: 150
+  max_count: 300
+  regrowth_per_tick: 2.0     # expected new items per tick while below max_count
+  energy_value: 20.0         # EU per item eaten
+  eat_radius: 2.0
+
+organisms:
+  initial_count: 30
+  max_population: 500
+  initial_energy: 50.0
+  max_age: null              # null = no age limit
+  move_cost_per_distance: 0.1
+  speed_cost_exponent: 1.0    # EVOLUTION: drag on; cost/tick at full speed ~ speed squared
+  sense_cost_per_unit: 0.004  # EVOLUTION: sensory upkeep; founders pay 20 x 0.004 = 0.08/tick
+  offspring_energy: 40.0     # transferred parent -> child
+  reproduction_overhead: 10.0  # lost by parent on top of the transfer
+  controller: nearest_food_seeker   # or: random_walk
+
+# Heritable genes. `initial` is every founder's value. Mutation (from increment 2.2) can move a
+# gene anywhere in [min, max], so each whole range must be physically sensible.
+# Units: speed = world units/tick; sense_range = world units; max_turn = radians/tick;
+# metabolic_rate = EU/tick; reproduction_threshold = EU; neutral_marker = none (no effect).
+genome:
+  speed:                  {initial: 1.5,  min: 0.25, max: 4.0}
+  sense_range:            {initial: 20.0, min: 1.0,  max: 60.0}
+  # EVOLUTION: frozen. Turning has no cost, so it would be a second free lunch (D-021).
+  max_turn:               {initial: 0.5,  min: 0.05, max: 1.5, mutable: false}
+  metabolic_rate:         {initial: 0.2,  min: 0.02, max: 0.5}
+  # min must exceed offspring_energy + reproduction_overhead (50)
+  reproduction_threshold: {initial: 80.0, min: 55.0, max: 250.0}
+  neutral_marker:         {initial: 0.5,  min: 0.0,  max: 1.0}
+
+# How offspring genomes differ from their parent's.
+mutation:
+  enabled: true   # EVOLUTION
+  rate: 0.1     # probability that each gene mutates at a birth
+  size: 0.05    # standard deviation of a change, as a fraction of the gene's (max - min)

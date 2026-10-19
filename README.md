@@ -27,6 +27,8 @@ Experiment definitions and results: [docs/experiments/](docs/experiments/). Reco
 
 ## Configuration
 
+`configs/evolution.yaml` is the Milestone 2 setup: mutation on, trade-off costs on. Compare it with `default.yaml` to see exactly what changes.
+
 Runs are described by YAML files in `configs/`. [configs/default.yaml](configs/default.yaml) documents every field and its unit. Invalid files are rejected before anything runs:
 
 ```bash

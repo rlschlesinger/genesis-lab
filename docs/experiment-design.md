@@ -30,4 +30,5 @@ Formal experiments live in [experiments/](experiments/), one file per experiment
 - **Report variation.** Always show spread across replicates (for example, median and interquartile range, or every run plotted), not only a mean.
 - **Report failures.** Runs that went extinct or crashed are results; they are not discarded silently.
 - **Observation vs inference.** "Seekers had higher mean lifespan in 9 of 10 paired runs" is an observation. "Seeking causes longer life" is an inference that needs the controlled design above.
+- **Fresh seeds for confirmatory tests.** Seeds used for exploring or previewing (seed 42 in increments 2.3–2.4) are not reused to test hypotheses those previews suggested. Each pre-registered experiment names its own seed range.
 - **No fabricated results.** Numbers in docs come from recorded runs, with their run IDs.

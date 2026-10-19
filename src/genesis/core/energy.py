@@ -4,7 +4,8 @@ Energy lives in two "accounts": living organisms, and uneaten food. It enters an
 only through recorded flows:
 
     in:    food spawned after the start (initial food is part of the starting stock)
-    out:   metabolism, movement, energy still held at death (D-011), reproduction overhead
+    out:   metabolism, sensing, movement, energy still held at death (D-011), reproduction
+           overhead
     moves: eating (food -> organism) and parent -> offspring. Transfers between accounts,
            or within one, change neither in nor out.
 
@@ -28,6 +29,7 @@ class EnergyLedger:
     food_spawned: float = 0.0
     metabolism: float = 0.0
     movement: float = 0.0
+    sensing: float = 0.0
     lost_at_death: float = 0.0
     reproduction_overhead: float = 0.0
 
@@ -39,7 +41,13 @@ class EnergyLedger:
     def outflow(self) -> float:
         # math.fsum adds floats with less rounding error than repeated +.
         return math.fsum(
-            [self.metabolism, self.movement, self.lost_at_death, self.reproduction_overhead]
+            [
+                self.metabolism,
+                self.sensing,
+                self.movement,
+                self.lost_at_death,
+                self.reproduction_overhead,
+            ]
         )
 
     @property

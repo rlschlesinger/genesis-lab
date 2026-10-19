@@ -467,3 +467,23 @@ def test_frozen_genes_stay_fixed_in_a_full_run():
     assert {o.genome.speed for o in [*sim.organisms, *sim.dead]} == {1.5}
     assert {o.genome.sense_range for o in [*sim.organisms, *sim.dead]} == {20.0}
     assert not any(e.gene in ("speed", "sense_range") for e in sim.mutation_log)
+
+
+# --- Trade-off costs ----------------------------------------------------------------------
+
+
+def test_sensing_cost_is_charged_and_recorded():
+    sim = Simulation(make_config(**NO_FOOD, **{"organisms.sense_cost_per_unit": 0.004}))
+    sim.step()
+    # 30 founders, sense range 20, 0.004 EU per unit per tick: 30 x 0.08 = 2.4 EU.
+    assert sim.ledger.sensing == pytest.approx(30 * 20.0 * 0.004)
+
+
+def test_ledger_balances_with_all_trade_offs_and_mutation():
+    evolution = DEFAULT_CONFIG.with_name("evolution.yaml")
+    raw = yaml.safe_load(evolution.read_text())
+    raw["run"]["max_ticks"] = 1500
+    sim = Simulation(SimulationConfig.model_validate(raw))
+    sim.run()  # step() checks the ledger every tick
+    assert sim.ledger.sensing > 0
+    assert len(sim.mutation_log) > 0
