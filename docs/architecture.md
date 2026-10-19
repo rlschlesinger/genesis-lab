@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Milestones 1 and 2 complete** (2026-10-18). Milestone 3 (The Science Lab: persistence, SQL, statistics) not started; it needs the user's approval.
+Status: **Milestones 1 and 2 complete.** Milestone 3 (The Science Lab) approved 2026-10-19 and in progress; schema in [schema.md](schema.md), columns in [data-dictionary.md](data-dictionary.md).
 
 ## Component map
 
@@ -239,4 +239,23 @@ Decisions: trade-off costs for sense range and speed; metabolic rate as a cost-f
 | Scenario A (neutral baseline) and B (resource scarcity) | E002 (off + neutral twins + positive control), E003 (scarcity, 2 × 2) |
 | No adaptation claims without controls and statistics | Pre-registration, neutral twins, permutation/sign tests, Holm correction, recorded corrections |
 | No neural networks | None added |
+
+## Milestone 3 plan (approved 2026-10-19)
+
+Decisions: Parquet files are the source of truth with DuckDB views over them; run folders keep writing CSV and an ETL produces Parquet; Experiment A is a four-level food dose-response testing H1; notebooks are Jupyter in VS Code (ipykernel), executed in tests.
+
+| # | Increment | Key test | Status |
+|---|---|---|---|
+| 3.0 | Schema document and data dictionary; stop for review | — | done |
+| 3.1 | Tick sampling, optional event log, schema version, condition, config hash in run.json | Defaults give identical results | |
+| 3.2 | ETL: run folder → Parquet with validation; back-fill E001–E003 | Rows and values match the CSVs | |
+| 3.3 | DuckDB views; `genesis sql`; join and lineage examples | SQL = pandas answers | |
+| 3.4 | Batch runner: experiment file → parallel, resumable runs | Parallel = sequential, byte for byte | |
+| 3.5 | pandas + SciPy analysis: descriptive stats, bootstrap/Wilson CIs, effect sizes; cross-check hand-written tests | Known answers | |
+| 3.6 | Experiment dashboards: individual runs vs aggregates | Built from the database | |
+| 3.7 | Export to CSV/Parquet; reload and re-analyse | Round trip | |
+| 3.8 | Analysis notebook, executed in tests | Runs clean | |
+| 3.9 | SQL exercises (hints, hidden answers) | Answers verified | |
+| 3.10 | Experiments A, B, C: blind pilots, pre-registration, runs, reports | Defined before running | |
+| 3.11 | Wrap-up; stop before neural networks | | |
 
