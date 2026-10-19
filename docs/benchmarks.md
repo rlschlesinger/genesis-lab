@@ -51,3 +51,51 @@ Same machine. Lake: 495 runs (E001–E006 plus stand-alone runs), 293 MB in 3,23
 | Batch runner: 12 runs of 5,000 ticks on 1 vs 13 workers | 17.5 s vs 2.6 s (3.4) |
 
 Simulation throughput is unchanged from the end of Milestone 2 (Milestone 3 added no simulation code beyond event collection, which tests show doesn't change results).
+
+## 2026-10-19 · stress test and optimization pass (D-036, D-037, D-038)
+
+**A different machine from the entries above:** Linux x86_64 (4-core Intel Xeon @ 2.10 GHz with AVX-512, a cloud VM), Python 3.12.3, NumPy 2.5.4. Both columns below were measured in one session on this machine with nothing else running: *before* is commit `652165d` (end of Milestone 3) run through the same benchmark script, *after* is this branch. Same method as always: best of 3 repeats; `configs/default.yaml` population sweep with food scaled to N.
+
+| target N | mean pop | mean food | ticks/s before | ticks/s after | µs per organism-tick before → after | speed-up |
+|---:|---:|---:|---:|---:|---:|---:|
+| 30 | 30 | 67 | 2326 | 2738 | 14.3 → 12.2 | 1.2× |
+| 100 | 100 | 109 | 786 | 1203 | 12.7 → 8.3 | 1.5× |
+| 300 | 300 | 160 | 214 | 595 | 15.6 → 5.6 | 2.8× |
+| 1000 | 1000 | 260 | 41 | 152 | 24.6 → 6.6 | 3.7× |
+| 3000 (100 ticks) | 3000 | 176 | 11 | 56 | 30.6 → 6.0 | 5.1× |
+
+Cost per organism-tick no longer rises with population: the all-pairs distance tables that made it grow (D-017) are gone above ~4,000 pairs. The remaining ~6 µs is mostly per-organism Python (reading and writing the `Organism` objects) plus ~100 small NumPy calls per tick that every population size pays.
+
+`configs/evolution.yaml` as the experiments run it (seed 9100, 5000 ticks, best of 2; `benchmark.py --evolution`):
+
+| | before | after |
+|---|---:|---:|
+| simulation alone | 1662 ticks/s | 2233 ticks/s (1.3×) |
+| with `RunRecorder` (gene statistics every tick, snapshots every 50) | 1265 ticks/s | 1833 ticks/s (1.4×) |
+| recorder overhead | 31 % | 22 % |
+
+A recorded 20,000-tick evolution run therefore takes ~11 s here instead of ~16 s (this VM is roughly 2.5× slower than the Apple Silicon laptop of the earlier entries).
+
+**Profiles (cProfile, which inflates Python-call-heavy code; relative shares are what matter).**
+
+| | before | after |
+|---|---|---|
+| N = 1000, 150 ticks | 4.3 s: `sense_food` 34 %, `resolve_feeding` 33 %, `step` body 15 %, `spend` 9 % | 1.4 s: `_grid_pairs` 41 % (half of it `argsort`), `step` body 10 % |
+| N = 3000, 60 ticks | 6.9 s: `sense_food` 43 %, `resolve_feeding` 32 % | 1.3 s: `_grid_pairs` 40 %, `argsort` 31 % |
+| evolution, 20,000 ticks (~94 organisms) | 28 s: `step` body 32 %, `spend` 16 % (5.6 M calls), `sense_food` 10 %, `resolve_feeding` 7 % | 16 s: `step` body 15 %, nearest-food 13 %, in-reach pairs 10 %, `move` 10 %, food `spawn`+`remove` 10 % |
+| same, recorded | 38 s: recorder 25 % (24 reductions/tick, 12 M `getattr`, `asdict`) | 21 s: recorder 19 % |
+
+Two lessons the profile taught: the fix that mattered at 1,000+ organisms (the grid) barely moves the realistic case, where Python call overhead dominated and array-based costs/deaths did the work; and after both, the floor is the fixed per-tick cost of ~100 NumPy calls, which only a wholesale restructuring would lower (declined, D-038).
+
+**Stress pass, same machine** (`tests/test_stress.py`; the long ones under `pytest -m slow`):
+
+| Scenario | Result |
+|---|---|
+| 5,000 organisms, 60 ticks, sim only / with recorder and events | 2.4 s / 2.4 s; 201 MB resident |
+| 3,000 organisms with 1,500 food items: Python heap during a tick | well under 60 MB (all-pairs would need several 36 MB tables) |
+| 50,000 ticks of `evolution.yaml` | 30 s; ledger drift at most 1.0e-8 EU = 0.002 of the tolerance; 8,853 organisms ever; 124 MB resident |
+| 120 runs × 2,000 ticks, 3 workers, then `ingest` | 58 s, 120/120 ok; lake of 240 k tick rows and 1.44 M gene_stats rows; `count(*)` 14–17 ms, grouped medians 25 ms |
+| Recorded 20,000-tick run with all events | recorder holds ~95 MB of row dicts (120 k gene_stats + 49 k events + 38 k genomes) |
+| Extinction on tick 0; empty world kept ticking; caps of 1 and 2; all genes on a bound; one organism in a 3 × 2 world; 20,000 food items in a 2000 × 2000 world | all run, record, ingest and query correctly; nothing needed fixing |
+
+**Bit-identity, verified not assumed:** every commit was checked against `tests/test_regression.py` (Linux state digests included) and against fifteen extra scenarios plus two complete recorded run folders recorded before the first change (state, event and energy digests; CSV bytes). All identical throughout.

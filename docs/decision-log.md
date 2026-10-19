@@ -210,6 +210,7 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Decision:** keep the all-pairs distance calculations in sensing and feeding.
 **Why:** measured, not guessed (docs/benchmarks.md). A default run takes ~1 s; 1000 organisms runs at 140 ticks/s. The profile shows the two n × m distance computations take ~75% of the time at N = 1000, so that's where a future fix would go.
 **Revisit when:** an experiment needs populations of 1000+, or batch sizes make run time a bottleneck. Planned fix: a spatial index.
+**Revisited 2026-10-19:** the spatial index was added as a grid (D-036), together with array-based per-tick work (D-038), after a stress-test pass measured both; results are bit-identical.
 
 ## D-015 · Run output format for Milestone 1 (2026-10-18)
 

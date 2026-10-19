@@ -94,6 +94,15 @@ What has been covered, where it appears in the code, and what comes next.
 ### 1.9 · Benchmarking and the first controlled experiment
 - **Benchmarking:** time repeated runs, report the best, and normalize (µs per organism-tick) so sizes can be compared.
 - **Profiling:** `cProfile` shows where time actually goes (here: n × m distance tables, ~75% at N = 1000). Measure before optimizing, and only optimize when it matters.
+
+### 3.12 · Stress test and optimization without changing a result (2026-10-19)
+- **Profile at the sizes you actually run:** at 1,000+ organisms the distance tables dominated (as D-017 predicted); at the ~100 organisms every experiment used, Python call overhead did (three `spend()` calls per organism per tick), and the recorder cost a quarter again. The two fixes are different (D-036, D-038).
+- **Spatial grid:** cut the world into cells no smaller than the longest reach; anything within reach lies in your cell or the ring around it. The grid only *proposes candidates*; the exact test still decides. That is what makes it a pure speed-up.
+- **Bit-identical means the same operations on the same numbers:** `hypot` on a subset of pairs gives the same bits as on the whole table (measured: 200,000 values, 0 mismatches), but `math.hypot` vs `np.hypot`, `np.power` vs Python `**`, and summing a matrix along a non-contiguous axis do *not*. Check such assumptions with a script before relying on them, then lock them in with tests.
+- **Vectorizing a loop:** `min`, subtract and add on arrays are the same IEEE operations as on scalars, in the same order per element, so `spend_all` equals `spend` in a loop. Keep the scalar rule as the stated reference and test the array version against it.
+- **Property-based testing (hypothesis, D-037):** describe the inputs, let the library search for a counter-example, get back the smallest one. Good for "two implementations must agree" on awkward inputs (cell boundaries, duplicates, exact reach).
+- **Golden values beyond the test suite:** before touching anything, record digests for every scenario you can think of (both configs, both controllers, long runs, big populations, edge cases, full run folders) and compare after each change. The regression test covers one; the stress pass covered fifteen plus two folders.
+- **Stress testing is about finding what breaks, not proving nothing does:** list the edges (empty population on tick 0, the cap, zero food, genes at their bounds, 50,000 ticks, 120-run batches, ingest and SQL at that scale, memory), run them, and turn anything surprising into a test.
 - **Pre-registration:** write question, hypotheses, metrics and analysis *before* running, and commit them, so the history proves the order.
 - **Paired design:** the same seeds for both conditions; analyse per-seed differences.
 - **Sign counting:** 10 of 10 pairs in one direction has chance probability ≈ 0.002 if there is no real difference.
