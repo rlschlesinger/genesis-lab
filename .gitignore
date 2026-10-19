@@ -17,3 +17,6 @@ data/*
 
 # OS
 .DS_Store
+
+# hypothesis example database (D-037)
+.hypothesis/

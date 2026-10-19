@@ -68,7 +68,7 @@ class FoodSupply:
         # low=0 for both axes; high broadcasts per column, so x is in [0, width) and y in
         # [0, height). One call draws all k points at once.
         new = rng.uniform(0.0, self._upper, size=(k, 2))
-        self._positions = np.vstack([self._positions, new])
+        self._positions = np.concatenate([self._positions, new])
         return k
 
     def regrow(self, rng: np.random.Generator) -> int:
@@ -96,10 +96,12 @@ class FoodSupply:
         idx = np.asarray(indices, dtype=np.intp)
         if idx.size == 0:
             return
-        if idx.min() < 0 or idx.max() >= self.count:
-            raise IndexError(f"food index out of range for {self.count} items: {idx.tolist()}")
-        if len(np.unique(idx)) != idx.size:
-            raise ValueError(f"duplicate food indices: {idx.tolist()}")
+        # A handful of indices per tick: plain Python checks beat NumPy's call overhead here.
+        items = idx.tolist()
+        if min(items) < 0 or max(items) >= self.count:
+            raise IndexError(f"food index out of range for {self.count} items: {items}")
+        if len(set(items)) != len(items):
+            raise ValueError(f"duplicate food indices: {items}")
         # A boolean mask: True = keep. Indexing with it drops the False rows in one step.
         keep = np.ones(self.count, dtype=bool)
         keep[idx] = False

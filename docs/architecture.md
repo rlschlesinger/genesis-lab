@@ -35,6 +35,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `intelligence/controllers.py` | `Observations` → `Actions` (pure) | Mutate world state |
 | `core/movement.py` | Apply `Actions` within trait limits; walls; distance moved | Decide anything |
 | `core/geometry.py` | `wrap_angle` | |
+| `core/spatial.py` | Which food is within reach of which organism: all-pairs for small populations, a grid of cells for large ones, identical results (D-036) | Decide anything; change a single bit of a distance |
 | `core/costs.py` | Per-tick living costs: metabolism, sensing, movement with drag | Touch organisms |
 | `core/feeding.py` | Who eats what: closest-pair matching, random tie-break | Change energy itself |
 | `core/energy.py` | `EnergyLedger`: flows and the per-tick conservation check | |
@@ -100,7 +101,7 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 ```
 
 - **Angles:** radians; heading 0 = +x, counter-clockwise positive; always wrapped to `[-pi, pi)`. **Bearing** = turn needed to face the food (positive = left).
-- **Sensing** computes all organism-to-food distances at once, an `(n, m)` table via broadcasting. Food beyond an organism's own `sense_range` is invisible. Equidistant food: lowest index wins.
+- **Sensing** asks `core/spatial.py` for each organism's nearest food within its own `sense_range`. Below ~4,000 organism × food pairs that is one `(n, m)` distance table via broadcasting; above it, a grid of cells (side = the longest sense range) so each organism only measures food in its own cell and the ring around it. The grid only proposes candidates; the distances and the `<=` test are the same operations, so the answer is identical bit for bit (D-036). Food beyond an organism's own `sense_range` is invisible. Equidistant food: lowest index wins.
 - **Actions are requests:** `turn` is clipped to `+/- max_turn`, `throttle` to `[0, 1]`. Non-finite actions raise.
 - **Move order:** turn, step along the new heading, clamp to walls. `distances` is measured after clamping, and movement cost (1.6) is charged on it.
 - **Baselines:** `RandomWalk` (normal turns, sd 0.3 rad, full speed) and `NearestFoodSeeker` (turn toward nearest sensed food, otherwise identical to `RandomWalk`, with the same random draws). The only difference between them is the response to sensed food.
@@ -112,7 +113,7 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 - `step()` runs one tick and returns a `TickSummary` (tick, population, births, deaths, food_count, food_spawned, food_eaten, mean_energy, lineages, mutations). Population and energy are end-of-tick values; `mean_energy` is NaN for an empty population.
 - `run()` steps until `max_ticks`, or extinction if `stop_on_extinction`.
 - Living organisms stay in ascending id order; dead organisms move to `sim.dead` and keep their records.
-- Snapshot: all per-organism arrays are built once at the start of the tick, before anyone moves.
+- Snapshot: all per-organism arrays are built once at the start of the tick, before anyone moves. From then on the tick works on arrays (costs via `costs.living_costs`, payments via `organism.spend_all`, deaths and reproduction eligibility as array comparisons) and writes results back to the organisms; the `Organism` objects remain the only lasting state, so code and tests may still set `org.x` or `org.energy` directly (D-038).
 - Survivors' `age` increments at step 9, so a death check in step 6 sees the age *before* this tick's increment.
 - `state_digest()`: SHA-256 over tick, food positions, and every organism's id/x/y/heading/energy/age/alive and genes. Equal digests mean bit-identical state. Digests are comparable only within one platform (CPU, OS, NumPy build): the last bits of `hypot`/`arctan2` results differ between platforms (D-027).
 
@@ -120,7 +121,7 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 
 - **Reach:** food within `eat_radius` of an organism's *post-move* position.
 - **One meal per organism per tick; each item eaten once.**
-- **Closest pairs first:** all in-reach pairs sorted by distance (ties: random key from the tiebreak stream); a pair eats if neither side is taken. Each item goes to the closest organism still competing for it.
+- **Closest pairs first:** all in-reach pairs (from `core/spatial.py`, ordered by organism then food index, as `np.nonzero` orders them) sorted by distance (ties: random key from the tiebreak stream); a pair eats if neither side is taken. Each item goes to the closest organism still competing for it.
 - **Eat, then pay costs** (metabolism, movement), so a nearly-empty organism that reaches food survives.
 - **Ledger:** stock = energy in living organisms + `food.count * energy_value`.
   - In: food spawned after the start.

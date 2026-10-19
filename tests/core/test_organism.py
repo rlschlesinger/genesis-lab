@@ -192,3 +192,58 @@ def test_pay_for_offspring_deducts_and_records_separately_from_spending():
 def test_unaffordable_offspring_raises_instead_of_clamping():
     with pytest.raises(RuntimeError, match="cannot afford"):
         make_organism(energy=30.0).pay_for_offspring(transfer=40.0, overhead=10.0)
+
+
+# --- spend_all: Organism.spend for a whole population, bit for bit (D-038) --------------------
+
+
+def spend_in_a_loop(energies, *costs):
+    """The reference: one Organism per entry, charged with spend() in the given order."""
+    organisms = [make_organism(energy=e) for e in energies]
+    paid = [[] for _ in costs]
+    for org_index, org in enumerate(organisms):
+        for cost_index, cost in enumerate(costs):
+            paid[cost_index].append(org.spend(float(cost[org_index])))
+    return paid, [o.energy for o in organisms], [o.energy_spent for o in organisms]
+
+
+@pytest.mark.parametrize("seed", range(5))
+def test_spend_all_matches_spend_one_at_a_time(seed):
+    import numpy as np
+
+    from genesis.core.organism import spend_all
+
+    rng = np.random.default_rng(seed)
+    n = 500
+    # Energies near zero so that many organisms run out part-way through the three costs.
+    energies = rng.choice([0.0, 0.1, 0.25, 0.3, 1.0, 50.0], size=n) * rng.uniform(0.9, 1.1, n)
+    energies[::7] = 0.0
+    costs = (rng.uniform(0, 0.3, n), rng.choice([0.0, 0.08], size=n), rng.uniform(0, 0.4, n))
+    paid, energy, spent = spend_all(energies, np.zeros(n), *costs)
+    ref_paid, ref_energy, ref_spent = spend_in_a_loop(energies, *costs)
+    for a, b in zip(paid, ref_paid, strict=True):
+        assert a.tolist() == b
+    assert energy.tolist() == ref_energy
+    assert spent.tolist() == ref_spent
+    assert (energy >= 0).all()
+
+
+def test_spend_all_rejects_negative_costs_and_accepts_an_empty_population():
+    import numpy as np
+
+    from genesis.core.organism import spend_all
+
+    with pytest.raises(ValueError, match="negative"):
+        spend_all(np.array([5.0]), np.zeros(1), np.array([-1.0]))
+    paid, energy, spent = spend_all(np.empty(0), np.empty(0), np.empty(0), np.empty(0))
+    assert len(paid) == 2 and energy.size == 0 and spent.size == 0
+
+
+def test_spend_all_leaves_its_inputs_untouched():
+    import numpy as np
+
+    from genesis.core.organism import spend_all
+
+    energy, spent, cost = np.array([1.0, 2.0]), np.array([0.0, 0.0]), np.array([0.5, 3.0])
+    spend_all(energy, spent, cost)
+    assert energy.tolist() == [1.0, 2.0] and spent.tolist() == [0.0, 0.0]

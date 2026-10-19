@@ -13,6 +13,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from genesis.core.geometry import wrap_angle
+from genesis.core.spatial import nearest_within_reach
 
 FloatArray = NDArray[np.float64]
 
@@ -46,6 +47,11 @@ def sense_food(
 
     If two food items are exactly equally near, the one with the lower index wins. Food order
     is itself deterministic (see FoodSupply.remove), so this is reproducible.
+
+    Finding the nearest food is delegated to ``genesis.core.spatial``: for small populations
+    it computes every organism-to-food distance at once, an (n, m) table via broadcasting; for
+    large ones it uses a grid so each organism only checks nearby food. Both give the same
+    answer bit for bit (D-036).
     """
     n, m = len(positions), len(food_positions)
     found = np.zeros(n, dtype=bool)
@@ -53,23 +59,14 @@ def sense_food(
     bearing = np.zeros(n)
 
     if n > 0 and m > 0:
-        # Broadcasting: (n, 1, 2) - (1, m, 2) -> (n, m, 2). Row i, column j holds the vector
-        # from organism i to food j. Every pair is computed in one step, with no Python loop.
-        offsets = food_positions[np.newaxis, :, :] - positions[:, np.newaxis, :]
-        distances = np.hypot(offsets[..., 0], offsets[..., 1])  # (n, m)
-
-        # Food beyond an organism's own range is invisible to it: treat it as infinitely far.
-        # sense_ranges[:, None] has shape (n, 1), so each row gets its own organism's range.
-        distances = np.where(distances <= sense_ranges[:, np.newaxis], distances, np.inf)
-
-        nearest = np.argmin(distances, axis=1)  # (n,) column index of the closest food
-        rows = np.arange(n)
-        distance = distances[rows, nearest]
+        # Food beyond an organism's own range is invisible to it: its distance comes back inf.
+        nearest, distance = nearest_within_reach(positions, sense_ranges, food_positions)
         found = np.isfinite(distance)
 
-        # Direction to the nearest food, relative to where the organism is facing.
-        dx = offsets[rows, nearest, 0]
-        dy = offsets[rows, nearest, 1]
+        # Direction to the nearest food, relative to where the organism is facing. Organisms
+        # that found nothing get a placeholder index; their bearing is masked to 0 below.
+        dx = food_positions[nearest, 0] - positions[:, 0]
+        dy = food_positions[nearest, 1] - positions[:, 1]
         bearing = np.where(found, wrap_angle(np.arctan2(dy, dx) - headings), 0.0)
 
     return Observations(

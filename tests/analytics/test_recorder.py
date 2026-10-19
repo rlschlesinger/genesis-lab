@@ -213,3 +213,61 @@ def test_logging_events_never_changes_the_simulation():
     a, _ = record(config)
     b, _ = record(config, events=("birth", "death", "meal"))
     assert a.state_digest() == b.state_digest()
+
+
+# --- Statistics on a (genes, organisms) matrix must equal the per-gene version (D-038) -------
+
+
+@pytest.mark.parametrize("n", [1, 2, 3, 7, 8, 9, 100, 127, 128, 129, 500, 3000, 10001])
+def test_matrix_statistics_equal_per_gene_statistics_bit_for_bit(n):
+    import numpy as np
+
+    from genesis.analytics.recorder import _stat_rows
+
+    rng = np.random.default_rng(n)
+    names = gene_names()
+    values = {g: rng.uniform(0.02, 250.0, n).tolist() for g in names}
+    matrix = np.ascontiguousarray(np.array([values[g] for g in names]))
+    fast = _stat_rows(5, names, matrix)
+    for gene, row in zip(names, fast, strict=True):
+        v = np.asarray(values[gene])
+        # Exact equality on purpose: the recorded CSV must not change in any bit.
+        expected = {"mean": float(v.mean()), "sd": float(v.std()), "min": float(v.min())}
+        assert row == {"tick": 5, "gene": gene, "n": n, **expected, "max": float(v.max())}
+    assert gene_stat_rows(5, values) == fast
+
+
+def test_matrix_statistics_refuse_the_wrong_memory_layout():
+    import numpy as np
+
+    from genesis.analytics.recorder import _stat_rows
+
+    by_organism = np.random.default_rng(1).uniform(0, 1, (50, 6))
+    with pytest.raises(ValueError, match="contiguous"):
+        _stat_rows(0, gene_names(), by_organism.T)  # a transposed view, not a copy
+
+
+def test_gene_stat_rows_rejects_ragged_input():
+    with pytest.raises(ValueError, match="one value per organism"):
+        gene_stat_rows(0, {"speed": [1.0, 2.0], "sense_range": [1.0]})
+
+
+def test_recorded_rows_match_the_dataclass_dicts_exactly():
+    from dataclasses import asdict
+
+    from genesis.analytics.metrics import tick_row
+
+    sim = Simulation(evolution_config(max_ticks=50))
+    recorder = RunRecorder(genome_snapshot_every=10, events=("birth", "death", "meal"))
+    while not sim.finished:
+        summary = sim.step()
+        recorder.observe(sim, summary)
+        assert tick_row(summary) == asdict(summary)
+        assert list(tick_row(summary)) == list(asdict(summary))  # same column order too
+        kept = [e for e in sim.events_this_tick]
+        assert (
+            recorder.events[-len(kept) :] == [{"seq": i, **asdict(e)} for i, e in enumerate(kept)]
+            or not kept
+        )
+    for org in sim.organisms:
+        assert org.genome.as_dict() == asdict(org.genome)

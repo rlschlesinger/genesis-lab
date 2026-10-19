@@ -104,3 +104,53 @@ def test_energy_is_passed_through_as_a_copy():
     )
     energies[0] = 0.0  # changing the source afterwards must not change the observation
     assert obs.energy[0] == 42.0
+
+
+# --- Large populations use the spatial grid; the answer must not change ----------------------
+
+
+def sense_all_pairs(positions, headings, sense_ranges, energies, food, monkeypatch):
+    """sense_food with the grid switched off (every pair computed), the reference answer."""
+    from genesis.core import spatial
+
+    monkeypatch.setattr(spatial, "DENSE_PAIR_LIMIT", float("inf"))
+    try:
+        return sense_food(positions, headings, sense_ranges, energies, food)
+    finally:
+        monkeypatch.setattr(spatial, "DENSE_PAIR_LIMIT", 4096)
+
+
+def assert_identical_observations(a, b):
+    for field in ("food_found", "food_distance", "food_bearing", "energy"):
+        x, y = getattr(a, field), getattr(b, field)
+        assert x.dtype == y.dtype
+        assert np.array_equal(x, y), field
+
+
+@pytest.mark.parametrize("seed", range(6))
+def test_grid_sensing_is_bit_identical_to_all_pairs(seed, monkeypatch):
+    rng = np.random.default_rng(seed)
+    n, m = rng.integers(200, 1500), rng.integers(50, 400)
+    positions = rng.uniform(0, 200, (n, 2))
+    headings = rng.uniform(-np.pi, np.pi, n)
+    sense_ranges = rng.uniform(1.0, 60.0, n) if seed % 2 else np.full(n, 20.0)
+    energies = rng.uniform(0, 100, n)
+    food = rng.uniform(0, 200, (m, 2))
+    grid = sense_food(positions, headings, sense_ranges, energies, food)
+    reference = sense_all_pairs(positions, headings, sense_ranges, energies, food, monkeypatch)
+    assert_identical_observations(grid, reference)
+
+
+def test_grid_sensing_breaks_exact_ties_by_lower_index_like_all_pairs(monkeypatch):
+    # 100 organisms at integer points; food at exactly 1 unit left and right of each: ties.
+    centres = np.array([(float(x), 50.0) for x in range(0, 300, 3)])
+    left, right = centres - [1.0, 0.0], centres + [1.0, 0.0]
+    food = np.vstack([right, left])  # "right" has the lower index for every organism
+    headings = np.zeros(len(centres))
+    sense = np.full(len(centres), 2.0)
+    energies = np.zeros(len(centres))
+    assert len(centres) * len(food) > 4096  # the grid path is in use
+    grid = sense_food(centres, headings, sense, energies, food)
+    reference = sense_all_pairs(centres, headings, sense, energies, food, monkeypatch)
+    assert_identical_observations(grid, reference)
+    assert np.all(grid.food_bearing == 0.0)  # faced +x, chose the right-hand item (index wins)

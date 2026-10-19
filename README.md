@@ -98,7 +98,7 @@ Each experiment is defined (question, hypotheses, seeds, analysis) and committed
 uv run genesis experiment status experiments/specs/E002.yaml          # which runs exist / are stale
 uv run genesis experiment run experiments/specs/E00N.yaml             # parallel, resumable, loads the lake
 uv run python experiments/e002_selection_machinery.py --analyse-only  # re-analyse saved runs
-uv run python experiments/benchmark.py                                # speed at population 30-1000
+uv run python experiments/benchmark.py [--sizes 30,1000,3000] [--evolution]  # speed, see docs/benchmarks.md
 ```
 
 ## Notebook
@@ -108,7 +108,8 @@ uv run python experiments/benchmark.py                                # speed at
 ## Everyday commands
 
 ```bash
-uv run pytest              # run the test suite
+uv run pytest              # run the test suite (~2 min; minute-long stress tests are skipped)
+uv run pytest -m slow      # the slow stress tests: 50,000 ticks, a 120-run batch
 uv run ruff check .        # lint
 uv run ruff format .       # auto-format
 ```
