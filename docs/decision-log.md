@@ -60,6 +60,18 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-015 · Run output format for Milestone 1 (2026-10-18)
+
+**Decision:** each run writes `run.json` + `ticks.csv` + `organisms.csv`, using only the standard library. run.json carries status (running → completed / failed) and provenance (git commit + dirty flag, versions, platform, full config). Files are written atomically (temp file + rename).
+**Why:** human-readable, needs no new dependencies, and enough for Milestone 1's question. Writing status first means crashed runs leave evidence.
+**Alternatives:** Parquet + DuckDB (planned for Milestone 3, once there are many runs to query); SQLite.
+**Revisit at:** Milestone 3.
+
+## D-016 · Founder lineage tracking (2026-10-18)
+
+**Decision:** every organism carries `founder_id`; the `lineages` metric counts distinct founder lineages alive.
+**Why:** spec section 9 asks for lineage diversity indicators. Measured before mutation exists, it gives the size of pure-chance drift, which Milestone 2 must distinguish from selection.
+
 ## D-014 · Reproduction details (2026-10-18)
 
 **Decision:** one child per parent per tick; random parent choice when the population cap binds; offspring placed uniformly within one step (`speed`) of the parent.

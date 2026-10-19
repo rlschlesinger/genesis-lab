@@ -2,9 +2,19 @@
 
 A local-first artificial life laboratory. Digital organisms live in a simulated 2D world, eat, reproduce and (from Milestone 2) evolve. Everything runs on your machine: no cloud services, no API keys.
 
-**Status:** Milestone 1 (The Petri Dish), increment 1.7: a running, deterministic ecosystem. Organisms sense, decide, move, eat, reproduce (exact copies), and die, with every unit of energy accounted for. Populations level off at a size set by the food supply.
+**Status:** Milestone 1 (The Petri Dish), increment 1.8: a running, deterministic ecosystem with recorded results. Organisms sense, decide, move, eat, reproduce (exact copies), and die, with every unit of energy accounted for. Populations level off at a size set by the food supply.
 
 A **tick** is one step of simulated time: every organism senses, acts and pays its energy costs once per tick.
+
+## Running a simulation
+
+```bash
+uv run genesis run                                  # default config, results in data/runs/<run id>/
+uv run genesis run --seed 7 --ticks 2000 --out data/runs/try-seed-7
+uv run genesis run --help                           # every option
+```
+
+Each run directory holds `run.json` (seed, config, code version, status), `ticks.csv` (one row per tick) and `organisms.csv` (one row per organism that ever lived). The same config and seed always produce identical CSV files.
 
 ## Configuration
 

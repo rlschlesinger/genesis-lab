@@ -79,6 +79,17 @@ What has been covered, where it appears in the code, and what comes next.
 - **Carrying capacity:** a population grows until it uses up the energy that comes in. Back-of-envelope: (spawn rate × energy per item) ÷ cost per organism per tick = 2 × 20 ÷ 0.35 ≈ 114. Observed ~112–116 (seed 42).
 - **Choosing metrics:** two controllers can reach the same population for different reasons; population size alone would hide the difference.
 
+### 1.8 · Metrics, CLI, output files (`analytics/`, `cli.py`)
+- **Provenance:** seed, config, git commit, dirty flag and versions make a result traceable. "Dirty" means the commit doesn't fully describe the code.
+- **CSV:** tables as text; `csv.DictWriter`; `lineterminator="\n"` for identical bytes on every OS.
+- **JSON:** nested metadata; `json.dumps(indent=2)`.
+- **Atomic writes:** write a temp file, then `os.replace`, so a crash can't leave half a file.
+- **Status records:** write "running" first, so failures leave evidence.
+- **argparse:** subcommands, options, defaults, `--help` for free; exit codes 0/1/2.
+- **Entry points:** `[project.scripts]` turns a Python function into a terminal command.
+- **Thin interfaces:** the CLI only translates arguments; the logic stays reusable.
+- **Test doubles:** `monkeypatch` replaces a method to simulate a failure.
+- **Genetic drift:** with identical organisms, 22 of 30 founder lineages died out by chance in 5000 ticks (seed 42).
+
 ## Upcoming (Milestone 1)
-- CLI design; CSV output (1.8)
 - Profiling and benchmarking (1.9)

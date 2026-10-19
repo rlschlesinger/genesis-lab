@@ -62,6 +62,7 @@ class Organism:
     # Identity and lineage: set at birth, never changed.
     id: int
     parent_id: int | None  # None for the founding population
+    founder_id: int  # the founding ancestor this organism descends from (itself, if a founder)
     generation: int  # parent's generation + 1; generations overlap (see architecture.md)
     birth_tick: int
     traits: Traits

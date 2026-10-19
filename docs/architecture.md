@@ -39,8 +39,11 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `core/energy.py` | `EnergyLedger`: flows and the per-tick conservation check | |
 | `evolution/reproduction.py` | Who reproduces (random at the cap) and where offspring appear | Touch organisms |
 | `core/simulation.py` | Tick order, RNG streams, founders, deaths, `TickSummary`, `state_digest` | Do I/O |
-| `analytics/metrics.py` *(planned)* | Per-tick measurements | Mutate state |
-| `cli.py` *(planned)* | Arguments, file output | Contain simulation rules |
+| `analytics/metrics.py` | Flat rows: `tick_row`, `organism_rows`; column lists | Mutate state |
+| `analytics/storage.py` | Byte-stable CSV/JSON writers, atomic replace | Know about simulations |
+| `analytics/provenance.py` | Git commit/dirty flag, versions, platform | |
+| `analytics/runs.py` | `execute_run`: simulate + write run.json/ticks.csv/organisms.csv with status | |
+| `cli.py` | `genesis run` arguments → `execute_run`; exit codes 0/1/2 | Contain logic |
 
 The API (Milestone 5) will drive the same `Simulation` object as the CLI.
 
@@ -118,6 +121,23 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 - **Child:** exact copy of the parent's `Traits` (shared frozen object), `generation = parent + 1`, `birth_tick = current tick`, placed uniformly in a disc of radius `parent.traits.speed` around the parent (clamped), random heading.
 - **Timing:** newborns are appended after survivors (IDs stay ascending), are not aged at step 9, and first act on tick `birth_tick + 1`. Founders act from tick 0. With `max_age = A`, everyone gets exactly `A` active ticks.
 
+## Run output
+
+```text
+<out>/run.json       run_id, experiment_id, status (running→completed|failed), seed, full config,
+                     git {commit, dirty}, environment, ticks_run, stop_reason, final_state_digest
+<out>/ticks.csv      one row per TickSummary (tick, population, births, deaths, food_count,
+                     food_spawned, food_eaten, mean_energy, lineages)
+<out>/organisms.csv  one row per organism ever: lineage, birth/death, lifetime totals, trait_* columns
+```
+
+- Default `<out>` is `data/runs/<run_id>`; run IDs look like `20261018T235501Z-s42-a1b2c3`.
+- `run.json` is written before simulating and rewritten at the end; a failed run records `failed_at_tick` and `error` and writes no CSVs.
+- CSVs use fixed columns, `\n` line endings, shortest exact float form, so identical runs give byte-identical files. Only `VOLATILE_FIELDS` (run_id, timestamps, duration) differ in run.json.
+- Existing non-empty output directories are refused unless `--overwrite`.
+- **Retention:** every tick and every organism (~200 KB + ~130 KB at defaults). No per-event logs in Milestone 1.
+- **Lineage:** `founder_id` is inherited; `lineages` counts distinct founder IDs alive.
+
 ## Randomness
 
 One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`. New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
@@ -134,5 +154,5 @@ One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one
 | 1.5 | `simulation.py`: tick loop, RNG streams | Determinism | done |
 | 1.6 | Eating, tie rule, energy ledger | Tie rule; ledger balances | done |
 | 1.7 | Cloning, population cap, newborn delay | Newborns inactive on birth tick | done |
-| 1.8 | Metrics, CLI, CSV output | Identical files from repeated runs | |
+| 1.8 | Metrics, CLI, CSV output | Identical files from repeated runs | done |
 | 1.9 | Benchmark, seeker-vs-random observation, docs | Numbers recorded | |

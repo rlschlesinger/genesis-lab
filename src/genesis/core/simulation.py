@@ -71,6 +71,7 @@ class TickSummary:
     food_spawned: int
     food_eaten: int
     mean_energy: float  # NaN when the population is empty: "no value", not zero
+    lineages: int  # distinct founder lineages still alive
 
 
 class Simulation:
@@ -108,20 +109,24 @@ class Simulation:
         # Draw all positions, then all headings, as two vectorized calls on the setup stream.
         positions = self.rng.setup.uniform(0.0, [self.world.width, self.world.height], size=(n, 2))
         headings = self.rng.setup.uniform(-np.pi, np.pi, size=n)
-        return [
-            Organism(
-                id=self._new_id(),
-                parent_id=None,
-                generation=0,
-                birth_tick=0,
-                traits=traits,
-                x=float(x),
-                y=float(y),
-                heading=float(h),
-                energy=cfg.initial_energy,
+        founders = []
+        for (x, y), h in zip(positions, headings, strict=True):
+            new_id = self._new_id()
+            founders.append(
+                Organism(
+                    id=new_id,
+                    parent_id=None,
+                    founder_id=new_id,  # each founder starts its own lineage
+                    generation=0,
+                    birth_tick=0,
+                    traits=traits,
+                    x=float(x),
+                    y=float(y),
+                    heading=float(h),
+                    energy=cfg.initial_energy,
+                )
             )
-            for (x, y), h in zip(positions, headings, strict=True)
-        ]
+        return founders
 
     # --- Running ------------------------------------------------------------------------
 
@@ -216,6 +221,9 @@ class Simulation:
             food_count=self.world.food.count,
             food_spawned=food_spawned,
             food_eaten=len(meals),
+            # A set is used only to count distinct values, never iterated, so its
+            # unordered nature cannot affect results.
+            lineages=len({o.founder_id for o in population}),
             mean_energy=(
                 float(np.mean([o.energy for o in population])) if population else math.nan
             ),
@@ -252,6 +260,7 @@ class Simulation:
                 Organism(
                     id=self._new_id(),
                     parent_id=parent.id,
+                    founder_id=parent.founder_id,
                     generation=parent.generation + 1,
                     birth_tick=self.tick,
                     # Exact copy (Milestone 1). Traits are frozen, so sharing one object

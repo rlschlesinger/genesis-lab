@@ -19,6 +19,7 @@ An artificial life research platform built incrementally as a teaching project. 
 uv sync
 uv run pytest
 uv run ruff check . && uv run ruff format --check .
+uv run genesis run --seed 42 --out data/runs/<name>   # one recorded run
 ```
 
 ## Simulation invariants (do not break)
@@ -30,6 +31,7 @@ uv run ruff check . && uv run ruff format --check .
 - **Energy ledger:** initial + inflow − outflow == current total, checked by `Simulation.step()` every tick (`EnergyLedgerError`). Every new energy flow must be recorded in `EnergyLedger`.
 - **Separation of concerns:** controllers are pure (observation → action) and never mutate the world; metrics are read-only.
 - **Boundaries:** hard walls (positions clamped), not wrap-around.
+- **Run records:** CSV output must stay byte-identical for identical config + seed + environment. A new TickSummary/organism field goes into the metrics column lists; never write nondeterministic values (timestamps, run IDs) into the CSVs.
 
 ## Code conventions
 

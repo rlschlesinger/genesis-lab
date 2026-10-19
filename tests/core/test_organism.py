@@ -17,7 +17,7 @@ TRAITS = Traits(
 
 def make_organism(**overrides) -> Organism:
     fields = dict(
-        id=1, parent_id=None, generation=0, birth_tick=0,
+        id=1, parent_id=None, founder_id=1, generation=0, birth_tick=0,
         traits=TRAITS, x=10.0, y=10.0, heading=0.0, energy=50.0,
     )  # fmt: skip
     fields.update(overrides)

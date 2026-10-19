@@ -336,3 +336,27 @@ def test_ledger_and_determinism_hold_with_reproduction():
     a.run()  # step() checks the ledger every tick
     b.run()
     assert a.state_digest() == b.state_digest()
+
+
+# --- Lineages -----------------------------------------------------------------------------
+
+
+def test_founder_lineage_is_inherited():
+    sim = Simulation(make_config(**{"run.max_ticks": 800}))
+    sim.run()
+    everyone = {o.id: o for o in [*sim.organisms, *sim.dead]}
+    founder_ids = {o.id for o in everyone.values() if o.parent_id is None}
+    for org in everyone.values():
+        if org.parent_id is None:
+            assert org.founder_id == org.id
+        else:
+            assert org.founder_id == everyone[org.parent_id].founder_id
+        assert org.founder_id in founder_ids
+
+
+def test_lineages_can_only_disappear_never_appear():
+    # No mutation and no immigration: a lineage that dies out can never come back.
+    summaries = Simulation(make_config(**{"run.max_ticks": 2000})).run()
+    counts = [s.lineages for s in summaries]
+    assert counts[0] <= 30
+    assert all(later <= earlier for earlier, later in zip(counts, counts[1:], strict=False))

@@ -135,6 +135,23 @@ class SimulationConfig(_Strict):
         return self
 
 
+def with_overrides(
+    config: SimulationConfig, *, seed: int | None = None, max_ticks: int | None = None
+) -> SimulationConfig:
+    """Return a copy of ``config`` with selected run settings replaced, fully re-validated.
+
+    Pydantic's ``model_copy(update=...)`` skips validation, so a bad override (a negative
+    seed from the command line, say) would slip through. Dumping to a dict and validating
+    again runs every rule.
+    """
+    raw = config.model_dump()
+    if seed is not None:
+        raw["run"]["seed"] = seed
+    if max_ticks is not None:
+        raw["run"]["max_ticks"] = max_ticks
+    return SimulationConfig.model_validate(raw)
+
+
 def load_config(path: str | Path) -> SimulationConfig:
     """Read and validate a YAML configuration file.
 
