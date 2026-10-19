@@ -56,7 +56,9 @@ def run_condition(
     for seed in seeds:
         config = apply_changes(base, {**condition.changes, "run.seed": seed})
         out = run_dir_for(root, condition, seed)
-        execute_run(config, out, experiment_id=experiment_id, overwrite=True)
+        execute_run(
+            config, out, experiment_id=experiment_id, condition=condition.label, overwrite=True
+        )
         dirs.append(out)
     return dirs
 
@@ -71,13 +73,16 @@ def settled_gene_means(run_dir: Path, first_tick: int, last_tick: int) -> dict[s
     meta = json.loads((run_dir / "run.json").read_text())
     if meta["status"] != "completed" or meta["ticks_run"] <= last_tick:
         return None
+    # With sampling (ticks_every > 1) only every n-th tick has a row, plus the final tick.
+    every = meta.get("ticks_every", 1)
+    final = meta["ticks_run"] - 1
+    recorded = [t for t in range(first_tick, last_tick + 1) if t % every == 0 or t == final]
     by_gene: dict[str, list[float]] = {}
     with (run_dir / "gene_stats.csv").open(newline="") as f:
         for row in csv.DictReader(f):
             if first_tick <= int(row["tick"]) <= last_tick and int(row["n"]) > 0:
                 by_gene.setdefault(row["gene"], []).append(float(row["mean"]))
-    expected = last_tick - first_tick + 1
-    if not by_gene or any(len(v) != expected for v in by_gene.values()):
+    if not by_gene or any(len(v) != len(recorded) for v in by_gene.values()):
         return None  # the population was empty for part of the window
     return {gene: statistics.fmean(values) for gene, values in by_gene.items()}
 

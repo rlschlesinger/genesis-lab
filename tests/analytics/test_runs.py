@@ -12,9 +12,9 @@ from genesis.analytics.metrics import (
     TICK_FIELDS,
     organism_rows,
 )
-from genesis.analytics.recorder import GENE_STAT_FIELDS, GENOME_SNAPSHOT_FIELDS
+from genesis.analytics.recorder import EVENT_FIELDS, GENE_STAT_FIELDS, GENOME_SNAPSHOT_FIELDS
 from genesis.analytics.runs import VOLATILE_FIELDS, execute_run
-from genesis.core.config import SimulationConfig, load_config, with_overrides
+from genesis.core.config import SimulationConfig, config_hash, load_config, with_overrides
 from genesis.core.energy import EnergyLedgerError
 from genesis.core.simulation import Simulation
 
@@ -47,6 +47,7 @@ def test_run_writes_every_output_file_with_expected_columns(config, tmp_path):
         "gene_stats.csv": GENE_STAT_FIELDS,
         "genomes.csv": GENOME_SNAPSHOT_FIELDS,
         "mutations.csv": MUTATION_FIELDS,
+        "events.csv": EVENT_FIELDS,
     }
     assert sorted(p.name for p in tmp_path.glob("*.csv")) == sorted(expected_headers)
     for name, fields in expected_headers.items():
@@ -87,7 +88,14 @@ def test_identical_runs_give_byte_identical_results(config, tmp_path):
     execute_run(config, tmp_path / "a")
     execute_run(config, tmp_path / "b")
     names = sorted(p.name for p in (tmp_path / "a").glob("*.csv"))
-    assert names == ["gene_stats.csv", "genomes.csv", "mutations.csv", "organisms.csv", "ticks.csv"]
+    assert names == [
+        "events.csv",
+        "gene_stats.csv",
+        "genomes.csv",
+        "mutations.csv",
+        "organisms.csv",
+        "ticks.csv",
+    ]
     for name in names:
         assert (tmp_path / "a" / name).read_bytes() == (tmp_path / "b" / name).read_bytes()
     meta_a = json.loads((tmp_path / "a" / "run.json").read_text())
@@ -168,3 +176,23 @@ def test_mutations_csv_and_gene_columns(tmp_path):
 def test_mutations_csv_is_header_only_when_mutation_is_off(config, tmp_path):
     execute_run(config, tmp_path)
     assert (tmp_path / "mutations.csv").read_text() == "tick,parent_id,child_id,gene,before,after\n"
+
+
+def test_run_json_records_schema_version_condition_and_config_hash(config, tmp_path):
+    execute_run(config, tmp_path, experiment_id="E999", condition="control")
+    meta = json.loads((tmp_path / "run.json").read_text())
+    assert meta["schema_version"] == 3
+    assert meta["condition"] == "control"
+    assert meta["config_hash"] == config_hash(config) and len(meta["config_hash"]) == 64
+    assert meta["ticks_every"] == 1 and meta["events_recorded"] == ""
+
+
+def test_sampled_run_still_reports_ticks_simulated(tmp_path):
+    raw = load_config(DEFAULT_CONFIG).model_dump()
+    raw["run"]["max_ticks"] = 100
+    raw["recording"].update(ticks_every=30, events=["death"])
+    execute_run(SimulationConfig.model_validate(raw), tmp_path)
+    meta = json.loads((tmp_path / "run.json").read_text())
+    assert meta["ticks_run"] == 100  # simulated, not rows written
+    assert [int(r["tick"]) for r in read_csv(tmp_path / "ticks.csv")] == [0, 30, 60, 90, 99]
+    assert meta["events_recorded"] == "death"

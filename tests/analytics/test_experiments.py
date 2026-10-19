@@ -1,5 +1,6 @@
 """Tests for the experiment helpers."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -64,3 +65,12 @@ def test_paired_drops_and_reports_missing_seeds():
     diffs, dropped = paired({1: 5.0, 2: None, 3: 2.0}, {1: 4.0, 2: 1.0, 3: 3.0})
     assert diffs == [1.0, -1.0]
     assert dropped == [2]
+
+
+def test_settled_means_work_with_sampled_ticks(base, tmp_path):
+    sampled = Condition("sampled", {"recording.ticks_every": 7})
+    (d,) = run_condition(base, sampled, [5], tmp_path, "TEST")
+    (full,) = run_condition(base, Condition("full"), [5], tmp_path, "TEST")
+    a, b = settled_gene_means(d, 200, 299), settled_gene_means(full, 200, 299)
+    assert a is not None and set(a) == set(b)
+    assert json.loads((d / "run.json").read_text())["condition"] == "sampled"

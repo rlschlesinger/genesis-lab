@@ -35,14 +35,25 @@ from genesis.analytics.metrics import (
     organism_rows,
 )
 from genesis.analytics.provenance import environment, git_info
-from genesis.analytics.recorder import GENE_STAT_FIELDS, GENOME_SNAPSHOT_FIELDS, RunRecorder
+from genesis.analytics.recorder import (
+    EVENT_FIELDS,
+    GENE_STAT_FIELDS,
+    GENOME_SNAPSHOT_FIELDS,
+    RunRecorder,
+)
 from genesis.analytics.storage import write_csv, write_json
-from genesis.core.config import SimulationConfig
+from genesis.core.config import SimulationConfig, config_hash
 from genesis.core.simulation import Simulation, TickSummary
 
 RUN_FILE, TICKS_FILE, ORGANISMS_FILE = "run.json", "ticks.csv", "organisms.csv"
 MUTATIONS_FILE = "mutations.csv"
 GENE_STATS_FILE, GENOMES_FILE = "gene_stats.csv", "genomes.csv"
+EVENTS_FILE = "events.csv"
+
+# Version of the run-folder format (docs/schema.md). 1: Milestone 1 (E001). 2: Milestone 2
+# (gene files, condition only in the folder name). 3: condition, config_hash, sampling
+# settings in run.json, and events.csv.
+SCHEMA_VERSION = 3
 
 # run.json fields that legitimately differ between two otherwise identical runs.
 VOLATILE_FIELDS = {"run_id", "started_at", "finished_at", "duration_seconds"}
@@ -74,6 +85,7 @@ def execute_run(
     *,
     run_id: str | None = None,
     experiment_id: str | None = None,
+    condition: str | None = None,
     overwrite: bool = False,
     on_tick: Callable[[TickSummary], None] | None = None,
 ) -> RunResult:
@@ -95,10 +107,15 @@ def execute_run(
     meta: dict = {
         "run_id": run_id,
         "experiment_id": experiment_id,
+        "condition": condition,
+        "schema_version": SCHEMA_VERSION,
         "status": "running",
         "started_at": _now(),
         "seed": config.run.seed,
         "config": config.model_dump(mode="json"),
+        "config_hash": config_hash(config),
+        "ticks_every": config.recording.ticks_every,
+        "events_recorded": ",".join(config.recording.events),
         "git": git_info(),
         "environment": environment(),
     }
@@ -107,7 +124,8 @@ def execute_run(
 
     started = time.perf_counter()
     sim = Simulation(config)
-    recorder = RunRecorder(config.recording.genome_snapshot_every)
+    rec = config.recording
+    recorder = RunRecorder(rec.genome_snapshot_every, rec.ticks_every, rec.events)
     try:
         while not sim.finished:
             summary = sim.step()
@@ -128,12 +146,13 @@ def execute_run(
     write_csv(out_dir / TICKS_FILE, TICK_FIELDS, recorder.ticks)
     write_csv(out_dir / GENE_STATS_FILE, GENE_STAT_FIELDS, recorder.gene_stats)
     write_csv(out_dir / GENOMES_FILE, GENOME_SNAPSHOT_FIELDS, recorder.genomes)
+    write_csv(out_dir / EVENTS_FILE, EVENT_FIELDS, recorder.events)
     write_csv(out_dir / ORGANISMS_FILE, ORGANISM_FIELDS, organism_rows(sim))
     write_csv(out_dir / MUTATIONS_FILE, MUTATION_FIELDS, mutation_rows(sim))
 
     stop_reason = "extinction" if not sim.organisms else "max_ticks"
     digest = sim.state_digest()
-    ticks_run = len(recorder.ticks)
+    ticks_run = sim.tick  # ticks simulated; with sampling, ticks.csv has fewer rows
     meta.update(
         status="completed",
         finished_at=_now(),

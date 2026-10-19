@@ -60,6 +60,12 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-028 · Sampled tick rows sum flows; optional event log (2026-10-19)
+
+**Decision:** `recording.ticks_every` keeps every n-th tick (plus the final tick) in ticks.csv and gene_stats.csv. Stock columns are snapshots of the recorded tick; flow columns are totals since the previous recorded row. `recording.events` logs births, deaths and/or meals to events.csv. run.json gains `schema_version` (3), `condition`, `config_hash`, `ticks_every`, `events_recorded`.
+**Why:** plain sampling would keep one tick's births out of every n and silently undercount totals by (n−1)/n; summing flows keeps totals exact at any interval (demo: identical totals at 1 and 10, with 10× fewer rows). Events support questions per-tick totals can't answer (where deaths happen, birth-time population), at modest size (~0.6 MB per 20k-tick run for births and deaths). Condition and config hash make runs groupable and comparable in the database.
+**Defaults:** `ticks_every: 1`, no events: output identical to schema version 2 apart from the new run.json fields and a header-only events.csv; golden tests unchanged.
+
 ## D-027 · Golden values: state digests per platform, event digests everywhere (2026-10-19)
 
 **Problem:** on a fresh Linux x86_64 checkout, `tests/test_regression.py` failed at every commit since the golden digests were recorded, including the commit that recorded them. Nothing in the code had changed behaviour: on this machine NumPy's `hypot` and `arctan2` give results that differ in the last bit from the arm64 macOS machine the values came from (on x86_64 with AVX-512, NumPy uses its own vectorised implementations; 0.6% of `hypot` and 7.8% of `arctan2` results differ from the C library's in the last bit). `state_digest()` hashes every float bit for bit, so one such difference anywhere changes it. D-006 already warned that bit-identical results hold only on one machine; the golden test had no way to say so.

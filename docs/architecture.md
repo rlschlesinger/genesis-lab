@@ -141,6 +141,7 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 <out>/mutations.csv  one row per gene change at a birth (header only when mutation is off)
 <out>/gene_stats.csv one row per (tick, gene): n, mean, sd (population), min, max; tidy format
 <out>/genomes.csv    every living genome every recording.genome_snapshot_every ticks (default 50) + final tick
+<out>/events.csv     optional births/deaths/meals (recording.events); header only by default
 ```
 
 - Default `<out>` is `data/runs/<run_id>`; run IDs look like `20261018T235501Z-s42-a1b2c3`.
@@ -148,7 +149,9 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 - CSVs use fixed columns, `\n` line endings, shortest exact float form, so identical runs give byte-identical files. Only `VOLATILE_FIELDS` (run_id, timestamps, duration) differ in run.json.
 - Existing non-empty output directories are refused unless `--overwrite`.
 - **Retention:** every tick, organism and mutation; per-tick gene statistics; full genomes sampled every 50 ticks. A 20,000-tick evolution run is ~16 MB (gene_stats.csv 10 MB). No meal/death event logs.
-- Recording policy lives in `RunRecorder` (analytics), not the simulation; a test confirms recording never changes results.
+- Recording policy lives in `RunRecorder` (analytics), not the simulation; tests confirm recording never changes results.
+- `recording.ticks_every` samples ticks.csv and gene_stats.csv; flow columns are summed between rows (D-028). The simulation always fills `events_this_tick`; the recorder keeps the kinds listed in `recording.events`.
+- run.json (schema version 3) also records `condition`, `schema_version`, `config_hash` (SHA-256 of the canonical config, seed included), `ticks_every`, `events_recorded`; `ticks_run` counts ticks simulated, not rows written.
 - **Lineage:** `founder_id` is inherited; `lineages` counts distinct founder IDs alive.
 
 ## Mutation
@@ -247,7 +250,7 @@ Decisions: Parquet files are the source of truth with DuckDB views over them; ru
 | # | Increment | Key test | Status |
 |---|---|---|---|
 | 3.0 | Schema document and data dictionary; stop for review | — | done |
-| 3.1 | Tick sampling, optional event log, schema version, condition, config hash in run.json | Defaults give identical results | |
+| 3.1 | Tick sampling, optional event log, schema version, condition, config hash in run.json | Defaults give identical results | done |
 | 3.2 | ETL: run folder → Parquet with validation; back-fill E001–E003 | Rows and values match the CSVs | |
 | 3.3 | DuckDB views; `genesis sql`; join and lineage examples | SQL = pandas answers | |
 | 3.4 | Batch runner: experiment file → parallel, resumable runs | Parallel = sequential, byte for byte | |

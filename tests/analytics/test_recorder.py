@@ -109,3 +109,107 @@ def test_stats_n_matches_population_every_tick(recorded_run):
 def test_frozen_gene_has_zero_spread(recorded_run):
     rows = [r for r in read_csv(recorded_run / "gene_stats.csv") if r["gene"] == "max_turn"]
     assert all(float(r["sd"]) == 0.0 and float(r["mean"]) == 0.5 for r in rows)
+
+
+# --- Sampling (ticks_every) ---------------------------------------------------------------
+
+
+def record(config, **recorder_kwargs) -> tuple[Simulation, RunRecorder]:
+    sim = Simulation(config)
+    recorder = RunRecorder(genome_snapshot_every=50, **recorder_kwargs)
+    while not sim.finished:
+        recorder.observe(sim, sim.step())
+    return sim, recorder
+
+
+def test_sampled_rows_are_every_nth_tick_plus_the_final_one():
+    _, rec = record(evolution_config(max_ticks=100), ticks_every=7)
+    ticks = [r["tick"] for r in rec.ticks]
+    assert ticks == [*range(0, 100, 7), 99]
+    assert {r["tick"] for r in rec.gene_stats} == set(ticks)
+
+
+def test_flow_totals_are_the_same_at_any_interval():
+    # Flows (births, deaths, meals, mutations) are summed between rows, so totals never
+    # depend on the sampling interval. Plain sampling would silently drop most of them.
+    config = evolution_config(max_ticks=400)
+    _, every_tick = record(config, ticks_every=1)
+    _, sampled = record(config, ticks_every=13)
+    for field in ("births", "deaths", "food_spawned", "food_eaten", "mutations"):
+        assert sum(r[field] for r in sampled.ticks) == sum(r[field] for r in every_tick.ticks), (
+            field
+        )
+
+
+def test_stock_columns_are_snapshots_of_the_recorded_tick():
+    config = evolution_config(max_ticks=200)
+    _, every_tick = record(config, ticks_every=1)
+    _, sampled = record(config, ticks_every=10)
+    full = {r["tick"]: r for r in every_tick.ticks}
+    for row in sampled.ticks:
+        for field in ("population", "food_count", "lineages"):
+            assert row[field] == full[row["tick"]][field], (field, row["tick"])
+
+
+def test_sampling_never_changes_the_simulation():
+    config = evolution_config(max_ticks=300)
+    a, _ = record(config, ticks_every=1)
+    b, _ = record(config, ticks_every=25)
+    assert a.state_digest() == b.state_digest()
+
+
+# --- Event log ----------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def logged():
+    return record(evolution_config(max_ticks=600), events=("birth", "death", "meal"))
+
+
+def test_event_counts_match_the_tick_totals(logged):
+    _, rec = logged
+    by_kind = {k: sum(e["kind"] == k for e in rec.events) for k in ("birth", "death", "meal")}
+    assert by_kind["birth"] == sum(r["births"] for r in rec.ticks) > 0
+    assert by_kind["death"] == sum(r["deaths"] for r in rec.ticks) > 0
+    assert by_kind["meal"] == sum(r["food_eaten"] for r in rec.ticks) > 0
+
+
+def test_birth_and_death_events_agree_with_organism_records(logged):
+    sim, rec = logged
+    everyone = {o.id: o for o in [*sim.organisms, *sim.dead]}
+    for e in rec.events:
+        org = everyone[e["organism_id"]]
+        if e["kind"] == "birth":
+            assert e["other_id"] == org.parent_id and e["tick"] == org.birth_tick
+        elif e["kind"] == "death":
+            assert e["tick"] == org.death_tick and e["detail"] == org.death_cause
+
+
+def test_events_are_numbered_in_order_within_each_tick(logged):
+    _, rec = logged
+    by_tick: dict[int, list[int]] = {}
+    for e in rec.events:
+        by_tick.setdefault(e["tick"], []).append(e["seq"])
+    assert all(seqs == list(range(len(seqs))) for seqs in by_tick.values())
+
+
+def test_meals_then_deaths_then_births_within_a_tick(logged):
+    # The order things happen in a tick (steps 5, 6, 7).
+    _, rec = logged
+    rank = {"meal": 0, "death": 1, "birth": 2}
+    by_tick: dict[int, list[int]] = {}
+    for e in rec.events:
+        by_tick.setdefault(e["tick"], []).append(rank[e["kind"]])
+    assert all(ranks == sorted(ranks) for ranks in by_tick.values())
+
+
+def test_only_requested_event_kinds_are_kept():
+    _, rec = record(evolution_config(max_ticks=300), events=("death",))
+    assert rec.events and {e["kind"] for e in rec.events} == {"death"}
+
+
+def test_logging_events_never_changes_the_simulation():
+    config = evolution_config(max_ticks=300)
+    a, _ = record(config)
+    b, _ = record(config, events=("birth", "death", "meal"))
+    assert a.state_digest() == b.state_digest()

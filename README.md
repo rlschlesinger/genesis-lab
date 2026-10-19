@@ -39,11 +39,12 @@ open data/runs/evo/report.html
 | File | Contents |
 |---|---|
 | `run.json` | Seed, full config, git commit (and whether the code had uncommitted changes), versions, status, final-state fingerprint |
-| `ticks.csv` | One row per tick: population, births, deaths, food, mean energy, founder lineages, mutations |
+| `ticks.csv` | One row per tick (or every `recording.ticks_every` ticks, with births/deaths/meals summed in between): population, births, deaths, food, mean energy, founder lineages, mutations |
 | `gene_stats.csv` | Per tick and gene: count, mean, standard deviation, min, max |
 | `genomes.csv` | Every living genome, every 50 ticks and on the final tick |
 | `organisms.csv` | One row per organism that ever lived: lineage, birth, death, lifetime totals, genes and traits |
 | `mutations.csv` | Every gene change at every birth |
+| `events.csv` | Optional log of births, deaths and meals (`recording.events`) |
 | `report.html` | Charts, after `genesis report` (self-contained, works offline) |
 
 ## Configuration

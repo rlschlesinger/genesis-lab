@@ -1,6 +1,6 @@
 # Data dictionary
 
-Status: **proposed** (increment 3.0); becomes binding when the ETL is implemented (3.2). See [schema.md](schema.md) for how the tables relate.
+Status: run-folder fields for schema version 3 implemented (3.1); database tables become binding when the ETL is implemented (3.2). See [schema.md](schema.md) for how the tables relate.
 
 **Conventions**
 
@@ -60,21 +60,23 @@ One row per simulation run, including failed ones. Source: `run.json`.
 
 ## `ticks`
 
-One row per (sampled) tick. Source: `ticks.csv`. Counts in a row describe that tick (births during it, population at its end).
+One row per recorded tick (every `ticks_every` ticks, plus the final tick). Source: `ticks.csv`.
+
+**Stocks vs flows.** *Stock* columns (`population`, `food_count`, `mean_energy`, `lineages`) are a snapshot at the end of the recorded tick. *Flow* columns (`births`, `deaths`, `food_spawned`, `food_eaten`, `mutations`) are **totals since the previous recorded row**, so summing a flow column over a run gives the true total at any `ticks_every` (D-028). With `ticks_every` = 1 (the default) each row describes exactly one tick.
 
 | Column | Type | Unit | Key | Since | Null when | Meaning |
 |---|---|---|---|---|---|---|
 | `run_id` | VARCHAR | — | PK, FK → runs | 1 | never | |
 | `tick` | INTEGER | tick | PK | 1 | never | Time step, from 0 |
 | `population` | INTEGER | — | | 1 | never | Living organisms at the end of the tick, including newborns |
-| `births` | INTEGER | — | | 1 | never | Newborns this tick |
-| `deaths` | INTEGER | — | | 1 | never | Deaths this tick |
+| `births` | INTEGER | — | | 1 | never | Newborns since the previous row (flow) |
+| `deaths` | INTEGER | — | | 1 | never | Deaths since the previous row (flow) |
 | `food_count` | INTEGER | — | | 1 | never | Uneaten food items at the end of the tick |
-| `food_spawned` | INTEGER | — | | 1 | never | Items that appeared this tick |
-| `food_eaten` | INTEGER | — | | 1 | never | Items eaten this tick |
+| `food_spawned` | INTEGER | — | | 1 | never | Items that appeared since the previous row (flow) |
+| `food_eaten` | INTEGER | — | | 1 | never | Items eaten since the previous row (flow) |
 | `mean_energy` | DOUBLE | EU | | 1 | population = 0 | Mean energy of the living population |
 | `lineages` | INTEGER | — | | 1 | never | Distinct founder lineages alive |
-| `mutations` | INTEGER | — | | 2 | version 1 | Gene changes among this tick's newborns |
+| `mutations` | INTEGER | — | | 2 | version 1 | Gene changes among newborns since the previous row (flow) |
 
 ## `gene_stats`
 
@@ -145,7 +147,7 @@ One row per gene change at a birth. Source: `mutations.csv`. Not present for ver
 
 ## `events` (new in 3.1; optional)
 
-One row per logged event, when `recording.events` lists that kind. Source: `events.csv`.
+One row per logged event, when `recording.events` lists that kind. Source: `events.csv` (always written; header only when no kinds are logged). Within a tick, events appear in the order they happen: meals (step 5), deaths (step 6), births (step 7).
 
 | Column | Type | Unit | Key | Null when | Meaning |
 |---|---|---|---|---|---|
@@ -165,6 +167,6 @@ For every run before loading it; a run failing any check is refused with a messa
 
 1. Every primary key is unique.
 2. Every foreign key points at an existing row (`organisms.parent_id`, `mutations.child_id`, `genomes.organism_id` …), within the same run.
-3. Row counts are consistent: `ticks` has `ticks_run` rows (or `ticks_run / ticks_every`, rounded up); `organisms` has `organisms_ever` rows; `mutations` has `mutations` rows.
+3. Row counts are consistent: `ticks` has one row per tick that is a multiple of `ticks_every`, plus the final tick if it isn't one; flow totals in `ticks` equal the event counts when events were logged; `organisms` has `organisms_ever` rows; `mutations` has `mutations` rows.
 4. Values are in range: counts ≥ 0, genes within their configured `[min, max]`, `alive` ⇔ `death_tick` is NULL.
 5. Every column's type matches this dictionary.

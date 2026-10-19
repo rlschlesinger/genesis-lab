@@ -195,6 +195,22 @@ What has been covered, where it appears in the code, and what comes next.
 
 ## Milestone 2 complete
 
+## Milestone 3: The Science Lab
+
+### 3.0 · Schema design (`docs/schema.md`, `docs/data-dictionary.md`)
+- **Tables, schemas, primary and composite keys, foreign keys, views.**
+- **Why every key includes `run_id`,** and the fan-out bug when a JOIN forgets it.
+- **Self-referencing tables** (organisms → parent) and recursive queries.
+- **Source of truth vs derived data:** Parquet files are the record; the database is a rebuildable lens.
+- **NULL vs NaN:** SQL aggregates skip NULL; a NaN poisons the result.
+- **Data dictionaries:** every column's type, unit and when it may be empty.
+
+### 3.1 · Sampling, events and run metadata
+- **Stocks vs flows:** a snapshot quantity can be sampled; an "amount during" quantity must be summed over the interval, or totals go wrong.
+- **Event logs:** one row per thing that happened, for questions totals can't answer.
+- **Canonical hashing:** sorting keys before hashing makes identical settings give identical fingerprints.
+- **Format versioning:** a version number in each record lets old and new data be read correctly together.
+
 ## Future learning objectives
 - **Milestone 3:** pandas, SQL with DuckDB, Parquet, significance tests and effect sizes with SciPy, batch experiment design.
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.

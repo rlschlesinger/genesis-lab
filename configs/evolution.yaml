@@ -55,3 +55,5 @@ mutation:
 # What a recorded run saves (never changes results, only what is kept).
 recording:
   genome_snapshot_every: 50   # ticks between full-genome snapshots (genomes.csv)
+  ticks_every: 1              # ticks between rows of ticks.csv and gene_stats.csv
+  events: []                  # log any of: birth, death, meal (events.csv)

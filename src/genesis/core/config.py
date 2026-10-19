@@ -12,6 +12,8 @@ Units used throughout Genesis Lab:
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 from pathlib import Path
 from typing import Annotated, Literal, Self
@@ -25,6 +27,7 @@ PositiveInt = Annotated[int, Field(gt=0)]
 NonNegativeInt = Annotated[int, Field(ge=0)]
 
 ControllerName = Literal["random_walk", "nearest_food_seeker"]
+EventKind = Literal["birth", "death", "meal"]
 
 
 class ConfigError(ValueError):
@@ -168,6 +171,22 @@ class RecordingConfig(_Strict):
     genome_snapshot_every: PositiveInt = Field(
         default=50, description="Ticks between snapshots of every living genome (genomes.csv)."
     )
+    ticks_every: PositiveInt = Field(
+        default=1,
+        description=(
+            "Ticks between rows of ticks.csv and gene_stats.csv (the final tick is always "
+            "kept). Flow columns (births, deaths, meals...) hold totals since the previous row."
+        ),
+    )
+    events: tuple[EventKind, ...] = Field(
+        default=(), description="Event kinds to log in events.csv: birth, death, meal."
+    )
+
+    @model_validator(mode="after")
+    def _distinct_events(self) -> Self:
+        if len(set(self.events)) != len(self.events):
+            raise ValueError(f"events lists a kind twice: {list(self.events)}")
+        return self
 
 
 class SimulationConfig(_Strict):
@@ -229,6 +248,17 @@ def with_overrides(
     if max_ticks is not None:
         raw["run"]["max_ticks"] = max_ticks
     return SimulationConfig.model_validate(raw)
+
+
+def config_hash(config: SimulationConfig) -> str:
+    """SHA-256 of the config in a canonical form: identical configs give identical hashes.
+
+    Canonical means keys sorted and no optional whitespace, so the same settings always
+    produce the same text, whatever order a YAML file listed them in. The seed is included:
+    two runs with the same hash should produce the same results (on the same platform).
+    """
+    text = json.dumps(config.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def load_config(path: str | Path) -> SimulationConfig:

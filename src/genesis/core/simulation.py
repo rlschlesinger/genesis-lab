@@ -92,6 +92,24 @@ class MutationEvent:
     after: float
 
 
+@dataclass(frozen=True, slots=True)
+class Event:
+    """One thing that happened to one organism during a tick (for the optional event log).
+
+    ``other_id`` is the parent for a birth; ``energy`` is what the newborn received, what the
+    deceased held, or what the meal gave; ``detail`` is the cause of a death.
+    """
+
+    tick: int
+    kind: str  # "meal", "death" or "birth", in the order they happen within a tick
+    organism_id: int
+    other_id: int | None
+    energy: float
+    x: float
+    y: float
+    detail: str | None
+
+
 class Simulation:
     """One run: a world, its organisms, and the clock.
 
@@ -114,6 +132,9 @@ class Simulation:
         self.dead: list[Organism] = []
         # Every gene change at every birth, in the order they happened.
         self.mutation_log: list[MutationEvent] = []
+        # This tick's meals, deaths and births, in the order they happened. Always collected
+        # (a handful per tick); the recorder decides which kinds to keep.
+        self.events_this_tick: list[Event] = []
         # Opened after founders and initial food exist: they make up the starting stock.
         self.ledger = EnergyLedger(initial_stock=self.energy_stock())
 
@@ -175,6 +196,7 @@ class Simulation:
         living = self.organisms
 
         food_value = self.config.food.energy_value
+        events: list[Event] = []
 
         # 1. Environment.
         food_spawned = self.world.food.regrow(self.rng.food)
@@ -208,7 +230,11 @@ class Simulation:
             self.rng.tiebreak,
         )  # fmt: skip
         for i in meals.eaters:
-            living[i].eat(food_value)
+            eater = living[i]
+            eater.eat(food_value)
+            events.append(
+                Event(self.tick, "meal", eater.id, None, food_value, eater.x, eater.y, None)
+            )
         self.world.food.remove(meals.foods)
 
         # 5b. Pay costs *after* eating, so a nearly-empty organism that reaches food gets to
@@ -240,6 +266,9 @@ class Simulation:
                 # Energy still held at death leaves the system (D-011). The organism's own
                 # record keeps the value, so analysis can see what it died with.
                 lost.append(org.energy)
+                events.append(
+                    Event(self.tick, "death", org.id, None, org.energy, org.x, org.y, str(cause))
+                )
                 org.die(self.tick, cause)
                 self.dead.append(org)
         # Summed exactly and added to the ledger once per tick, like the living costs (D-026).
@@ -251,6 +280,12 @@ class Simulation:
         newborns = self._reproduce(survivors)
         mutations_this_tick = len(self.mutation_log) - logged_before
         self.organisms = survivors + newborns  # still ascending ID order: new IDs are larger
+        for child in newborns:
+            events.append(
+                Event(self.tick, "birth", child.id, child.parent_id, child.energy, child.x,
+                      child.y, None)
+            )  # fmt: skip
+        self.events_this_tick = events
 
         # 8. Check conservation, then record. A failed check raises EnergyLedgerError.
         self.ledger.check(self.energy_stock(), self.tick)

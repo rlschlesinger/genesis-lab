@@ -1,6 +1,6 @@
 # Database schema (Milestone 3)
 
-Status: **proposed, for review before implementation** (increment 3.0). Column-level detail is in the [data dictionary](data-dictionary.md).
+Status: **approved 2026-10-19**; run-folder schema version 3 implemented in 3.1. Column-level detail is in the [data dictionary](data-dictionary.md).
 
 ## Why a database at all
 

@@ -7,7 +7,13 @@ import pydantic
 import pytest
 import yaml
 
-from genesis.core.config import ConfigError, SimulationConfig, load_config, with_overrides
+from genesis.core.config import (
+    ConfigError,
+    SimulationConfig,
+    config_hash,
+    load_config,
+    with_overrides,
+)
 
 DEFAULT_CONFIG = Path(__file__).parents[2] / "configs" / "default.yaml"
 
@@ -243,3 +249,26 @@ def test_snapshot_interval_must_be_positive(raw):
 def test_recording_section_is_optional(raw):
     del raw["recording"]
     assert validate(raw).recording.genome_snapshot_every == 50
+
+
+def test_config_hash_identifies_settings_not_formatting():
+    config = load_config(DEFAULT_CONFIG)
+    assert config_hash(config) == config_hash(load_config(DEFAULT_CONFIG))
+    # Key order in the source doesn't matter...
+    reordered = SimulationConfig.model_validate(dict(reversed(config.model_dump().items())))
+    assert config_hash(reordered) == config_hash(config)
+    # ...but any setting does, including the seed.
+    assert config_hash(with_overrides(config, seed=7)) != config_hash(config)
+
+
+@pytest.mark.parametrize("events", [["birth", "birth"], ["lunch"]])
+def test_invalid_event_lists_rejected(raw, events):
+    raw["recording"]["events"] = events
+    with pytest.raises(pydantic.ValidationError, match="events"):
+        validate(raw)
+
+
+def test_ticks_every_must_be_positive(raw):
+    raw["recording"]["ticks_every"] = 0
+    with pytest.raises(pydantic.ValidationError, match="ticks_every"):
+        validate(raw)
