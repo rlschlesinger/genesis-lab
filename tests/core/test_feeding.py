@@ -1,6 +1,7 @@
 """Tests for food contention: reach, closest-first matching, fair tie-breaking."""
 
 import numpy as np
+import pytest
 
 from genesis.core.feeding import resolve_feeding
 
@@ -82,3 +83,44 @@ def test_every_meal_is_within_reach():
 def test_empty_inputs():
     assert len(feed(np.empty((0, 2)), [[0, 0]])) == 0
     assert len(feed([[0, 0]], np.empty((0, 2)))) == 0
+
+
+# --- Large populations use the spatial grid; the meals must not change -----------------------
+
+
+def feed_all_pairs(organisms, food, rng, monkeypatch):
+    """resolve_feeding with the grid switched off, the reference answer."""
+    from genesis.core import spatial
+
+    monkeypatch.setattr(spatial, "DENSE_PAIR_LIMIT", float("inf"))
+    try:
+        return resolve_feeding(organisms, food, RADIUS, rng)
+    finally:
+        monkeypatch.setattr(spatial, "DENSE_PAIR_LIMIT", 4096)
+
+
+@pytest.mark.parametrize("seed", range(6))
+def test_grid_feeding_is_bit_identical_to_all_pairs(seed, monkeypatch):
+    rng = np.random.default_rng(seed)
+    n, m = rng.integers(200, 2000), rng.integers(50, 500)
+    size = 40.0 if seed % 2 else 200.0  # a small world makes a crowded one
+    organisms, food = rng.uniform(0, size, (n, 2)), rng.uniform(0, size, (m, 2))
+    grid = resolve_feeding(organisms, food, RADIUS, np.random.default_rng(seed + 100))
+    reference = feed_all_pairs(organisms, food, np.random.default_rng(seed + 100), monkeypatch)
+    assert np.array_equal(grid.eaters, reference.eaters)
+    assert np.array_equal(grid.foods, reference.foods)
+    assert len(grid) > 0
+
+
+def test_grid_feeding_resolves_exact_ties_like_all_pairs(monkeypatch):
+    # Organisms on a lattice, food exactly half-way between neighbours: every pair is a tie,
+    # so the outcome depends entirely on the tiebreak draws being assigned to the same pairs.
+    xs = np.arange(0.0, 60.0, 3.0)
+    organisms = np.array([(x, y) for x in xs for y in xs])
+    food = organisms + np.array([1.5, 0.0])
+    assert len(organisms) * len(food) > 4096
+    for seed in range(5):
+        grid = resolve_feeding(organisms, food, RADIUS, np.random.default_rng(seed))
+        reference = feed_all_pairs(organisms, food, np.random.default_rng(seed), monkeypatch)
+        assert np.array_equal(grid.eaters, reference.eaters)
+        assert np.array_equal(grid.foods, reference.foods)

@@ -18,6 +18,8 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+from genesis.core.spatial import pairs_within_reach
+
 FloatArray = NDArray[np.float64]
 IntArray = NDArray[np.intp]
 
@@ -44,15 +46,13 @@ def resolve_feeding(
     if len(organism_positions) == 0 or len(food_positions) == 0:
         return empty
 
-    # Every organism-to-food distance at once: (n, m), the same broadcasting as sensing.
-    offsets = food_positions[np.newaxis, :, :] - organism_positions[:, np.newaxis, :]
-    distances = np.hypot(offsets[..., 0], offsets[..., 1])
-
-    # np.nonzero lists the (row, column) of every True entry: the in-reach pairs only.
-    org_idx, food_idx = np.nonzero(distances <= eat_radius)
+    # The in-reach pairs and their distances, ordered by organism then food index. For small
+    # populations this computes every organism-to-food distance at once; for large ones a
+    # grid skips the pairs that cannot be in reach. Same pairs either way (D-036).
+    reach = np.full(len(organism_positions), eat_radius, dtype=np.float64)
+    org_idx, food_idx, pair_dist = pairs_within_reach(organism_positions, reach, food_positions)
     if len(org_idx) == 0:
         return empty
-    pair_dist = distances[org_idx, food_idx]
 
     # One random key per pair. np.lexsort sorts by the *last* key first: distance, then the
     # random key for exact ties. Draws come from the dedicated tiebreak stream, so the number

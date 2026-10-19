@@ -542,3 +542,30 @@ def test_long_run_that_once_failed_the_ledger_now_completes():
     sim = Simulation(SimulationConfig.model_validate(raw))
     sim.run()  # raised EnergyLedgerError before the fix
     assert sim.tick == 14_000
+
+
+# --- The spatial grid (D-036) must not change a single bit of any run -------------------------
+
+
+def test_run_with_the_grid_matches_a_run_with_every_pair_computed(monkeypatch):
+    """A whole run at a population that uses the grid vs the same run with the grid off."""
+    from genesis.core import spatial
+
+    changes = {
+        "run.max_ticks": 150,
+        "run.stop_on_extinction": False,
+        "organisms.initial_count": 400,
+        "organisms.max_population": 400,
+        "organisms.initial_energy": 200.0,
+        "food.max_count": 400,
+        "food.initial_count": 200,
+        "food.regrowth_per_tick": 20.0,
+        "mutation.enabled": True,
+    }
+    with_grid = Simulation(make_config(**changes))
+    with_grid.run()
+    monkeypatch.setattr(spatial, "DENSE_PAIR_LIMIT", float("inf"))
+    all_pairs = Simulation(make_config(**changes))
+    all_pairs.run()
+    assert with_grid.state_digest() == all_pairs.state_digest()
+    assert with_grid.ledger == all_pairs.ledger
