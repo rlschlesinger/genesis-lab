@@ -22,17 +22,23 @@ filter, group and plot any gene the same way.
 from __future__ import annotations
 
 import math
-from dataclasses import asdict
+import operator
+from dataclasses import fields
 
 import numpy as np
 
 from genesis.analytics.metrics import GENE_FIELDS, tick_row
-from genesis.core.simulation import Simulation, TickSummary
+from genesis.core.simulation import Event, Simulation, TickSummary
 from genesis.evolution.genome import gene_names
 
 GENE_STAT_FIELDS: list[str] = ["tick", "gene", "n", "mean", "sd", "min", "max"]
 EVENT_FIELDS: list[str] = ["tick", "seq", "kind", "organism_id", "other_id", "energy", "x", "y",
                            "detail"]  # fmt: skip
+# Event's own field names, in order: used instead of dataclasses.asdict, which deep-copies
+# every value and costs ~20x more for the same plain dict.
+_EVENT_FIELD_NAMES: tuple[str, ...] = tuple(f.name for f in fields(Event))
+# All six genes of a genome in one call: genome -> (speed, sense_range, ...).
+_GENES_OF = operator.attrgetter(*gene_names())
 # TickSummary columns that count things happening *during* a tick (flows, not stocks).
 FLOW_FIELDS: tuple[str, ...] = ("births", "deaths", "food_spawned", "food_eaten", "mutations")
 # The same gene_* column names as organisms.csv, so the two files can be joined on them.
@@ -46,15 +52,41 @@ def gene_stat_rows(tick: int, genome_values: dict[str, list[float]]) -> list[dic
     these numbers describe exactly the organisms alive, not an estimate of some larger group.
     An empty population gets n = 0 and NaN statistics ("no value", not zero).
     """
-    rows = []
-    for gene, values in genome_values.items():
-        if values:
-            v = np.asarray(values, dtype=np.float64)
-            stats = (float(v.mean()), float(v.std()), float(v.min()), float(v.max()))
-        else:
-            stats = (math.nan,) * 4
-        rows.append(dict(zip(GENE_STAT_FIELDS, (tick, gene, len(values), *stats), strict=True)))
-    return rows
+    names = list(genome_values)
+    counts = {len(values) for values in genome_values.values()}
+    if len(counts) > 1:
+        raise ValueError(f"every gene needs one value per organism, got counts {sorted(counts)}")
+    matrix = np.array([genome_values[g] for g in names], dtype=np.float64).reshape(len(names), -1)
+    return _stat_rows(tick, names, matrix)
+
+
+def _stat_rows(tick: int, names: list[str], matrix: np.ndarray) -> list[dict]:
+    """``gene_stat_rows`` on a C-contiguous (genes, organisms) array: one row per gene.
+
+    All genes are reduced in one NumPy call per statistic (``axis=1``) instead of one call per
+    gene. Each row of the matrix is one gene's values laid out contiguously in memory, so
+    NumPy sums each row with exactly the same pairwise algorithm it uses for a 1-D array, and
+    the results are bit for bit what the per-gene version produced (D-038; checked in
+    tests/analytics/test_recorder.py). A (organisms, genes) layout reduced along axis 0 would
+    *not* be: there NumPy accumulates in a different order.
+    """
+    n = matrix.shape[1]
+    if n == 0:
+        stats = [(math.nan,) * 4] * len(names)
+    else:
+        if not matrix.flags.c_contiguous:
+            raise ValueError("gene matrix must be C-contiguous (genes as rows)")
+        stats = zip(
+            matrix.mean(axis=1).tolist(),
+            matrix.std(axis=1).tolist(),
+            matrix.min(axis=1).tolist(),
+            matrix.max(axis=1).tolist(),
+            strict=True,
+        )
+    return [
+        dict(zip(GENE_STAT_FIELDS, (tick, gene, n, *gene_stats), strict=True))
+        for gene, gene_stats in zip(names, stats, strict=True)
+    ]
 
 
 class RunRecorder:
@@ -93,8 +125,12 @@ class RunRecorder:
         self._pending = dict.fromkeys(FLOW_FIELDS, 0)
 
         living = sim.organisms
-        by_gene = {g: [getattr(o.genome, g) for o in living] for g in gene_names()}
-        self.gene_stats.extend(gene_stat_rows(tick, by_gene))
+        # One (organisms, genes) table from a single attribute lookup per organism, then
+        # transposed into a contiguous (genes, organisms) matrix for _stat_rows.
+        names = gene_names()
+        by_organism = np.array([_GENES_OF(o.genome) for o in living], dtype=np.float64)
+        matrix = np.ascontiguousarray(by_organism.reshape(len(living), len(names)).T)
+        self.gene_stats.extend(_stat_rows(tick, names, matrix))
 
         # Snapshot on the interval, and always on the final tick so the end state is kept.
         if tick % self.genome_snapshot_every == 0 or sim.finished:
@@ -107,5 +143,5 @@ class RunRecorder:
             return
         kept = [e for e in sim.events_this_tick if e.kind in self.event_kinds]
         for seq, event in enumerate(kept):
-            row = asdict(event)
+            row = {name: getattr(event, name) for name in _EVENT_FIELD_NAMES}
             self.events.append({"seq": seq, **row})

@@ -15,7 +15,7 @@ which would silently alter Milestone 1 results (tests/test_regression.py guards 
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, fields
+from dataclasses import dataclass, fields
 
 from genesis.core.config import GenomeConfig
 from genesis.core.organism import Traits
@@ -66,11 +66,16 @@ class Genome:
         return cls(**{name: getattr(config, name).initial for name in gene_names()})
 
     def as_dict(self) -> dict[str, float]:
-        return asdict(self)
+        # Same as dataclasses.asdict(self), minus its deep copy of each value (floats need
+        # none); called at every birth and in every genome snapshot.
+        return {name: getattr(self, name) for name in _GENE_NAMES}
 
 
 def gene_names() -> list[str]:
     return [f.name for f in fields(Genome)]
+
+
+_GENE_NAMES: tuple[str, ...] = tuple(gene_names())
 
 
 def express(genome: Genome, config: GenomeConfig | None = None) -> Traits:

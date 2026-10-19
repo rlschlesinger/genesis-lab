@@ -47,7 +47,9 @@ ORGANISM_FIELDS: list[str] = [
 
 
 def tick_row(summary: TickSummary) -> dict:
-    return asdict(summary)
+    # Same dict as dataclasses.asdict(summary), without its deep copy of every value, which
+    # cost more per tick than recording everything else (D-038).
+    return {name: getattr(summary, name) for name in TICK_FIELDS}
 
 
 def organism_row(org: Organism) -> dict:
