@@ -153,3 +153,23 @@ def test_e007_evaluation_follows_the_pre_registered_rule(e007_trained):
         assert not away.mutation.enabled
     assert configs[("seeker", 9200)].organisms.controller == "nearest_food_seeker"
     assert configs[("random_brains", 9200)].brain.founder_weights is None
+
+
+def test_e007_results_figures_build_from_metrics():
+    import sys
+
+    sys.path.insert(0, str(EXPERIMENTS))
+    report = load("e007_report")
+    rng = np.random.default_rng(0)
+    df = pd.DataFrame(
+        [
+            {"condition": c, "world": w, "meal_rate": rng.uniform(0.02, 0.07)}
+            for c in report.LABELS
+            for w in range(6)
+        ]
+    )
+    outcomes = report.outcomes_figure(df)
+    assert len(outcomes.data) == 2 * len(report.LABELS)  # dots + mean bar per condition
+    diff = pd.Series(rng.normal(0.002, 0.001, 6), index=range(6))
+    differences = report.differences_figure(diff, (0.001, 0.003), 0.0033)
+    assert list(differences.data[0].y) == sorted(diff)

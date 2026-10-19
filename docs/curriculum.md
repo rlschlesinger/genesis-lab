@@ -361,6 +361,14 @@ What has been covered, where it appears in the code, and what comes next.
 - **Pre-registering a rule, not a list:** the evaluation's brains don't exist until training ends, so the rule that will pick them is fixed and tested in advance.
 - **Fixing the tools you find broken:** the smoke run exposed a hashing bug in the batch runner.
 
+### 4.8 · Running E007 (`experiments/e007_neuroevolution.py`, `e007_report.py`)
+- **A positive control that passed:** evolved beat random brains in 24/24 worlds, so the main comparison means something.
+- **Significant but inconclusive:** the evolved − seeker interval excluded zero but crossed the SESOI; the pre-registered rule says "can't tell if it matters", and that is the honest verdict.
+- **Equivalence supported:** home vs away inside ±5%; brains without position inputs can't specialise to a world.
+- **Decomposing a ratio:** energy per meal = cost per tick ÷ meals per tick; both parts contributed.
+- **Exploration after the fact:** a crowding hypothesis (seekers herd) found and labelled exploratory, with a test design for later.
+- **Plotting runs, not organisms:** each dot a world; the verdict drawn as an interval against a band.
+
 ## Future learning objectives
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

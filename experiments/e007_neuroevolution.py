@@ -165,7 +165,7 @@ def verdict(category: str, estimate: float) -> str:
     return "INCONCLUSIVE"
 
 
-def analyse(train: ExperimentSpec, lake: Path, smoke: bool) -> None:
+def analyse(train: ExperimentSpec, lake: Path, smoke: bool) -> dict:
     outcomes = training_outcomes(train, lake)
     failed = outcomes[~outcomes["succeeded"]]
     print(f"training: {int(outcomes['succeeded'].sum())} of {len(outcomes)} runs succeeded")
@@ -192,10 +192,14 @@ def analyse(train: ExperimentSpec, lake: Path, smoke: bool) -> None:
     if not passed:
         print("  H11 failed: per the definition, H12 and H13 are inconclusive")
 
+    h12: dict = {}
     for name, a, b, seed in [("H12", "evolved", "seeker", 7012), ("H13", "evolved", "home", 7013)]:
         x, y = paired(df, a, b, "meal_rate")
         effect = paired_effect(x, y, np.random.default_rng(seed))
         sesoi = SESOI_FRACTION * y.mean()
+        if name == "H12":  # kept for the results page
+            wide = df.pivot(index="world", columns="condition", values="meal_rate")
+            h12 = {"diff": wide[a] - wide[b], "ci": (effect.ci.low, effect.ci.high), "sesoi": sesoi}
         category = practical_significance(effect.ci, sesoi)
         label = verdict(category, effect.mean_difference) if passed else "INCONCLUSIVE (H11 gate)"
         print(f"\n{name} {a} - {b}, meals per organism-tick (n = {effect.n} worlds)")
@@ -212,6 +216,7 @@ def analyse(train: ExperimentSpec, lake: Path, smoke: bool) -> None:
         f"  mean difference {effect.ci} EU per meal ({effect.relative_to_control:+.1%} of "
         f"seeker), two-sided p = {test.p_value:.5f}"
     )
+    return {"metrics": df, **h12}
 
 
 # --- Command line ---------------------------------------------------------------------------
@@ -222,6 +227,9 @@ def main() -> int:
     parser.add_argument("--smoke", action="store_true", help="tiny code check (throwaway seeds)")
     parser.add_argument("--analyse-only", action="store_true", help="don't run; analyse saved runs")
     parser.add_argument("--rerun-stale", action="store_true")
+    parser.add_argument(
+        "--report", action="store_true", help="also write data/dashboards/E007-results.html"
+    )
     args = parser.parse_args()
 
     train = load_spec(TRAIN_SPEC)
@@ -241,7 +249,19 @@ def main() -> int:
         print(f"E007 evaluation: {evaluation.run_count()} runs planned (spec: {record}) ...")
         outcomes = run_experiment(evaluation, rerun_stale=args.rerun_stale, lake=lake)
         print(f"ran {len(outcomes)}, failed {sum(not o.ok for o in outcomes)}\n")
-    analyse(train, lake, args.smoke)
+    results = analyse(train, lake, args.smoke)
+    if args.report:
+        from e007_report import write_report  # experiments/ is on sys.path when run as a script
+
+        out = write_report(
+            results["metrics"],
+            results["diff"],
+            results["ci"],
+            results["sesoi"],
+            lake,
+            PROJECT_ROOT / "data" / "dashboards" / "E007-results.html",
+        )
+        print(f"\nresults page written to {out}")
     return 0
 
 

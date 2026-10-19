@@ -194,7 +194,7 @@ con = connect(ROOT / "data" / "lake")
 out = [
     """# SQL exercises
 
-Ten questions about the simulated populations in the lake (E001–E006), from simple filters to window functions and recursion. Answers are at the bottom; each shows the query and the result it gives on the current lake.
+Ten questions about the simulated populations in the lake (E001–E007), from simple filters to window functions and recursion. Answers are at the bottom; each shows the query and the result it gives on the current lake.
 
 **Run a query:**
 

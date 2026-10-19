@@ -1,6 +1,6 @@
 # SQL exercises
 
-Ten questions about the simulated populations in the lake (E001–E006), from simple filters to window functions and recursion. Answers are at the bottom; each shows the query and the result it gives on the current lake.
+Ten questions about the simulated populations in the lake (E001–E007), from simple filters to window functions and recursion. Answers are at the bottom; each shows the query and the result it gives on the current lake.
 
 **Run a query:**
 
@@ -111,6 +111,7 @@ E003                       80        0
 E004                       40        0
 E005                       40        0
 E006                      250      162
+E007                      144        0
 ```
 
 Only E006 has extinctions (162 of 250 runs), by design: its harsh world (no starting food, regrowth 0.1) was chosen by pilots so that extinction happens. Every other experiment kept all its runs.
