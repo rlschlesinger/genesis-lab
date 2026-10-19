@@ -44,12 +44,20 @@ def render(run: RunData) -> str:
             if distributions is not None
             else "<p class='caveat'>No mutable genes or no snapshots in this run.</p>"
         ),
+        behaviour_figure=_behaviour_html(run),
         mutation_table=_mutation_table(run),
         run_dir=html.escape(run.run_dir.name),
         files=", ".join(f"<code>{name}</code>" for name in REQUIRED_FILES),
         max_points=MAX_POINTS,
         stride_note=_stride_note(run),
     )
+
+
+def _behaviour_html(run: RunData) -> str:
+    figure = figures.behaviour_figure(run)
+    if figure is None:
+        return "<p class='caveat'>This run was recorded before behaviour was measured.</p>"
+    return chart_html(figure, "behaviour")
 
 
 def _lede(run: RunData) -> str:

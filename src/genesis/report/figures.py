@@ -155,6 +155,98 @@ def distributions_figure(run: RunData) -> go.Figure | None:
     return fig
 
 
+ROLLING_ROWS = 100  # behaviour shares are noisy tick to tick; plot a rolling mean
+
+
+def rolling_mean(values: list[float | None], window: int = ROLLING_ROWS) -> list[float | None]:
+    """Mean of the last ``window`` values at each row, ignoring missing ones (None/NaN).
+
+    Computed with cumulative sums: total and count of valid values up to each row, minus the
+    same ``window`` rows earlier. None where the window holds no valid value.
+    """
+    x = np.array([math.nan if v is None else v for v in values], dtype=np.float64)
+    valid = ~np.isnan(x)
+    totals = np.concatenate([[0.0], np.cumsum(np.where(valid, x, 0.0))])
+    counts = np.concatenate([[0], np.cumsum(valid)])
+    end = np.arange(1, len(x) + 1)
+    start = np.maximum(end - window, 0)
+    n = counts[end] - counts[start]
+    with np.errstate(invalid="ignore", divide="ignore"):
+        means = (totals[end] - totals[start]) / n
+    return [float(m) if k else None for m, k in zip(means, n, strict=True)]
+
+
+def behaviour_figure(run: RunData) -> go.Figure | None:
+    """What organisms did: share turning toward seen food, throttle; with brains, how far
+    weights have drifted from the founders and how varied they are."""
+    if not run.behaviour:
+        return None
+    rows = run.behaviour
+    smoothed = {c: rolling_mean([r[c] for r in rows]) for c in ("toward_food", "mean_throttle")}
+    keep = downsample(list(range(len(rows))))
+    ticks = [rows[i]["tick"] for i in keep]
+    titles = [
+        f"turning toward seen food ({ROLLING_ROWS}-row rolling mean)",
+        f"throttle ({ROLLING_ROWS}-row rolling mean)",
+    ]
+    if run.has_brains:
+        titles.append("brain weights: drift from founders, and spread")
+    fig = make_subplots(
+        rows=len(titles), cols=1, shared_xaxes=True, vertical_spacing=0.1, subplot_titles=titles
+    )
+    for i, (column, color) in enumerate(
+        [("toward_food", theme.ACCENT), ("mean_throttle", theme.GENE_COLORS["speed"])], start=1
+    ):
+        fig.add_trace(
+            go.Scatter(
+                x=ticks,
+                y=[smoothed[column][k] for k in keep],
+                name=column.replace("_", " "),
+                line=dict(color=color, width=1.4),
+            ),
+            row=i,
+            col=1,
+        )
+        fig.update_yaxes(range=[0, 1.05], row=i, col=1)
+    if run.has_brains:
+        for column, label, color in [
+            ("weight_drift", "mean |weight - founder's|", theme.GENE_COLORS["metabolic_rate"]),
+            ("weight_sd", "spread (mean sd per weight)", theme.GENE_COLORS["neutral_marker"]),
+        ]:
+            fig.add_trace(
+                go.Scatter(
+                    x=ticks,
+                    y=[rows[k][column] for k in keep],
+                    name=label,
+                    line=dict(color=color, width=1.4),
+                ),
+                row=3,
+                col=1,
+            )
+    fig.update_layout(**theme.base_layout(height=170 * len(titles) + 80))
+    fig.update_xaxes(title_text="tick", row=len(titles), col=1)
+    theme.style_axes(fig)  # before the reference line: it treats annotations as titles
+    # Reference: a controller that turns at random brings food closer half the time.
+    fig.add_hline(
+        y=0.5, line=dict(color=theme.MUTED, width=1, dash="dot"), row=1, col=1,
+        annotation_text="random turning", annotation_font_color=theme.MUTED,
+    )  # fmt: skip
+    if run.has_brains:
+        # Name each brain line at its last point (charts have no legend).
+        for column, label, color in [
+            ("weight_drift", "drift from founders", theme.GENE_COLORS["metabolic_rate"]),
+            ("weight_sd", "spread", theme.GENE_COLORS["neutral_marker"]),
+        ]:
+            last = next((r for r in reversed(rows) if r[column] is not None), None)
+            if last is not None and not math.isnan(last[column]):
+                fig.add_annotation(
+                    x=last["tick"], y=last[column], text=label, showarrow=False,
+                    xanchor="right", yanchor="bottom", font=dict(color=color, size=11),
+                    row=3, col=1,
+                )  # fmt: skip
+    return fig
+
+
 def mutation_summary(run: RunData) -> list[dict]:
     """Per gene: number of mutations, and mean absolute step as a fraction of the gene's range."""
     summary = []

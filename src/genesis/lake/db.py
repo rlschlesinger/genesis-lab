@@ -7,7 +7,8 @@ file uses absolute paths, so rebuild it if the project folder moves.
 
 Views and macros (docs/schema.md):
 
-    runs, ticks, gene_stats, genomes, organisms, mutations, events   one per lake table
+    runs, ticks, gene_stats, genomes, organisms, mutations, events,
+    behaviour, brains                                                 one per lake table
     experiments          built from docs/experiments/*.md
     completed_runs       runs WHERE status = 'completed' (start analyses here)
     run_params           common config values as plain columns
@@ -54,7 +55,10 @@ SELECT
     (config ->> '$.mutation.rate')::DOUBLE                        AS mutation_rate,
     (config ->> '$.mutation.size')::DOUBLE                        AS mutation_size,
     (config ->> '$.organisms.speed_cost_exponent')::DOUBLE        AS speed_cost_exponent,
-    (config ->> '$.organisms.sense_cost_per_unit')::DOUBLE        AS sense_cost_per_unit
+    (config ->> '$.organisms.sense_cost_per_unit')::DOUBLE        AS sense_cost_per_unit,
+    (config -> '$.brain') IS NOT NULL                             AS has_brains,
+    (config ->> '$.brain.mutation_rate')::DOUBLE                  AS brain_mutation_rate,
+    (config ->> '$.brain.mutation_size')::DOUBLE                  AS brain_mutation_size
 FROM runs;
 
 CREATE OR REPLACE VIEW lineage_sizes AS

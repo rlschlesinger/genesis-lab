@@ -6,7 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from genesis.analytics.behaviour import BEHAVIOUR_FIELDS
 from genesis.analytics.metrics import (
+    BRAIN_FIELDS,
     MUTATION_FIELDS,
     ORGANISM_FIELDS,
     TICK_FIELDS,
@@ -48,6 +50,8 @@ def test_run_writes_every_output_file_with_expected_columns(config, tmp_path):
         "genomes.csv": GENOME_SNAPSHOT_FIELDS,
         "mutations.csv": MUTATION_FIELDS,
         "events.csv": EVENT_FIELDS,
+        "behaviour.csv": BEHAVIOUR_FIELDS,
+        "brains.csv": BRAIN_FIELDS,
     }
     assert sorted(p.name for p in tmp_path.glob("*.csv")) == sorted(expected_headers)
     for name, fields in expected_headers.items():
@@ -89,6 +93,8 @@ def test_identical_runs_give_byte_identical_results(config, tmp_path):
     execute_run(config, tmp_path / "b")
     names = sorted(p.name for p in (tmp_path / "a").glob("*.csv"))
     assert names == [
+        "behaviour.csv",
+        "brains.csv",
         "events.csv",
         "gene_stats.csv",
         "genomes.csv",
@@ -181,7 +187,7 @@ def test_mutations_csv_is_header_only_when_mutation_is_off(config, tmp_path):
 def test_run_json_records_schema_version_condition_and_config_hash(config, tmp_path):
     execute_run(config, tmp_path, experiment_id="E999", condition="control")
     meta = json.loads((tmp_path / "run.json").read_text())
-    assert meta["schema_version"] == 3
+    assert meta["schema_version"] == 4
     assert meta["condition"] == "control"
     assert meta["config_hash"] == config_hash(config) and len(meta["config_hash"]) == 64
     assert meta["ticks_every"] == 1 and meta["events_recorded"] == ""

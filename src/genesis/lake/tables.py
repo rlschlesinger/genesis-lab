@@ -16,6 +16,7 @@ from dataclasses import dataclass
 import pyarrow as pa
 
 from genesis.evolution.genome import gene_names
+from genesis.intelligence.brain_inputs import parameter_names
 
 INT, FLOAT, BOOL, TEXT = pa.int32(), pa.float64(), pa.bool_(), pa.string()
 # Microseconds: Parquet has no whole-second timestamp type (it would silently widen "s" to
@@ -24,6 +25,7 @@ TIMESTAMP = pa.timestamp("us", tz="UTC")
 
 GENE_COLUMNS = [f"gene_{g}" for g in gene_names()]
 TRAIT_COLUMNS = [f"trait_{g}" for g in gene_names() if g != "neutral_marker"]
+BRAIN_COLUMNS = parameter_names()  # wh_0_food_seen, ..., bo_throttle (62)
 
 
 @dataclass(frozen=True)
@@ -188,5 +190,32 @@ EVENTS = Table(
     3,
 )
 
-DATA_TABLES = [TICKS, GENE_STATS, GENOMES, ORGANISMS, MUTATIONS, EVENTS]
+BEHAVIOUR = Table(
+    "behaviour",
+    _schema(
+        ("run_id", TEXT),
+        ("tick", INT),
+        ("n", INT),
+        ("seeing_food", INT),
+        ("toward_food", FLOAT),
+        ("mean_turn", FLOAT),
+        ("mean_throttle", FLOAT),
+        ("weight_sd", FLOAT),
+        ("weight_drift", FLOAT),
+    ),
+    ("run_id", "tick"),
+    "behaviour.csv",
+    4,
+)
+
+BRAINS = Table(
+    "brains",
+    _schema(("run_id", TEXT), ("organism_id", INT), *[(c, FLOAT) for c in BRAIN_COLUMNS]),
+    ("run_id", "organism_id"),
+    "brains.csv",
+    4,
+    renames=(("id", "organism_id"),),
+)
+
+DATA_TABLES = [TICKS, GENE_STATS, GENOMES, ORGANISMS, MUTATIONS, EVENTS, BEHAVIOUR, BRAINS]
 ALL_TABLES = [RUNS, *DATA_TABLES]

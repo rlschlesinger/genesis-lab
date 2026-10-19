@@ -46,7 +46,7 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-from genesis.intelligence.neural import N_INPUTS
+from genesis.intelligence.neural import N_HIDDEN, N_INPUTS, OUTPUT_NAMES
 from genesis.intelligence.sensors import Observations
 
 FloatArray = NDArray[np.float64]
@@ -61,6 +61,21 @@ INPUT_NAMES: tuple[str, ...] = (
     "noise",
 )
 assert len(INPUT_NAMES) == N_INPUTS  # the brain and its senses must agree on the count
+
+
+def parameter_names() -> list[str]:
+    """A readable name for each of a brain's 62 parameters, in ``Brain.to_vector()`` order.
+
+    ``wh_3_food_ahead``: hidden unit 3's weight on the food_ahead input. ``bh_3``: hidden unit
+    3's bias. ``wo_turn_3``: the turn output's weight on hidden unit 3. ``bo_turn``: the turn
+    output's bias. Used as column names in brains.csv, so a query can say which weight it means.
+    """
+    return [
+        *[f"wh_{h}_{name}" for h in range(N_HIDDEN) for name in INPUT_NAMES],
+        *[f"bh_{h}" for h in range(N_HIDDEN)],
+        *[f"wo_{out}_{h}" for out in OUTPUT_NAMES for h in range(N_HIDDEN)],
+        *[f"bo_{out}" for out in OUTPUT_NAMES],
+    ]
 
 
 def wall_distance_ahead(

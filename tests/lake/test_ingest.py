@@ -110,7 +110,7 @@ def test_runs_row_carries_metadata(run_dir, tmp_path):
     (row,) = lake_rows(tmp_path, "runs", result.run_id)
     meta = json.loads((run_dir / "run.json").read_text())
     assert row["experiment_id"] == "E900" and row["condition"] == "S_plenty"
-    assert row["condition_derived"] is False and row["schema_version"] == 3
+    assert row["condition_derived"] is False and row["schema_version"] == 4
     assert (
         row["config_hash"]
         == meta["config_hash"]

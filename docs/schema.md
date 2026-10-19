@@ -51,6 +51,8 @@ erDiagram
     runs ||--o{ organisms : "has"
     runs ||--o{ mutations : "has"
     runs ||--o{ events : "has (optional)"
+    runs ||--o{ behaviour : "has one row per tick row"
+    organisms ||--o| brains : "has (neural runs)"
     organisms ||--o{ organisms : "parent of"
     organisms ||--o{ mutations : "child in"
     organisms ||--o{ genomes : "appears in"
@@ -121,6 +123,8 @@ erDiagram
 | `organisms` | run × organism ever alive | (`run_id`, `organism_id`) | `organisms.csv` |
 | `mutations` | gene change at a birth | (`run_id`, `child_id`, `gene`) | `mutations.csv` |
 | `events` | birth, death or meal (optional) | (`run_id`, `tick`, `seq`) | `events.csv` (new in 3.1) |
+| `behaviour` | run × recorded tick | (`run_id`, `tick`) | `behaviour.csv` (new in 4.5) |
+| `brains` | run × organism with a brain | (`run_id`, `organism_id`) | `brains.csv` (new in 4.5) |
 
 ### Why every key starts with `run_id`
 
@@ -149,7 +153,7 @@ If ticks are sampled (3.1), not every birth tick has a row; such queries use the
 | View | Purpose |
 |---|---|
 | `completed_runs` | `runs WHERE status = 'completed'`. Analyses start here, so failed runs are excluded by default (acceptance criterion). |
-| `run_params` | Commonly filtered config values as plain columns: controller, food regrowth, mutation on/rate/size, initial count, trade-off costs. |
+| `run_params` | Commonly filtered config values as plain columns: controller, food regrowth, mutation on/rate/size, initial count, trade-off costs; `has_brains`, brain mutation rate and size (4.5). |
 | `settled_gene_means(first_tick, last_tick)` | Table macro: per run and gene, the mean over a tick window (the E002/E003 measurement), with `rows_in_window` and `rows_with_population` so incomplete windows can be spotted. |
 | `experiments` | Built from `docs/experiments/E*.md` on connect, including the commit that first added each definition. |
 | `lineage_sizes` | Per run and founder: descendants ever born, alive at the end. |
@@ -163,6 +167,7 @@ Run folders were written by different code over time. Each gets a `schema_versio
 | 1 | Milestone 1 (E001) | `run.json`, `ticks.csv`, `organisms.csv` | No genes, no `mutations` column in ticks |
 | 2 | Milestone 2 (E002, E003) | + `gene_stats.csv`, `genomes.csv`, `mutations.csv` | `condition` only in the folder name |
 | 3 | Milestone 3 | + optional `events.csv`; `condition`, `config_hash`, sampling settings in `run.json` | |
+| 4 | Milestone 4 | + `behaviour.csv`, `brains.csv` | Every earlier file byte-identical to version 3 for the same config and seed |
 
 The ETL fills columns a version lacks with NULL ("unknown"), never with 0 or a guess. For versions 1–2, `condition` is taken from the folder name (`S_plenty-s2000` → `S_plenty`), and the data dictionary records that it was derived.
 

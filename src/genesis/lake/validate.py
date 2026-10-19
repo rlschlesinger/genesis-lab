@@ -10,7 +10,7 @@ from __future__ import annotations
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from genesis.lake.tables import ALL_TABLES, GENE_COLUMNS
+from genesis.lake.tables import ALL_TABLES, BRAIN_COLUMNS, GENE_COLUMNS
 
 STATUSES = {"completed", "failed", "running"}
 COUNT_COLUMNS = {
@@ -25,7 +25,10 @@ COUNT_COLUMNS = {
         "mutations",
     ],
     "organisms": ["generation", "birth_tick", "age", "food_eaten", "offspring_count"],
+    "behaviour": ["n", "seeing_food"],
 }
+# behaviour columns that are shares or fractions, so must lie in [0, 1] (NULL allowed).
+FRACTION_COLUMNS = ["toward_food", "mean_turn", "mean_throttle"]
 FLOW_FOR_EVENT = {"birth": "births", "death": "deaths", "meal": "food_eaten"}
 
 
@@ -76,6 +79,7 @@ def check_foreign_keys(tables: dict[str, pa.Table]) -> None:
         ("mutations", "child_id"),
         ("events", "organism_id"),
         ("events", "other_id"),
+        ("brains", "organism_id"),
     ]
     for table_name, column in references:
         table = tables.get(table_name)
@@ -104,6 +108,11 @@ def check_row_counts(run: dict, tables: dict[str, pa.Table]) -> None:
     _expect_rows(tables["organisms"], run["organisms_ever"], "organisms", "organisms_ever")
     if tables.get("mutations") is not None:
         _expect_rows(tables["mutations"], run["mutations"], "mutations", "mutations")
+    behaviour = tables.get("behaviour")
+    if behaviour is not None and behaviour["tick"].to_pylist() != expected:
+        raise ValidationError(
+            "row counts", f"behaviour has {behaviour.num_rows} rows; expected one per ticks row"
+        )
     events = tables.get("events")
     if events is not None and run["events_recorded"]:
         for kind in run["events_recorded"].split(","):
@@ -125,6 +134,8 @@ def _expect_rows(table: pa.Table, expected: int | None, name: str, field: str) -
 def check_ranges(meta: dict, tables: dict[str, pa.Table]) -> None:
     """4. Counts are never negative; genes stay in bounds; alive <=> no death tick."""
     for table_name, columns in COUNT_COLUMNS.items():
+        if table_name not in tables:
+            continue  # behaviour exists from run-folder version 4 on
         for column in columns:
             values = tables[table_name][column]
             if values.null_count < len(values) and pc.min(values).as_py() < 0:
@@ -134,6 +145,14 @@ def check_ranges(meta: dict, tables: dict[str, pa.Table]) -> None:
     alive, no_death = organisms["alive"], pc.is_null(organisms["death_tick"])
     if not pc.all(pc.equal(alive, no_death)).as_py():
         raise ValidationError("ranges", "organisms: alive disagrees with death_tick")
+
+    behaviour = tables.get("behaviour")
+    if behaviour is not None and behaviour.num_rows:
+        for column in FRACTION_COLUMNS:
+            values = pc.drop_null(behaviour[column])
+            if len(values) and (pc.min(values).as_py() < 0 or pc.max(values).as_py() > 1):
+                raise ValidationError("ranges", f"behaviour.{column} leaves [0, 1]")
+    check_brains(meta, tables)
 
     genome = meta["config"].get("genome")  # absent in version-1 runs (no genes)
     if not genome:
@@ -151,3 +170,24 @@ def check_ranges(meta: dict, tables: dict[str, pa.Table]) -> None:
                 raise ValidationError(
                     "ranges", f"{table_name}.gene_{name} leaves its range [{low}, {high}]"
                 )
+
+
+def check_brains(meta: dict, tables: dict[str, pa.Table]) -> None:
+    """Brains: one row per organism when the run had brains, none otherwise; every weight
+    within the configured limit (part of checks 3 and 4)."""
+    brains = tables.get("brains")
+    if brains is None:
+        return  # run-folder version < 4
+    brain_config = meta["config"].get("brain")
+    if brain_config is None:
+        if brains.num_rows:
+            raise ValidationError("row counts", "brains has rows but the run had no brains")
+        return
+    _expect_rows(brains, meta.get("organisms_ever"), "brains", "organisms_ever")
+    limit = brain_config["weight_limit"]
+    for column in BRAIN_COLUMNS:
+        values = brains[column]
+        if values.null_count:
+            raise ValidationError("ranges", f"brains.{column} has empty values")
+        if brains.num_rows and pc.max(pc.abs(values)).as_py() > limit:
+            raise ValidationError("ranges", f"brains.{column} leaves [-{limit}, {limit}]")

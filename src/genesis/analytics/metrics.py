@@ -12,6 +12,7 @@ from dataclasses import asdict, fields
 from genesis.core.organism import Organism, Traits
 from genesis.core.simulation import MutationEvent, Simulation, TickSummary
 from genesis.evolution.genome import gene_names
+from genesis.intelligence.brain_inputs import parameter_names
 
 TICK_FIELDS: list[str] = [f.name for f in fields(TickSummary)]
 
@@ -44,6 +45,10 @@ ORGANISM_FIELDS: list[str] = [
     *GENE_FIELDS,
     *TRAIT_FIELDS,
 ]
+
+
+# brains.csv: one row per organism that had a brain, its 62 parameters by name (D-043).
+BRAIN_FIELDS: list[str] = ["id", *parameter_names()]
 
 
 def tick_row(summary: TickSummary) -> dict:
@@ -80,6 +85,18 @@ def organism_rows(sim: Simulation) -> list[dict]:
     """One row per organism that ever lived, living and dead, in ascending ID order."""
     everyone = sorted([*sim.organisms, *sim.dead], key=lambda o: o.id)
     return [organism_row(o) for o in everyone]
+
+
+def brain_rows(sim: Simulation) -> list[dict]:
+    """One row per organism that ever had a brain, in ascending ID order (none without
+    brains). Brains never change during a lifetime, so one row per organism is complete."""
+    everyone = sorted([*sim.organisms, *sim.dead], key=lambda o: o.id)
+    names = BRAIN_FIELDS[1:]
+    return [
+        {"id": o.id, **dict(zip(names, o.brain.to_vector().tolist(), strict=True))}
+        for o in everyone
+        if o.brain is not None
+    ]
 
 
 def mutation_rows(sim: Simulation) -> list[dict]:

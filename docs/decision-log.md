@@ -60,6 +60,17 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-043 · Recording behaviour and brains (run-folder version 4) (2026-10-19)
+
+**Decision:** two new files in every run folder, and matching lake tables. `behaviour.csv`: one row per recorded tick, for every controller: organisms deciding, how many saw food, the share whose applied turn brought seen food closer to straight ahead (`|bearing − turn| < |bearing|`), mean |turn|/max_turn, mean throttle, and with brains the mean per-weight population sd and the mean |weight − founder's weight|. `brains.csv`: one row per organism with a brain, its 62 parameters under readable names (`wh_3_food_ahead`). The simulation keeps the tick's observations and actions as `last_decision` (references, no copies); the recorder reads them. Schema version 4; every earlier file is unchanged. Reports gain a Behaviour section (rolling means; a 0.5 "random turning" reference).
+**Why:**
+- **Behaviour, not weights, is what matters:** 62 numbers per organism are unreadable; "turns toward food" and "throttle" are what selection acts on, and they are measured identically for the rule-based controllers, which gives E007 its baselines (seeker = 1.0, random walk ≈ 0.5, verified by tests).
+- **Applied, not requested, actions:** a rule asking for a sharp turn is credited with the turn its body allowed.
+- **Whole brains at birth, not brain mutations:** 62 × births mutation rows would dwarf the gene log; a brain never changes, so one row per organism is complete and exact (values round-trip bit for bit).
+- **Separate files:** adding columns to ticks.csv would change its bytes for every run.
+**Alternatives:** per-weight statistics in gene_stats (62 extra rows per tick); behaviour averaged over the sampling interval (smoother, but different semantics from the other stock columns).
+**Correction to D-042's first observation:** recorded with this measure, the same run (neural.yaml, seed 1) goes from `toward_food` 0.57 at tick 0 to 0.85 at the final tick, not 100%. D-042's figure came from a cruder one-off check (sign of the turn on one tick, ignoring food within 0.1 rad of straight ahead) and is superseded. Throttle 0.55 → 0.78 agrees.
+
 ## D-042 · The neural controller in the tick (2026-10-19)
 
 **Decision:** `controller: neural` (requires a `brain:` section). Each tick the simulation adds `BodySenses` to the observations (wall distance ahead, own sense range, max turn and reproduction threshold) and stacks the living organisms' brains; `NeuralController` draws one uniform noise value per organism from the controller stream, builds the inputs (D-040), runs one forward pass (D-039), and returns turn = output₀ × max_turn and throttle = output₁. `think()` returns inputs, every activation and the actions, for inspection. Rule-based controllers get exactly the observations they always did. A `brain:` section with a rule-based controller is allowed: brains are inherited and mutated but never used, a no-selection control for weights. `configs/neural.yaml` is `evolution.yaml` with the neural controller, a brain section, and every expressed gene frozen, so only brains evolve.

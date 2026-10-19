@@ -340,6 +340,13 @@ What has been covered, where it appears in the code, and what comes next.
 - **Choosing an endpoint:** when food supply sets population size, population and meal rate can't distinguish good foragers from poor ones; E007 must measure something else.
 - **Exact replay:** recomputing a tick's decision outside the simulation gives the same bits, the basis for the inspector.
 
+### 4.5 · Recording behaviour and brains (`analytics/behaviour.py`, schema v4)
+- **Measure the phenotype that matters:** 62 weights are unreadable; "does it turn toward food?" is what selection sees.
+- **Baselines measured the same way:** the seeker scores 1.0, the random walker about 0.5, so neural runs can be placed between them.
+- **Wide vs long tables:** one row per brain with 62 named columns (a vector genome) vs one row per (tick, gene) for gene_stats.
+- **Schema evolution without breaking old data:** new files, a version number, older runs load with the new tables absent.
+- **Smoothing a noisy signal honestly:** a rolling mean, labelled as such, with missing values skipped rather than treated as zero.
+
 ## Future learning objectives
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

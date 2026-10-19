@@ -11,8 +11,11 @@ Collected per run:
     genomes      every living organism's genes, every ``genome_snapshot_every`` ticks and on
                  the final tick
     events       optional log of births, deaths and meals (``recording.events``)
+    behaviour    one row per recorded tick: what organisms did, and brain diversity and drift
+                 (analytics/behaviour.py; every controller, brain columns only with brains)
 
-With ``ticks_every`` > 1, ticks and gene_stats keep every n-th tick (plus the final one).
+With ``ticks_every`` > 1, ticks, gene_stats and behaviour keep every n-th tick (plus the final
+one).
 
 gene_stats uses "tidy" (long) format: one observation per row, with the gene name as a column
 value rather than baked into column names. Analysis tools (pandas, DuckDB, Plotly) can then
@@ -27,6 +30,7 @@ from dataclasses import fields
 
 import numpy as np
 
+from genesis.analytics.behaviour import behaviour_row
 from genesis.analytics.metrics import GENE_FIELDS, tick_row
 from genesis.core.simulation import Event, Simulation, TickSummary
 from genesis.evolution.genome import gene_names
@@ -105,6 +109,10 @@ class RunRecorder:
         self.gene_stats: list[dict] = []
         self.genomes: list[dict] = []
         self.events: list[dict] = []
+        self.behaviour: list[dict] = []
+        # Founder ID -> founder's brain weights, captured once: weight drift is measured from
+        # them. Founders who died on tick 0 are in sim.dead, so both lists are searched.
+        self._founder_brains: dict[int, np.ndarray] | None = None
         # Flow columns accumulated since the last recorded tick row.
         self._pending = dict.fromkeys(FLOW_FIELDS, 0)
 
@@ -125,6 +133,13 @@ class RunRecorder:
         self._pending = dict.fromkeys(FLOW_FIELDS, 0)
 
         living = sim.organisms
+        if self._founder_brains is None:
+            self._founder_brains = {
+                o.id: o.brain.to_vector()
+                for o in [*living, *sim.dead]
+                if o.parent_id is None and o.brain is not None
+            }
+        self.behaviour.append(behaviour_row(tick, sim.last_decision, living, self._founder_brains))
         # One (organisms, genes) table from a single attribute lookup per organism, then
         # transposed into a contiguous (genes, organisms) matrix for _stat_rows.
         names = gene_names()

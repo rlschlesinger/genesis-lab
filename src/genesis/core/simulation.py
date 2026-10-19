@@ -37,9 +37,9 @@ from genesis.evolution.genome import Genome, express
 from genesis.evolution.mutation import mutate
 from genesis.evolution.reproduction import place_offspring, select_parents
 from genesis.intelligence.brain_inputs import wall_distance_ahead
-from genesis.intelligence.controllers import make_controller
+from genesis.intelligence.controllers import Actions, make_controller
 from genesis.intelligence.neural import BrainStack
-from genesis.intelligence.sensors import BodySenses, sense_food
+from genesis.intelligence.sensors import BodySenses, Observations, sense_food
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,6 +99,17 @@ class MutationEvent:
 
 
 @dataclass(frozen=True, slots=True)
+class Decision:
+    """This tick's decision step, kept for recording behaviour (one entry per organism that
+    acted, in ID order). References to arrays the tick computed anyway: storing it costs
+    nothing and changes nothing."""
+
+    observations: Observations
+    actions: Actions  # as requested; movement clips turn to +/- max_turn, throttle to [0, 1]
+    max_turn: NDArray[np.float64]
+
+
+@dataclass(frozen=True, slots=True)
 class Event:
     """One thing that happened to one organism during a tick (for the optional event log).
 
@@ -142,6 +153,8 @@ class Simulation:
         # This tick's meals, deaths and births, in the order they happened. Always collected
         # (a handful per tick); the recorder decides which kinds to keep.
         self.events_this_tick: list[Event] = []
+        # This tick's observations and actions, for behaviour metrics (None before tick 0).
+        self.last_decision: Decision | None = None
         # Opened after founders and initial food exist: they make up the starting stock.
         self.ledger = EnergyLedger(initial_stock=self.energy_stock())
 
@@ -257,6 +270,7 @@ class Simulation:
             actions = self.controller.decide(observations, self.rng.controller, brains)
         else:
             actions = self.controller.decide(observations, self.rng.controller)
+        self.last_decision = Decision(observations, actions, max_turns)
 
         # 4. Move, then write the results back to each organism. tolist() hands back plain
         #    Python floats with the same values; it is many times faster than converting one

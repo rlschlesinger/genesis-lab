@@ -11,6 +11,9 @@ Output directory layout:
     genomes.csv     every living genome, every recording.genome_snapshot_every ticks + final
     organisms.csv   one row per organism that ever lived (genes and traits)
     mutations.csv   one row per gene change at a birth (header only when mutation is off)
+    events.csv      optional log of births, deaths and meals (header only when off)
+    behaviour.csv   one row per recorded tick: what organisms did; brain diversity and drift
+    brains.csv      one row per organism with a brain: its 62 weights (header only without)
 
 Retention policy (spec section 9): every tick, every organism and every mutation is recorded;
 full genomes are sampled (default every 50 ticks). Measured for a 20,000-tick evolution run
@@ -27,10 +30,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from genesis.analytics.behaviour import BEHAVIOUR_FIELDS
 from genesis.analytics.metrics import (
+    BRAIN_FIELDS,
     MUTATION_FIELDS,
     ORGANISM_FIELDS,
     TICK_FIELDS,
+    brain_rows,
     mutation_rows,
     organism_rows,
 )
@@ -49,11 +55,13 @@ RUN_FILE, TICKS_FILE, ORGANISMS_FILE = "run.json", "ticks.csv", "organisms.csv"
 MUTATIONS_FILE = "mutations.csv"
 GENE_STATS_FILE, GENOMES_FILE = "gene_stats.csv", "genomes.csv"
 EVENTS_FILE = "events.csv"
+BEHAVIOUR_FILE, BRAINS_FILE = "behaviour.csv", "brains.csv"
 
 # Version of the run-folder format (docs/schema.md). 1: Milestone 1 (E001). 2: Milestone 2
 # (gene files, condition only in the folder name). 3: condition, config_hash, sampling
-# settings in run.json, and events.csv.
-SCHEMA_VERSION = 3
+# settings in run.json, and events.csv. 4: behaviour.csv and brains.csv (Milestone 4); every
+# earlier file unchanged.
+SCHEMA_VERSION = 4
 
 # run.json fields that legitimately differ between two otherwise identical runs.
 VOLATILE_FIELDS = {"run_id", "started_at", "finished_at", "duration_seconds"}
@@ -149,6 +157,8 @@ def execute_run(
     write_csv(out_dir / EVENTS_FILE, EVENT_FIELDS, recorder.events)
     write_csv(out_dir / ORGANISMS_FILE, ORGANISM_FIELDS, organism_rows(sim))
     write_csv(out_dir / MUTATIONS_FILE, MUTATION_FIELDS, mutation_rows(sim))
+    write_csv(out_dir / BEHAVIOUR_FILE, BEHAVIOUR_FIELDS, recorder.behaviour)
+    write_csv(out_dir / BRAINS_FILE, BRAIN_FIELDS, brain_rows(sim))
 
     stop_reason = "extinction" if not sim.organisms else "max_ticks"
     digest = sim.state_digest()

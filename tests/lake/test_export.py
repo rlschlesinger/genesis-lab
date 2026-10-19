@@ -68,10 +68,12 @@ def test_export_has_one_file_per_table_with_rows_plus_readme_and_manifest(parque
         "genomes.parquet",
         "organisms.parquet",
         "mutations.parquet",
+        "behaviour.parquet",
         "README.md",
         "manifest.json",
     } == names
-    # No events were logged, so there is no (empty) events file.
+    # No events were logged and no run had brains, so there is no (empty) events or brains
+    # file.
 
 
 def test_manifest_row_counts_match_the_database(parquet_export, lake):

@@ -127,7 +127,7 @@ def test_parallel_and_sequential_runs_are_byte_identical(tmp_path):
     run_experiment(one, workers=1, ingest=False)
     run_experiment(two, workers=2, ingest=False)
     a, b = csv_bytes(tmp_path / "a" / "out"), csv_bytes(tmp_path / "b" / "out")
-    assert len(a) == 4 * 6  # 2 conditions x 2 seeds x 6 CSV files
+    assert len(a) == 4 * 8  # 2 conditions x 2 seeds x 8 CSV files
     assert a == b
 
 

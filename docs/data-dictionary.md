@@ -161,12 +161,43 @@ One row per logged event, when `recording.events` lists that kind. Source: `even
 | `x`, `y` | DOUBLE | wu | | never | Where it happened |
 | `detail` | VARCHAR | — | | not a death | Cause of death |
 
+## `behaviour` (new in 4.5)
+
+One row per recorded tick (same ticks as `ticks`), for every controller. Source: `behaviour.csv`. Computed by `analytics/behaviour.py` (D-043). Behaviour columns describe the decision made during the tick; brain columns describe the population at the end of it.
+
+| Column | Type | Unit | Key | Null when | Meaning |
+|---|---|---|---|---|---|
+| `run_id` | VARCHAR | — | PK, FK → runs | never | |
+| `tick` | INTEGER | tick | PK | never | |
+| `n` | INTEGER | organisms | | never | Organisms that decided this tick |
+| `seeing_food` | INTEGER | organisms | | never | Of those, how many had food in sight |
+| `toward_food` | DOUBLE | share, 0–1 | | nobody saw food off-centre | Share of food-seeing organisms whose applied turn brought the food closer to straight ahead. Random turning ≈ 0.5; the food seeker 1.0 |
+| `mean_turn` | DOUBLE | fraction of max_turn | | `n` = 0 | Mean \|applied turn\| ÷ the organism's own max_turn |
+| `mean_throttle` | DOUBLE | fraction of speed | | `n` = 0 | Mean applied throttle |
+| `weight_sd` | DOUBLE | weight units | | no brains, or nobody alive | Mean over the 62 parameters of the population standard deviation: brain diversity |
+| `weight_drift` | DOUBLE | weight units | | no brains, or nobody alive | Mean \|weight − own founder's weight\| over all living organisms and parameters |
+
+## `brains` (new in 4.5)
+
+One row per organism that had a brain: its 62 parameters. Source: `brains.csv` (always written; header only without brains). A brain never changes during a lifetime, so one row describes it completely.
+
+| Column | Type | Unit | Key | Null when | Meaning |
+|---|---|---|---|---|---|
+| `run_id` | VARCHAR | — | PK, FK → runs | never | |
+| `organism_id` | INTEGER | — | PK, FK → organisms | never | |
+| `wh_{h}_{input}` (42) | DOUBLE | weight | | never | Hidden unit *h*'s weight on an input (`food_seen`, `food_ahead`, `food_left`, `food_closeness`, `energy`, `wall_ahead`, `noise`), *h* = 0–5 |
+| `bh_{h}` (6) | DOUBLE | weight | | never | Hidden unit *h*'s bias |
+| `wo_{output}_{h}` (12) | DOUBLE | weight | | never | Output `turn` or `throttle`: its weight on hidden unit *h* |
+| `bo_{output}` (2) | DOUBLE | weight | | never | Output bias |
+
+Column order is `Brain.to_vector()` order ([neural-networks.md](neural-networks.md)). Every value lies within ±`brain.weight_limit`.
+
 ## Checks the ETL performs (3.2)
 
 For every run before loading it; a run failing any check is refused with a message naming the check:
 
 1. Every primary key is unique.
 2. Every foreign key points at an existing row (`organisms.parent_id`, `mutations.child_id`, `genomes.organism_id` …), within the same run.
-3. Row counts are consistent: `ticks` has one row per tick that is a multiple of `ticks_every`, plus the final tick if it isn't one; flow totals in `ticks` equal the event counts when events were logged; `organisms` has `organisms_ever` rows; `mutations` has `mutations` rows.
-4. Values are in range: counts ≥ 0, genes within their configured `[min, max]`, `alive` ⇔ `death_tick` is NULL.
+3. Row counts are consistent: `ticks` has one row per tick that is a multiple of `ticks_every`, plus the final tick if it isn't one; flow totals in `ticks` equal the event counts when events were logged; `organisms` has `organisms_ever` rows; `mutations` has `mutations` rows; `behaviour` has one row per `ticks` row; `brains` has `organisms_ever` rows when the run had brains and none otherwise.
+4. Values are in range: counts ≥ 0, genes within their configured `[min, max]`, `alive` ⇔ `death_tick` is NULL, behaviour shares within [0, 1], brain weights within ±`weight_limit`.
 5. Every column's type matches this dictionary.

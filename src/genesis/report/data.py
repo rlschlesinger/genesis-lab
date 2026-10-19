@@ -33,6 +33,11 @@ class RunData:
     genomes: list[dict]
     mutations: list[dict]
     bounds: dict[str, GeneBounds]  # gene -> limits, from the run's own recorded config
+    behaviour: list[dict] | None = None  # behaviour.csv; None for runs recorded before v4
+
+    @property
+    def has_brains(self) -> bool:
+        return self.meta["config"].get("brain") is not None
 
     @property
     def genes(self) -> list[str]:
@@ -66,6 +71,9 @@ def load_run(run_dir: str | Path) -> RunData:
         genomes=_read(run_dir / "genomes.csv"),
         mutations=_read(run_dir / "mutations.csv"),
         bounds=bounds,
+        behaviour=_read(run_dir / "behaviour.csv")
+        if (run_dir / "behaviour.csv").exists()
+        else None,
     )
 
 

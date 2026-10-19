@@ -30,11 +30,11 @@ def test_report_contains_every_section_and_gene(run_dir):
     html = write_report(run_dir).read_text()
     meta = json.loads((run_dir / "run.json").read_text())
     assert meta["run_id"] in html
-    for section in ("Population", "Gene trends", "Distributions", "Mutations"):
+    for section in ("Population", "Gene trends", "Distributions", "Behaviour", "Mutations"):
         assert section in html
     for gene in meta["config"]["genome"]:
         assert gene in html
-    for div_id in ("population", "gene-trends", "distributions"):
+    for div_id in ("population", "gene-trends", "distributions", "behaviour"):
         assert f'id="{div_id}"' in html
 
 
@@ -108,3 +108,35 @@ def test_cli_report_command(run_dir, tmp_path, capsys):
     assert main(["report", str(run_dir), "--out", str(out)]) == 0
     assert out.exists() and "report written" in capsys.readouterr().out
     assert main(["report", str(tmp_path / "nope")]) == 2
+
+
+def test_neural_run_report_shows_brain_weights(tmp_path):
+    out = tmp_path / "neural"
+    execute_run(config("neural.yaml"), out)
+    html = write_report(out).read_text()
+    assert "brain weights: drift from founders" in html
+    assert "random turning" in html
+
+
+def test_rule_based_report_has_behaviour_but_no_brain_panel(run_dir):
+    html = write_report(run_dir).read_text()
+    assert "turning toward seen food" in html
+    assert "brain weights" not in html
+
+
+def test_report_for_a_run_recorded_before_behaviour_existed(run_dir, tmp_path):
+    copy = tmp_path / "old"
+    copy.mkdir()
+    for f in run_dir.iterdir():
+        if f.name not in ("behaviour.csv", "brains.csv", "report.html"):
+            (copy / f.name).write_bytes(f.read_bytes())
+    html = write_report(copy).read_text()
+    assert "recorded before behaviour was measured" in html
+
+
+def test_rolling_mean_skips_missing_values():
+    from genesis.report.figures import rolling_mean
+
+    # Window 2: [1], [1, -], [-, 3], [3, -], [-, 5]; a window of only missing values is None.
+    assert rolling_mean([1, None, 3, float("nan"), 5], window=2) == [1.0, 1.0, 3.0, 3.0, 5.0]
+    assert rolling_mean([None, None, 4.0], window=2) == [None, None, 4.0]
