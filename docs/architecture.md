@@ -156,3 +156,20 @@ One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one
 | 1.7 | Cloning, population cap, newborn delay | Newborns inactive on birth tick | done |
 | 1.8 | Metrics, CLI, CSV output | Identical files from repeated runs | done |
 | 1.9 | Benchmark, seeker-vs-random comparison (E001), docs | Numbers recorded | done |
+
+## Milestone 2 plan (approved 2026-10-18)
+
+Decisions: trade-off costs for sense range and speed; metabolic rate as a cost-free positive control; a neutral marker gene as the in-run drift control; Plotly HTML reports; hand-written permutation and sign tests (SciPy stays in Milestone 3).
+
+| # | Increment | Key test | Status |
+|---|---|---|---|
+| 2.0 | Golden digests lock in Milestone 1 behaviour | Default run unchanged | done |
+| 2.1 | Genome: gene definitions, bounds, expression to traits | Bounds validated; Milestone 1 unchanged | |
+| 2.2 | Mutation: per-gene rate and size, reflection, own RNG stream, off switch | In bounds; no pile-up; off = exact copy | |
+| 2.3 | Inheritance wired in; `mutations.csv`; gene columns | Child = parent + recorded changes | |
+| 2.4 | Trade-off costs; positive control and neutral marker | Ledger balances; defaults = Milestone 1 | |
+| 2.5 | Trait statistics per tick; genome snapshots | Matches a recount from raw data | |
+| 2.6 | `genesis report`: Plotly HTML trait charts | Built from recorded files | |
+| 2.7 | Permutation and sign tests | Known cases | |
+| 2.8 | E002 (machinery and controls), E003 (food scarcity), pre-registered | Reported against the drift baseline | |
+| 2.9 | Docs, curriculum, push, stop for review | | |
