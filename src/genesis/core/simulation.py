@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import math
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 from itertools import compress
 
 import numpy as np
@@ -36,8 +36,10 @@ from genesis.evolution.brain import founder_brains, mutate_brain
 from genesis.evolution.genome import Genome, express
 from genesis.evolution.mutation import mutate
 from genesis.evolution.reproduction import place_offspring, select_parents
+from genesis.intelligence.brain_inputs import wall_distance_ahead
 from genesis.intelligence.controllers import make_controller
-from genesis.intelligence.sensors import sense_food
+from genesis.intelligence.neural import BrainStack
+from genesis.intelligence.sensors import BodySenses, sense_food
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +129,7 @@ class Simulation:
         self.rng = RngStreams.from_seed(config.run.seed)
         self.world = World.from_config(config, self.rng.food)
         self.controller = make_controller(config.organisms.controller)
+        self._neural = config.organisms.controller == "neural"
         # Founders' speed: the drag cost is relative to it (core/costs.py).
         self._reference_speed = config.genome.speed.initial
         self.tick = 0
@@ -235,8 +238,25 @@ class Simulation:
             positions, headings, sense_ranges, energies, self.world.food.positions
         )
 
-        # 3. Decide.
-        actions = self.controller.decide(observations, self.rng.controller)
+        # 3. Decide. A neural controller also needs each organism's brain and what it knows
+        #    about its own body (D-042); rule-based controllers get exactly what they always
+        #    did, so their runs are unchanged.
+        if self._neural and living:
+            observations = replace(
+                observations,
+                body=BodySenses(
+                    wall_distance=wall_distance_ahead(
+                        positions, headings, self.world.width, self.world.height
+                    ),
+                    sense_range=sense_ranges,
+                    max_turn=max_turns,
+                    reproduction_threshold=thresholds,
+                ),
+            )
+            brains = BrainStack.of([o.brain for o in living])
+            actions = self.controller.decide(observations, self.rng.controller, brains)
+        else:
+            actions = self.controller.decide(observations, self.rng.controller)
 
         # 4. Move, then write the results back to each organism. tolist() hands back plain
         #    Python floats with the same values; it is many times faster than converting one

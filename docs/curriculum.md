@@ -333,6 +333,13 @@ What has been covered, where it appears in the code, and what comes next.
 - **Append-only random streams, tested:** a seventh stream leaves the first six untouched; brains carried along but unused change nothing else.
 - **Backward compatibility:** an optional config section is left out of the saved config when absent, so old runs keep their fingerprints.
 
+### 4.4 · Neural organisms (`NeuralController`, `configs/neural.yaml`)
+- **Genotype → behaviour, end to end:** sense → 7 inputs → forward pass → turn and throttle → movement.
+- **Scaling outputs to the body:** turn is a fraction of the organism's own max_turn.
+- **Evolution found a behaviour nobody wrote:** in one run, turning toward seen food went from 57% (chance-like) to 100%, and throttle rose.
+- **Choosing an endpoint:** when food supply sets population size, population and meal rate can't distinguish good foragers from poor ones; E007 must measure something else.
+- **Exact replay:** recomputing a tick's decision outside the simulation gives the same bits, the basis for the inspector.
+
 ## Future learning objectives
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

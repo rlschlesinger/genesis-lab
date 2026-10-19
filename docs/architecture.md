@@ -34,7 +34,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `intelligence/sensors.py` | World snapshot → `Observations` (nearest food in range) | Mutate anything |
 | `intelligence/neural.py` | `Brain` (weights and biases, flat-vector layout), `BrainStack`, `forward()` → `Activations` (D-039) | Know about organisms or the world; use any other summation method |
 | `intelligence/brain_inputs.py` | `INPUT_NAMES`, `wall_distance_ahead`, `brain_inputs` → the (n, 7) input matrix (D-040) | Draw random numbers (noise is passed in) |
-| `intelligence/controllers.py` | `Observations` → `Actions` (pure) | Mutate world state |
+| `intelligence/controllers.py` | `Observations` → `Actions` (pure); `NeuralController.think` also returns inputs and activations (D-042) | Mutate world state |
 | `core/movement.py` | Apply `Actions` within trait limits; walls; distance moved | Decide anything |
 | `core/geometry.py` | `wrap_angle` | |
 | `core/spatial.py` | Which food is within reach of which organism: all-pairs for small populations, a grid of cells for large ones, identical results (D-036) | Decide anything; change a single bit of a distance |
@@ -349,9 +349,9 @@ Scope: [roadmap/04A](roadmap/04A_NEURAL_BRAINS.md) and [roadmap/04B](roadmap/04B
 | 4.1 | Forward pass in NumPy: `Brain`, parameter layout, worked example ([neural-networks.md](neural-networks.md)) | Hand-computed example; batch = one at a time, bit for bit | done |
 | 4.2 | Sensor vector: 7 normalised inputs including a wall sensor and noise | Every input in [−1, 1] for extreme states | done |
 | 4.3 | Brains as inherited genes: `brain` RNG stream (appended), founder initialisation, bounded mutation, inheritance, digest | Golden values unchanged; child = parent + mutation | done |
-| 4.4 | `controller: neural` in the tick; `configs/neural.yaml` | Rule-based runs byte-identical; ledger balances | |
+| 4.4 | `controller: neural` in the tick; `configs/neural.yaml` | Rule-based runs byte-identical; ledger balances | done |
 | 4.5 | Recording: brains at birth, behaviour summaries; schema v4; lake tables; report charts | Lake checks; recount | |
 | 4.6 | `genesis inspect`: inputs → hidden → outputs → action → state for one organism and tick | Replay = original run | |
-| 4.7 | Pre-register E007: random vs seeker vs evolved brains, train/evaluation seed groups | Smoke runs on throwaway seeds | |
+| 4.7 | Pre-register E007: random vs seeker vs evolved brains, train/evaluation seed groups; neural golden values (both platforms) | Smoke runs on throwaway seeds | |
 | 4.8 | Run E007 and report | Results appended to the definition | |
 | 4.9 | Wrap-up: docs, scope check; stop before Milestone 5 | | |

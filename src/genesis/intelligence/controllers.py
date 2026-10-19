@@ -3,7 +3,7 @@
 A controller is a *pure* decision function: it reads observations and returns actions, and
 never changes the world. The simulation applies the actions afterwards. This boundary is what
 lets a neural network replace these hand-written rules in Milestone 4 without touching any
-other code.
+other code: ``NeuralController`` below is one more controller, chosen by config.
 """
 
 from __future__ import annotations
@@ -14,6 +14,8 @@ from typing import Protocol
 import numpy as np
 from numpy.typing import NDArray
 
+from genesis.intelligence.brain_inputs import brain_inputs
+from genesis.intelligence.neural import Activations, BrainStack, forward
 from genesis.intelligence.sensors import Observations
 
 FloatArray = NDArray[np.float64]
@@ -38,7 +40,9 @@ class Controller(Protocol):
     need a matching method. Type checkers verify the match.
     """
 
-    def decide(self, obs: Observations, rng: np.random.Generator) -> Actions: ...
+    def decide(
+        self, obs: Observations, rng: np.random.Generator, brains: BrainStack | None = None
+    ) -> Actions: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,7 +56,9 @@ class RandomWalk:
 
     turn_sd: float = 0.3  # standard deviation of each random turn, radians
 
-    def decide(self, obs: Observations, rng: np.random.Generator) -> Actions:
+    def decide(
+        self, obs: Observations, rng: np.random.Generator, brains: BrainStack | None = None
+    ) -> Actions:
         n = len(obs)
         return Actions(turn=rng.normal(0.0, self.turn_sd, size=n), throttle=np.ones(n))
 
@@ -68,7 +74,9 @@ class NearestFoodSeeker:
 
     turn_sd: float = 0.3
 
-    def decide(self, obs: Observations, rng: np.random.Generator) -> Actions:
+    def decide(
+        self, obs: Observations, rng: np.random.Generator, brains: BrainStack | None = None
+    ) -> Actions:
         n = len(obs)
         # Draw random turns for *every* organism, even those that will use the bearing
         # instead. That keeps the number of random draws independent of how many organisms
@@ -80,9 +88,64 @@ class NearestFoodSeeker:
         return Actions(turn=turn, throttle=np.ones(n))
 
 
-CONTROLLERS: dict[str, type[RandomWalk] | type[NearestFoodSeeker]] = {
+@dataclass(frozen=True, slots=True)
+class Thought:
+    """One tick of neural decision-making, kept whole so it can be inspected (4.6)."""
+
+    inputs: FloatArray  # (n, 7) as built by brain_inputs, before the network clips them
+    activations: Activations  # every intermediate value of the forward pass
+    actions: Actions
+
+
+@dataclass(frozen=True, slots=True)
+class NeuralController:
+    """Each organism's own evolved brain decides (Milestone 4, D-042).
+
+    Per tick: draw one noise value per organism from the controller stream, build the
+    7-input matrix (brain_inputs), run every brain in one forward pass, and map the two
+    outputs to actions:
+
+    - turn = output 0 (in (-1, 1)) x the organism's own max_turn: the brain chooses a
+      fraction of what its body allows, so a turn output never saturates against the limit.
+    - throttle = output 1, already in (0, 1).
+
+    Like the rule-based controllers it is pure: same observations, brains and random state
+    give the same actions, and nothing in the world is touched.
+    """
+
+    def think(self, obs: Observations, rng: np.random.Generator, brains: BrainStack) -> Thought:
+        n = len(obs)
+        if obs.body is None:
+            raise ValueError("the neural controller needs Observations.body (BodySenses)")
+        if len(brains) != n:
+            raise ValueError(f"{len(brains)} brains for {n} organisms")
+        # One draw per organism every tick, whatever the brains do with it (D-009's rule).
+        noise = rng.uniform(-1.0, 1.0, size=n)
+        body = obs.body
+        inputs = brain_inputs(
+            obs, body.sense_range, body.reproduction_threshold, body.wall_distance, noise
+        )
+        activations = forward(brains, inputs)
+        actions = Actions(
+            turn=activations.outputs[:, 0] * body.max_turn,
+            throttle=activations.outputs[:, 1].copy(),
+        )
+        return Thought(inputs, activations, actions)
+
+    def decide(
+        self, obs: Observations, rng: np.random.Generator, brains: BrainStack | None = None
+    ) -> Actions:
+        if len(obs) == 0:  # an extinct population: nothing to decide, nothing drawn
+            return Actions(turn=np.empty(0), throttle=np.empty(0))
+        if brains is None:
+            raise ValueError("the neural controller needs one brain per organism")
+        return self.think(obs, rng, brains).actions
+
+
+CONTROLLERS: dict[str, type[RandomWalk] | type[NearestFoodSeeker] | type[NeuralController]] = {
     "random_walk": RandomWalk,
     "nearest_food_seeker": NearestFoodSeeker,
+    "neural": NeuralController,
 }
 
 

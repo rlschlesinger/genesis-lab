@@ -19,6 +19,22 @@ FloatArray = NDArray[np.float64]
 
 
 @dataclass(frozen=True, slots=True)
+class BodySenses:
+    """What a neural brain needs beyond food (Milestone 4): one entry per organism.
+
+    Filled in by the simulation only when the controller is neural; rule-based controllers
+    never see it, so their runs do no extra work and stay byte-identical.
+    """
+
+    wall_distance: (
+        FloatArray  # distance to the wall straight ahead (brain_inputs.wall_distance_ahead)
+    )
+    sense_range: FloatArray  # own sense range: food and wall distances are judged against it
+    max_turn: FloatArray  # own turning limit: the turn output is a fraction of it
+    reproduction_threshold: FloatArray  # own threshold: energy is reported as a fraction of it
+
+
+@dataclass(frozen=True, slots=True)
 class Observations:
     """What every organism senses this tick. Each array has one entry per organism (row i is
     organism i, in the same order as the inputs to ``sense_food``).
@@ -28,6 +44,7 @@ class Observations:
     food_distance: FloatArray  # distance to nearest sensed food; inf if none
     food_bearing: FloatArray  # turn needed to face it, radians in [-pi, pi); 0 if none
     energy: FloatArray  # own current energy (unused by Milestone 1 controllers; for later)
+    body: BodySenses | None = None  # only for neural controllers (Milestone 4)
 
     def __len__(self) -> int:
         return len(self.energy)

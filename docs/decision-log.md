@@ -60,6 +60,17 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-042 · The neural controller in the tick (2026-10-19)
+
+**Decision:** `controller: neural` (requires a `brain:` section). Each tick the simulation adds `BodySenses` to the observations (wall distance ahead, own sense range, max turn and reproduction threshold) and stacks the living organisms' brains; `NeuralController` draws one uniform noise value per organism from the controller stream, builds the inputs (D-040), runs one forward pass (D-039), and returns turn = output₀ × max_turn and throttle = output₁. `think()` returns inputs, every activation and the actions, for inspection. Rule-based controllers get exactly the observations they always did. A `brain:` section with a rule-based controller is allowed: brains are inherited and mutated but never used, a no-selection control for weights. `configs/neural.yaml` is `evolution.yaml` with the neural controller, a brain section, and every expressed gene frozen, so only brains evolve.
+**Why:**
+- **Turn as a fraction of max_turn:** the brain chooses within what its body allows; mapping to a fixed angle would mostly saturate against the limit and hide the output's value.
+- **BodySenses only for neural runs:** rule-based runs do no extra work and stay byte-identical (verified against `main`).
+- **Frozen genes in neural.yaml:** a change in behaviour can then only come from the brain, not from speed or sense range evolving alongside it.
+- **The carried-but-unused option:** E007 can compare weight changes under selection with drift alone, like the neutral twins of D-025.
+**First observation (one seed, anecdotal):** in `neural.yaml` seed 1, the share of food-seeing organisms turning toward food rose from 57% at tick 0 to 100% at tick 20,000; mean throttle from 0.53 to 0.78. Settled population and meals per organism-tick were similar for neural, seeker and random walk, as expected when food supply sets population size (E004), so E007 needs an endpoint that is not pinned by the food supply.
+**Alternatives:** passing brains inside `Observations` (brains aren't observations); a controller that stores brains itself (it would hold state that belongs to organisms and go stale at every birth and death).
+
 ## D-041 · Brains are inherited like genes, with their own stream (2026-10-19)
 
 **Decision:** an optional `brain:` config section (`weight_limit` 4, `initial_sd` 0.5, `mutation_rate` 0.1 per weight, `mutation_size` 0.2). When present, every founder gets its own brain, weights Normal(0, 0.5) reflected into ±4, drawn in founder order; at each birth every weight mutates with probability 0.1 by a Normal(0, 0.2) step, reflected into ±4. All draws come from a seventh stream, `brain`, appended after `mutation`. Both draws happen for all 62 weights at every birth. `mutation.enabled: false` freezes brains too. Brain changes are not written to `mutations.csv` (whole brains are recorded at birth in 4.5). The state digest includes weights when present. When the section is absent it is omitted from the config dump, so existing config hashes are unchanged.

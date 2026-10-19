@@ -29,6 +29,7 @@ uv sync            # creates .venv and installs the locked dependencies
 ```bash
 uv run genesis run --seed 7 --out data/runs/first             # ecosystem, no evolution
 uv run genesis run --config configs/evolution.yaml --out data/runs/evo   # with evolution (~6 s)
+uv run genesis run --config configs/neural.yaml --out data/runs/neural  # evolving neural brains (~10 s)
 uv run genesis report data/runs/evo                           # writes data/runs/evo/report.html
 open data/runs/evo/report.html
 ```
@@ -78,6 +79,7 @@ Runs are described by YAML files in `configs/`:
 
 - [`default.yaml`](configs/default.yaml): the Milestone 1 ecosystem, with mutation and trade-off costs off. Every field is documented with its unit.
 - [`evolution.yaml`](configs/evolution.yaml): the same, plus mutation, trade-off costs (drag and sensing upkeep), a frozen turning gene and 20,000 ticks. A test keeps the two files from differing anywhere else.
+- [`neural.yaml`](configs/neural.yaml): `evolution.yaml` with each organism's own evolving neural brain as the controller and every expressed gene frozen, so only brains evolve ([how the brain works](docs/neural-networks.md)).
 
 Invalid configs are rejected before anything runs, with an error naming the field.
 

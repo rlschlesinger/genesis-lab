@@ -233,6 +233,33 @@ def test_evolution_config_differs_only_where_intended():
     }
 
 
+def test_neural_config_differs_only_where_intended():
+    # neural.yaml is a full copy of evolution.yaml: only the controller, the brain section and
+    # the frozen expressed genes differ, so neural runs are comparable with E002-E006 settings.
+    evolution = flatten(load_config(DEFAULT_CONFIG.with_name("evolution.yaml")).model_dump())
+    neural = flatten(load_config(DEFAULT_CONFIG.with_name("neural.yaml")).model_dump())
+    differing = {key for key in neural if neural[key] != evolution.get(key)}
+    assert differing == {
+        "organisms.controller",
+        "genome.speed.mutable",
+        "genome.sense_range.mutable",
+        "genome.metabolic_rate.mutable",
+        "genome.reproduction_threshold.mutable",
+        "brain.weight_limit",
+        "brain.initial_sd",
+        "brain.mutation_rate",
+        "brain.mutation_size",
+    }
+
+
+def test_neural_controller_requires_a_brain_section(raw):
+    raw["organisms"]["controller"] = "neural"
+    with pytest.raises(pydantic.ValidationError, match="needs a brain"):
+        validate(raw)
+    raw["brain"] = {}
+    assert validate(raw).brain.weight_limit == 4.0
+
+
 @pytest.mark.parametrize("field", ["speed_cost_exponent", "sense_cost_per_unit"])
 def test_negative_costs_rejected(raw, field):
     raw["organisms"][field] = -0.1

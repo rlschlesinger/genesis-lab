@@ -26,7 +26,7 @@ NonNegativeFloat = Annotated[float, Field(ge=0)]
 PositiveInt = Annotated[int, Field(gt=0)]
 NonNegativeInt = Annotated[int, Field(ge=0)]
 
-ControllerName = Literal["random_walk", "nearest_food_seeker"]
+ControllerName = Literal["random_walk", "nearest_food_seeker", "neural"]
 EventKind = Literal["birth", "death", "meal"]
 
 
@@ -236,6 +236,14 @@ class SimulationConfig(_Strict):
         if self.brain is None:
             data.pop("brain", None)
         return data
+
+    @model_validator(mode="after")
+    def _neural_needs_brains(self) -> Self:
+        # The reverse is allowed: brains carried by a rule-based controller are inherited and
+        # mutated but never used, a no-selection control for brain weights.
+        if self.organisms.controller == "neural" and self.brain is None:
+            raise ValueError("controller 'neural' needs a brain: section (it may be empty: {})")
+        return self
 
     @model_validator(mode="after")
     def _reproduction_affordable(self) -> Self:
