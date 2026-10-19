@@ -104,5 +104,68 @@ class ResetRequest(_Strict):
     seed: int | None = Field(default=None, ge=0, le=2**32 - 1)
 
 
+class BrainThought(BaseModel):
+    """A neural organism's decision on the run's latest tick, exactly as computed (D-050)."""
+
+    tick: int  # the tick this decision was made in
+    input_names: list[str]
+    inputs: list[float]  # as passed to the network (7)
+    hidden_sum: list[float]  # weighted sums into the hidden layer (6)
+    hidden: list[float]  # tanh of those (6)
+    output_sum: list[float]  # weighted sums into the outputs (2)
+    outputs: list[float]  # turn in (-1, 1), throttle in (0, 1)
+    turn: float  # radians, as applied (output x max_turn)
+    throttle: float  # as applied
+
+
+class OrganismDetail(BaseModel):
+    id: int
+    alive: bool
+    parent_id: int | None
+    founder_id: int
+    generation: int
+    birth_tick: int
+    death_tick: int | None
+    death_cause: str | None
+    age: int
+    energy: float
+    x: float
+    y: float
+    heading: float
+    food_eaten: int
+    offspring_count: int
+    children: list[int]  # IDs of its offspring, in birth order
+    genome: dict[str, float]
+    traits: dict[str, float]
+    brain_weights: dict[str, float] | None  # 62 named parameters (brains.csv names); None without
+    thought: BrainThought | None  # None: no brain, or it didn't decide on the latest tick
+
+
+class SavedRun(BaseModel):
+    """A recorded run folder on disk (written by genesis run, experiments, or an export)."""
+
+    path: str  # relative to the project folder
+    run_id: str
+    status: str
+    experiment_id: str | None
+    condition: str | None
+    seed: int
+    controller: str | None
+    ticks_run: int | None
+    final_population: int | None
+    started_at: str | None
+
+
+class ExportResult(BaseModel):
+    """A live run written as a normal run folder by replaying it headlessly (D-050)."""
+
+    run_id: str  # of the recorded run (the live run's ID plus the tick)
+    path: str
+    ticks: int
+    digest: str
+    matches_live_run: bool  # the replay's final digest equals the live run's
+    ingested: bool
+
+
 class ErrorBody(BaseModel):
     detail: str

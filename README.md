@@ -148,4 +148,5 @@ data/                      generated run output (ignored by Git)
 - [SQL examples](docs/sql-examples.md) and [SQL exercises](docs/sql-exercises.md)
 - [Benchmarks](docs/benchmarks.md): recorded performance
 - [Neural networks, by hand](docs/neural-networks.md): what an organism's brain computes, with a worked example
+- [API](docs/API.md): the HTTP and WebSocket API (`genesis serve`), with a Python example in `scripts/api_example.py`
 - [Roadmap](docs/roadmap/README.md): scope for Milestones 4–6 and how it maps onto this project

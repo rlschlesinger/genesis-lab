@@ -29,7 +29,8 @@ uv run genesis report data/runs/<name>               # HTML report (Plotly, offl
 uv run genesis inspect data/runs/<name> --tick T --organism ID [--weights]   # replay one decision
 uv run genesis lake ingest data/runs data/experiments  # validate + convert runs to data/lake/ (Parquet)
 uv run genesis sql "SELECT ..."                      # query the lake (views: docs/schema.md)
-uv run genesis serve                                 # API on http://127.0.0.1:8765 (OpenAPI docs at /docs)
+uv run genesis serve                                 # API on http://127.0.0.1:8765 (docs/API.md; OpenAPI at /docs)
+uv run python scripts/api_example.py                 # drive the API from Python (server must be running)
 uv run genesis dashboard E00N [--compare T:C]       # experiment dashboard from the lake
 uv run genesis lake export --experiment E00N --out data/exports/E00N   # + README + manifest
 uv run python experiments/e007_neuroevolution.py --analyse-only --report   # E007 verdicts + results page

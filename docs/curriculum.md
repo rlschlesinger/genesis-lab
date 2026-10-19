@@ -400,6 +400,13 @@ What has been covered, where it appears in the code, and what comes next.
 - **Columnar data:** one array per field, the shape drawing code wants.
 - **Tests that bypass the real thing:** an in-process test client hid a missing WebSocket library; one end-to-end test with a real server closes that gap (and was shown to fail without it).
 
+### 5.4 · Details, saved runs, export (`api/details.py`, `api/saved.py`, `docs/API.md`)
+- **Deriving instead of storing:** which organisms decided on a tick follows from the tick order; storing it would cost every tick.
+- **Determinism as a feature:** exporting a live run = replaying it; the digest proves the copy is exact.
+- **Event loop vs worker threads:** CPU or file work that shares nothing can leave the loop (`asyncio.to_thread`); work on shared state can't.
+- **Documentation that can't drift:** a test fails if a route is missing from `docs/API.md`.
+- **Friendly failures:** a client that can't connect says what to do, not a 40-line traceback.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

@@ -77,3 +77,17 @@ def test_serve_refuses_a_network_address_without_allow_remote(capsys):
     assert "127.0.0.1" in LOCAL_HOSTS
     assert main(["serve", "--host", "0.0.0.0"]) == 2
     assert "--allow-remote" in capsys.readouterr().err
+
+
+def test_every_route_is_documented_in_api_md():
+    """docs/API.md is the reference the browser lab is built against: it must list every
+    route the server actually has."""
+    from pathlib import Path
+
+    doc = (Path(__file__).parents[2] / "docs" / "API.md").read_text()
+    app = create_app()
+    paths = {route.path for route in app.routes if route.path.startswith("/api/")}
+    assert paths  # the check is real: there are routes to look for
+    missing = sorted(p for p in paths if p.removeprefix("/api").replace("{run_id}", "{id}")
+                     .replace("{organism_id}", "{oid}") not in doc)  # fmt: skip
+    assert not missing, f"routes missing from docs/API.md: {missing}"

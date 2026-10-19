@@ -60,6 +60,19 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-050 · Organism details from the decision record; export by replay (2026-10-19)
+
+**Decision:**
+- `GET /runs/{id}/organisms/{oid}`: identity, family (children), genome, traits, body, the 62 named brain weights, and `thought`, the organism's decision on the latest tick read from `Simulation.last_decision`. The record has no IDs; they follow from the tick order (founders and everyone born before the tick, minus anyone dead before it), and the count is checked against the record.
+- `POST /runs/{id}/export`: replays the live run headlessly with `execute_run` (config with `max_ticks` = the tick reached) into `data/runs/live/<run_id>-t<tick>/`, compares the replay's final digest with the live run's, and optionally ingests it (condition `live`). Paused or finished runs only. Runs in a worker thread.
+- `GET /saved-runs`: run folders under `data/runs` and `data/experiments`, newest first, with paths relative to the project; read in a worker thread (~0.25 s for 640 folders).
+- `docs/API.md` documents every route (a test checks it lists all of them) and `scripts/api_example.py` drives the whole API from Python.
+**Why:**
+- **Thought from the record, not a recomputation:** the browser shows exactly what the simulation computed (tested against `genesis inspect`'s replay, and the ID rule against the truth on every tick of a 600-tick run with births and deaths).
+- **Export by replay:** determinism makes a recorder on every live run unnecessary (it would cost memory and ~20% speed whether or not anyone exports). The digest comparison makes each export prove itself; a test checks the files equal a `genesis run` of the same config byte for byte.
+- **Threads only for work that shares nothing:** the replay builds its own simulation and listing reads files, so neither can race the stepping loop (D-048), and neither stalls running simulations.
+**Alternatives:** storing IDs in every decision record (a list per tick for a lookup that happens on clicks); recording every live run (above); exporting only the final state (loses the history the lake and reports need).
+
 ## D-049 · The snapshot stream: newest state only, no queue (2026-10-19)
 
 **Decision:** `ws://127.0.0.1:8765/api/runs/{id}/stream?fps=N` (N = 1–30, default 15). Messages are JSON with a `type`: `hello` once (protocol version, the run, world size), then `snapshot`s (tick, state, speed, error, population, last tick's counts, food and organisms as columns: id, x, y, heading, energy, generation, founder), and `gone` (with `replaced_by` after a reset) before closing when the run disappears. Each viewer has a sender task that at most N times a second sends the newest snapshot if the run changed since its last message; a listener task notices disconnects even when nothing is being sent. Snapshots are built once per change and shared (`LiveRun.snapshot_cache`); positions are rounded to 0.01 world units, headings to 0.001 rad, energy to 0.01 EU. Close codes 4404 (unknown run) and 4422 (bad fps). `websockets` added as a runtime dependency: uvicorn needs it (or wsproto) to accept WebSocket connections at all.

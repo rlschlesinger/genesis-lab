@@ -12,6 +12,7 @@ same way:
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -19,7 +20,7 @@ from fastapi import FastAPI, Request, WebSocket, status
 from fastapi.responses import JSONResponse
 
 from genesis import __version__
-from genesis.api import stepping, stream
+from genesis.api import details, saved, stepping, stream
 from genesis.api.runs import (
     InvalidRunRequest,
     RunConflict,
@@ -32,10 +33,13 @@ from genesis.api.schemas import (
     ConfigSummary,
     Digest,
     ErrorBody,
+    ExportResult,
     Health,
+    OrganismDetail,
     ResetRequest,
     RunCreate,
     RunInfo,
+    SavedRun,
     SpeedRequest,
     StepRequest,
 )
@@ -70,6 +74,10 @@ def create_app(manager: RunManager | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.manager = manager or RunManager()
+    # Where saved runs are listed from and exports go (tests point these at temp folders).
+    app.state.saved_roots = saved.SAVED_ROOTS
+    app.state.export_root = saved.EXPORT_ROOT
+    app.state.lake = saved.PROJECT_ROOT / saved.DEFAULT_LAKE
     _errors(app)
 
     @app.get("/api/health", response_model=Health)
@@ -113,6 +121,35 @@ def create_app(manager: RunManager | None = None) -> FastAPI:
         """A fingerprint of the full state (hashes every organism ever: not for polling)."""
         run = app.state.manager.get(run_id)
         return Digest(run_id=run.run_id, tick=run.sim.tick, digest=run.sim.state_digest())
+
+    @app.get(
+        "/api/runs/{run_id}/organisms/{organism_id}",
+        response_model=OrganismDetail,
+        responses=ERROR_RESPONSES,
+    )
+    async def get_organism(run_id: str, organism_id: int) -> OrganismDetail:
+        """One organism: family, genome, body and, with a brain, its latest decision."""
+        return details.organism_detail(app.state.manager.get(run_id), organism_id)
+
+    @app.post("/api/runs/{run_id}/export", response_model=ExportResult, responses=ERROR_RESPONSES)
+    async def export_live_run(run_id: str, ingest: bool = True) -> ExportResult:
+        """Save the run so far as a normal run folder (data/runs/live/), replaying it
+        headlessly; optionally load it into the lake. The run must be paused or finished."""
+        return await saved.export_run(
+            app.state.manager.get(run_id),
+            app.state.export_root,
+            app.state.lake if ingest else None,
+        )
+
+    @app.get("/api/saved-runs", response_model=list[SavedRun])
+    async def list_saved_runs(experiment_id: str | None = None, limit: int = 200) -> list[SavedRun]:
+        """Recorded run folders, newest first (up to ``limit``, at most 1,000)."""
+        limit = max(1, min(limit, 1000))
+        # Reading hundreds of run.json files takes ~0.25 s: do it off the event loop so
+        # running simulations don't stall. Safe in a thread: it touches no simulation.
+        return await asyncio.to_thread(
+            saved.saved_runs, app.state.saved_roots, experiment_id, limit
+        )
 
     @app.websocket("/api/runs/{run_id}/stream")
     async def run_stream(websocket: WebSocket, run_id: str) -> None:

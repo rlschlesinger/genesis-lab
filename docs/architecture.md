@@ -68,6 +68,8 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `api/runs.py` | `RunManager`, `LiveRun`, the allowed state transitions (`ALLOWED`), config loading by name | Know about HTTP |
 | `api/stepping.py` | `step`, `resume`, `pause`, `stop`, the background `run_loop` (slices, tick budget) (D-048) | Choose which tick comes next (only how many) |
 | `api/stream.py` | WebSocket snapshots: `hello`/`snapshot`/`gone`, `build_snapshot` (columnar, rounded), per-viewer sender and listener (D-049) | Queue messages; send exact state |
+| `api/details.py` | `organism_detail`, `thought` from the latest decision record, `deciders` (D-050) | Recompute a decision |
+| `api/saved.py` | `saved_runs` (folders on disk), `export_run` (replay to a run folder, digest check, ingest) (D-050) | Accept paths from clients |
 | `api/app.py` | FastAPI routes over a `RunManager`; errors → status codes | Contain simulation logic |
 | `cli.py` | `genesis run` arguments → `execute_run`; exit codes 0/1/2 | Contain logic |
 
@@ -411,11 +413,23 @@ Scope: [roadmap/05A](roadmap/05A_API_STREAMING.md) and [roadmap/05B](roadmap/05B
 | 5.1 | FastAPI app, `genesis serve`, run manager with explicit states, create/list/get/delete runs, configs | Invalid configs rejected; state table | done |
 | 5.2 | Pause, resume, single step, reset by seed; playback speed | Run steered through the API = headless run (digest) | done |
 | 5.3 | WebSocket snapshot stream: versioned payload, newest-only, bounded queues, many clients | Two clients see the same state; no unbounded growth | done |
-| 5.4 | Organism details (genome, family, brain thought); saved runs; export to a run folder; `docs/API.md` and an example script | Export = a `genesis run` folder | |
+| 5.4 | Organism details (genome, family, brain thought); saved runs; export to a run folder; `docs/API.md` and an example script | Export = a `genesis run` folder | done |
 | 5.5 | Vite + React + TypeScript; design tokens, fonts, layout shell; API client, reconnecting WebSocket hook; Zustand store | Store and payload unit tests | |
 | 5.6 | Live World: PixiJS canvas, food, organisms, pan/zoom, selection, trails; 1,000+ organisms | Selection never changes the simulation | |
 | 5.7 | Controls and the organism inspector with a brain view | Out-of-range input rejected in place | |
 | 5.8 | Run Analytics: live charts with units, sample sizes, run IDs | Chart values = backend values | |
 | 5.9 | Experiment Comparison and Lineage Explorer from the lake | Two runs compared; tree correct | |
 | 5.10 | Hardening and wrap-up: reconnect, extinction, refresh, keyboard and accessibility, phone width; `genesis lab`; quickstart, manual E2E checklist, docs | Checklist passes | |
+
+### Chunk 05A scope check (2026-10-19)
+
+| 05A requirement | Evidence |
+|---|---|
+| Validated endpoints: create, read config, pause, resume, single step, reset by seed, summary, organism details, list saved runs, export | [API.md](API.md) endpoint table; `tests/api/` |
+| WebSocket stream of read-only snapshots at a rate independent of the tick rate; typed, versioned payload; coalescing for slow consumers; simulation never blocked by the UI | `api/stream.py` (D-049): `hello`/`snapshot`/`gone`, version 1, newest-only at ≤ fps; tests: frames capped while running flat out, a non-reading viewer doesn't slow the run |
+| Explicit run state; safe control coordination; bounded inputs, paths and memory | `RunState` and `ALLOWED` (D-047); one-thread model (D-048); names not paths; ≤ 4 live runs; no queues |
+| Deterministic stepping through the API; sequence independent of the number of clients | Digest test: API-steered runs (steps, pauses, speeds, flat out) = headless runs, rule-based and neural |
+| `docs/API.md` and a usage script | [API.md](API.md) (coverage tested); `scripts/api_example.py` |
+| Tests: create/step/pause/resume/reset; invalid config; snapshot shape; two clients same state; disconnects; no unbounded queue growth; digest equal to headless after N ticks | `tests/api/test_app.py`, `test_runs.py`, `test_controls.py`, `test_stream.py` (including a real-uvicorn WebSocket test), `test_details.py` |
+| Learning: client/server, JSON schemas, async I/O, WebSocket vs HTTP, concurrency hazards, one authority | [curriculum.md](curriculum.md) 5.1–5.4 |
 
