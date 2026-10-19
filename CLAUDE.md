@@ -6,7 +6,9 @@ An artificial life research platform built incrementally as a teaching project. 
 
 ## Working rules
 
-- **Milestone gating:** never start a new milestone without explicit user approval. Current: Milestone 1 (The Petri Dish). Stop after each numbered increment (see docs/architecture.md, "Milestone 1 plan").
+- **Milestone gating:** never start a new milestone without explicit user approval. **Milestone 1 is complete; Milestone 2 has not been approved.** Propose a Milestone 2 plan and wait. Stop after each numbered increment.
+- **Experiments:** define each one in `docs/experiments/E00N-*.md` (question, hypotheses, metrics, analysis) and commit it *before* running. Append results; never edit the definition afterwards. Label post-hoc findings as exploratory.
+- **Exercises for the user:** always say where to look, give the method, and put the answer at the bottom. Flag judgment calls.
 - **Teaching loop for every substantial change:** problem → concept → proposed implementation → smallest useful increment → demonstrate → how to inspect/test → one small exercise → ask to proceed.
 - **New dependencies:** explain why, name alternatives, add it in the increment that first needs it. Record significant ones in docs/decision-log.md.
 - **Do not commit or push** unless the user asks.

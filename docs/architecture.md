@@ -1,6 +1,6 @@
 # Architecture
 
-Status: Milestone 1 design. Modules marked *(planned)* do not exist yet.
+Status: **Milestone 1 complete** (2026-10-18). Milestone 2 (genetics and evolution) not started; it needs the user's approval.
 
 ## Component map
 
@@ -155,4 +155,4 @@ One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one
 | 1.6 | Eating, tie rule, energy ledger | Tie rule; ledger balances | done |
 | 1.7 | Cloning, population cap, newborn delay | Newborns inactive on birth tick | done |
 | 1.8 | Metrics, CLI, CSV output | Identical files from repeated runs | done |
-| 1.9 | Benchmark, seeker-vs-random observation, docs | Numbers recorded | |
+| 1.9 | Benchmark, seeker-vs-random comparison (E001), docs | Numbers recorded | done |

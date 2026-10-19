@@ -2,7 +2,7 @@
 
 A local-first artificial life laboratory. Digital organisms live in a simulated 2D world, eat, reproduce and (from Milestone 2) evolve. Everything runs on your machine: no cloud services, no API keys.
 
-**Status:** Milestone 1 (The Petri Dish), increment 1.8: a running, deterministic ecosystem with recorded results. Organisms sense, decide, move, eat, reproduce (exact copies), and die, with every unit of energy accounted for. Populations level off at a size set by the food supply.
+**Status:** Milestone 1 (The Petri Dish) complete: a running, deterministic ecosystem with recorded results and a first controlled experiment ([E001](docs/experiments/E001-controller-comparison.md)). Organisms sense, decide, move, eat, reproduce (exact copies), and die, with every unit of energy accounted for. Populations level off at a size set by the food supply.
 
 A **tick** is one step of simulated time: every organism senses, acts and pays its energy costs once per tick.
 
@@ -15,6 +15,15 @@ uv run genesis run --help                           # every option
 ```
 
 Each run directory holds `run.json` (seed, config, code version, status), `ticks.csv` (one row per tick) and `organisms.csv` (one row per organism that ever lived). The same config and seed always produce identical CSV files.
+
+## Experiments and benchmarks
+
+```bash
+uv run python experiments/e001_controller_comparison.py   # E001: 20 runs, ~45 s
+uv run python experiments/benchmark.py                    # speed at population 30-1000
+```
+
+Experiment definitions and results: [docs/experiments/](docs/experiments/). Recorded benchmarks: [docs/benchmarks.md](docs/benchmarks.md).
 
 ## Configuration
 
@@ -49,7 +58,8 @@ uv run ruff format .       # auto-format
 ```text
 src/genesis/   the importable package (simulation, evolution, analytics, ...)
 tests/         automated tests (pytest)
-configs/       YAML run configurations (from increment 1.1)
+configs/       YAML run configurations
+experiments/   experiment and benchmark scripts
 docs/          architecture, decisions, curriculum, experiment methodology
 data/          generated run output (ignored by Git)
 ```

@@ -91,5 +91,20 @@ What has been covered, where it appears in the code, and what comes next.
 - **Test doubles:** `monkeypatch` replaces a method to simulate a failure.
 - **Genetic drift:** with identical organisms, 22 of 30 founder lineages died out by chance in 5000 ticks (seed 42).
 
-## Upcoming (Milestone 1)
-- Profiling and benchmarking (1.9)
+### 1.9 · Benchmarking and the first controlled experiment
+- **Benchmarking:** time repeated runs, report the best, and normalize (µs per organism-tick) so sizes can be compared.
+- **Profiling:** `cProfile` shows where time actually goes (here: n × m distance tables, ~75% at N = 1000). Measure before optimizing, and only optimize when it matters.
+- **Pre-registration:** write question, hypotheses, metrics and analysis *before* running, and commit them, so the history proves the order.
+- **Paired design:** the same seeds for both conditions; analyse per-seed differences.
+- **Sign counting:** 10 of 10 pairs in one direction has chance probability ≈ 0.002 if there is no real difference.
+- **Confirmatory vs exploratory:** results that test a stated hypothesis vs patterns noticed afterwards (which become new hypotheses).
+- **Separating fact from explanation:** "cost per tick differs" was measured; "because of walls" is a likely, untested reason.
+- **Censoring:** organisms still alive at the end have unknown lifespans; excluding them biases lifespan downward.
+
+## Milestone 1 complete
+
+## Future learning objectives
+- **Milestone 2:** mutation and heredity, variation vs selection vs drift, lineage trees, trait distributions.
+- **Milestone 3:** pandas, SQL with DuckDB, Parquet, significance tests and effect sizes with SciPy, batch experiment design.
+- **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.
+- **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

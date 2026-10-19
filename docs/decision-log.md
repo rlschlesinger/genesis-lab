@@ -60,6 +60,12 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-017 · No performance optimization in Milestone 1 (2026-10-18)
+
+**Decision:** keep the all-pairs distance calculations in sensing and feeding.
+**Why:** measured, not guessed (docs/benchmarks.md). A default run takes ~1 s; 1000 organisms runs at 140 ticks/s. The profile shows the two n × m distance computations take ~75% of the time at N = 1000, so that's where a future fix would go.
+**Revisit when:** an experiment needs populations of 1000+, or batch sizes make run time a bottleneck. Planned fix: a spatial index.
+
 ## D-015 · Run output format for Milestone 1 (2026-10-18)
 
 **Decision:** each run writes `run.json` + `ticks.csv` + `organisms.csv`, using only the standard library. run.json carries status (running → completed / failed) and provenance (git commit + dirty flag, versions, platform, full config). Files are written atomically (temp file + rename).
