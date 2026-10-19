@@ -55,6 +55,22 @@ So this brain turns 64% of its maximum turn to the left (positive is counter-clo
 
 Notice hidden unit 1: its two inputs cancelled out exactly, so it contributed nothing. With other inputs it would. That is what a hidden unit is: a feature that switches on for some combinations of inputs and not others.
 
+## What the brain is told
+
+The organism brain has 7 inputs, each scaled so it lies between −1 and 1 and is 0 when there is nothing to report ([`brain_inputs.py`](../src/genesis/intelligence/brain_inputs.py), D-040):
+
+| # | Input | Meaning |
+|---|---|---|
+| 0 | food_seen | 1 if any food is within sense range, else 0 |
+| 1 | food_ahead | cos(bearing to food): 1 straight ahead, −1 straight behind |
+| 2 | food_left | sin(bearing to food): 1 to the left, −1 to the right |
+| 3 | food_closeness | 1 touching the food, 0 at the edge of sight |
+| 4 | energy | energy as a fraction of the reproduction threshold (capped at 1) |
+| 5 | wall_ahead | 1 touching the wall straight ahead, 0 when it is out of sight |
+| 6 | noise | a fresh random number each tick |
+
+So "food slightly to the left, quite close, half full, no wall in sight" is roughly `[1, 0.97, 0.26, 0.7, 0.5, 0, noise]`.
+
 ## Counting parameters
 
 Every weight and bias is one number in the brain. For the organism brain:

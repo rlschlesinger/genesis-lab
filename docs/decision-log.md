@@ -60,6 +60,18 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-040 · The brain's seven inputs (2026-10-19)
+
+**Decision:** the input vector is, in order: food_seen (0/1), food_ahead = cos(bearing), food_left = sin(bearing), food_closeness = 1 − distance/sense range, energy = energy/reproduction threshold capped at 1, wall_ahead = 1 − (distance to the wall along the heading)/sense range clipped to [0, 1], and noise, uniform in [−1, 1], drawn from the controller stream. Food inputs are 0 when no food is in sight. Built by `intelligence/brain_inputs.py`; rule-based sensing is unchanged.
+**Why:**
+- **Normalised to [−1, 1], 0 = nothing to report:** no input can drown out the others by scale alone, and every weighted sum stays bounded (D-039).
+- **cos and sin, not the angle:** the bearing jumps from +π to −π directly behind; cos/sin change smoothly.
+- **A separate food_seen flag:** "no food" and "food exactly sideways" both have cos = 0; the flag tells them apart.
+- **Wall sensor:** hard walls (D-004) are the one obstacle in the world; without it a brain could not learn to avoid them. Measured against sense range so "close" means the same for walls and food.
+- **Noise:** the baselines wander randomly; a brain without randomness could only go straight or circle, an unfair handicap in E007. Its weights decide how much noise matters.
+- **Energy as a fraction of the threshold:** "how close to reproducing", meaningful whatever the threshold gene is.
+**Alternatives:** absolute heading and position (meaningless without a map, and would let brains memorise one world); several food targets (more inputs, slower evolution); distance-weighted food "smell" fields (more realistic, harder to inspect).
+
 ## D-039 · The organism brain: 7 inputs, 6 hidden, 2 outputs, one way of adding (2026-10-19)
 
 **Decision:** a fixed-topology feedforward network in NumPy: 7 inputs (designed in 4.2), one hidden layer of 6 tanh units, 2 outputs (turn via tanh, throttle via sigmoid), with separate bias vectors: 62 parameters. Parameters are stored as one flat vector in a fixed order (hidden weights row by row, hidden biases, output weights row by row, output biases). Inputs are clipped to [−1, 1]; NaN inputs raise. All weighted sums go through one function, `forward()`, written as multiply-then-`sum` over the last axis.

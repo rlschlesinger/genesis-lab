@@ -319,6 +319,13 @@ What has been covered, where it appears in the code, and what comes next.
 - **Floating-point order matters:** `@`, `einsum` and `sum` disagree in the last bit; one code path keeps results bit-identical.
 - **Selection vs backpropagation:** no gradient, no right answers; variation plus differential reproduction.
 
+### 4.2 · The sensor vector (`intelligence/brain_inputs.py`)
+- **Feature design:** a network can only react to what it is told; choosing inputs matters as much as the network.
+- **Normalisation:** every input scaled to [−1, 1] with 0 meaning "nothing", so no input dominates by scale alone.
+- **Encoding angles:** (cos, sin) instead of an angle that jumps at ±π.
+- **Ray casting:** distance to the first wall along a heading, from one division per wall.
+- **Property-based testing found a real edge case:** a heading whose sine is ~10⁻³⁰⁸ overflows the division; the answer (infinity) was right, the warning was not.
+
 ## Future learning objectives
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.
