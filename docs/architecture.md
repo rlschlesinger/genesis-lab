@@ -107,7 +107,7 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 - Living organisms stay in ascending id order; dead organisms move to `sim.dead` and keep their records.
 - Snapshot: all per-organism arrays are built once at the start of the tick, before anyone moves.
 - Survivors' `age` increments at step 9, so a death check in step 6 sees the age *before* this tick's increment.
-- `state_digest()`: SHA-256 over tick, food positions, and every organism's id/x/y/heading/energy/age/alive and genes. Equal digests mean bit-identical state.
+- `state_digest()`: SHA-256 over tick, food positions, and every organism's id/x/y/heading/energy/age/alive and genes. Equal digests mean bit-identical state. Digests are comparable only within one platform (CPU, OS, NumPy build): the last bits of `hypot`/`arctan2` results differ between platforms (D-027).
 
 ## Eating and energy accounting
 

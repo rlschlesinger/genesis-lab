@@ -108,6 +108,7 @@ What has been covered, where it appears in the code, and what comes next.
 ### 2.0 · Golden tests (`tests/test_regression.py`)
 - **Characterization tests:** record what the code *does* (a state digest) to catch accidental behaviour changes during refactors.
 - **Refactor vs behaviour change:** a refactor keeps every result identical; anything else must be a deliberate, logged decision.
+- **Floating-point is not portable:** `hypot` and `arctan2` can differ in the last bit between CPUs and operating systems, so a bit-for-bit digest is a per-platform value. Hashing only integer counts (who was born, who died, what was eaten) gives a check that holds everywhere (D-027).
 
 ### 2.1 · Genome (`evolution/genome.py`)
 - **Genotype vs phenotype:** the inherited information vs the expressed characteristics. `express()` is the mapping.
