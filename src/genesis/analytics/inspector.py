@@ -201,9 +201,11 @@ def _platform_note(recorded: tuple[str, str] | None) -> str | None:
 def _not_alive_reason(sim: Simulation, organism_id: int, tick: int, ids: list[int]) -> str:
     dead = next((o for o in sim.dead if o.id == organism_id), None)
     if dead is not None:
+        # Founders act from tick 0; a newborn first acts the tick after its birth.
+        first = dead.birth_tick if dead.parent_id is None else dead.birth_tick + 1
         return (
             f"organism {organism_id} died at tick {dead.death_tick} ({dead.death_cause}); "
-            f"choose a tick from {dead.birth_tick + 1} to {dead.death_tick}"
+            f"choose a tick from {first} to {dead.death_tick}"
         )
     if organism_id >= sim._next_id:  # IDs are handed out in order: not born yet
         return f"organism {organism_id} is born after tick {tick - 1}; choose a later tick"

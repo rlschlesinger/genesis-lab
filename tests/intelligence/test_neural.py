@@ -170,7 +170,7 @@ def test_stacked_forward_is_bit_identical_to_one_brain_at_a_time(n):
     brains = [random_brain(rng) for _ in range(n)]
     inputs = rng.uniform(-1, 1, size=(n, N_INPUTS))
     together = forward(BrainStack.of(brains), inputs)
-    for k in (0, n // 2, n - 1):
+    for k in range(n):  # every brain, not a sample: docs/neural-networks.md promises this
         alone = brains[k].forward(inputs[k])
         assert alone.hidden_sum.tobytes() == together.hidden_sum[k].tobytes()
         assert alone.outputs.tobytes() == together.outputs[k].tobytes()

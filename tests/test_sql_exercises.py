@@ -43,7 +43,17 @@ def test_answer_is_valid_sql_for_the_schema(number, query, _result, tmp_path):
 )
 @pytest.mark.parametrize(("number", "query", "result"), answers())
 def test_answer_still_gives_its_printed_result(number, query, result):
-    relation = connect(REAL_LAKE).sql(query)
+    con = connect(REAL_LAKE)
+    # A lake holding only some experiments (say, a fresh E007 re-run on another machine)
+    # would make every printed result wrong without anything having changed.
+    # An answer that names no experiment summarises them all, so it needs every experiment
+    # the document mentions.
+    named = set(re.findall(r"'(E\d{3})'", query))
+    needed = named or set(re.findall(r"\bE\d{3}\b", DOC.read_text()))
+    present = {row[0] for row in con.sql("SELECT DISTINCT experiment_id FROM runs").fetchall()}
+    if needed - present:
+        pytest.skip(f"answer {number} needs {sorted(needed - present)}, not in this lake")
+    relation = con.sql(query)
     assert format_table(relation.columns, relation.fetchall()) == result, (
         f"answer {number} no longer matches the document: the lake or the code changed. "
         "Run scripts/build_sql_exercises.py and check the answer notes still hold."

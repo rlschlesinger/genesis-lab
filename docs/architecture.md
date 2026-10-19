@@ -9,12 +9,13 @@ configs/default.yaml ──► core/config.py (Pydantic) ──► SimulationCon
                                                             │
 cli.py ──► core/simulation.py ──owns──► World       (core/world.py: bounds, food positions)
                 │                 ├──► Organisms   (core/organism.py: state, Genome, Traits)
-                │                 └──► RNG streams {setup, food, controller, reproduction, tiebreak, mutation}
+                │                 └──► RNG streams {setup, food, controller, reproduction, tiebreak, mutation, brain}
                 │
            tick():
              1 world.regrow_food(rng.food)
              2 observations = sense(snapshot)          every organism sees the same frozen world
              3 actions = controller.decide(obs, rng.controller)
+               (neural: obs + body senses + the living organisms' brains → think(), D-042)
              4 apply movement, clamp to walls
              5 eat (closest pairs first, rng.tiebreak), then pay energy costs; ledger records flows
              6 process deaths
@@ -69,7 +70,7 @@ The API (Milestone 5) will drive the same `Simulation` object as the CLI.
 
 ## Configuration
 
-`load_config(path)` → `SimulationConfig` with sections `run`, `world`, `food`, `organisms`, `genome`. Models forbid unknown keys and are frozen. Cross-field rules:
+`load_config(path)` → `SimulationConfig` with sections `run`, `world`, `food`, `organisms`, `genome`, `mutation`, `recording` (optional, defaults) and `brain` (optional; required by `controller: neural`, omitted from the dump when absent so older config hashes are unchanged). Models forbid unknown keys and are frozen. Cross-field rules:
 
 - `food.initial_count <= food.max_count`
 - `organisms.initial_count <= organisms.max_population`
@@ -120,7 +121,7 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 - Living organisms stay in ascending id order; dead organisms move to `sim.dead` and keep their records.
 - Snapshot: all per-organism arrays are built once at the start of the tick, before anyone moves. From then on the tick works on arrays (costs via `costs.living_costs`, payments via `organism.spend_all`, deaths and reproduction eligibility as array comparisons) and writes results back to the organisms; the `Organism` objects remain the only lasting state, so code and tests may still set `org.x` or `org.energy` directly (D-038).
 - Survivors' `age` increments at step 9, so a death check in step 6 sees the age *before* this tick's increment.
-- `state_digest()`: SHA-256 over tick, food positions, and every organism's id/x/y/heading/energy/age/alive and genes. Equal digests mean bit-identical state. Digests are comparable only within one platform (CPU, OS, NumPy build): the last bits of `hypot`/`arctan2` results differ between platforms (D-027).
+- `state_digest()`: SHA-256 over tick, food positions, and every organism's id/x/y/heading/energy/age/alive and genes, plus its 62 brain weights when it has a brain. Equal digests mean bit-identical state. Digests are comparable only within one platform (CPU, OS, NumPy build): the last bits of `hypot`/`arctan2` results differ between platforms (D-027).
 
 ## Eating and energy accounting
 
@@ -155,6 +156,9 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 <out>/gene_stats.csv one row per (tick, gene): n, mean, sd (population), min, max; tidy format
 <out>/genomes.csv    every living genome every recording.genome_snapshot_every ticks (default 50) + final tick
 <out>/events.csv     optional births/deaths/meals (recording.events); header only by default
+<out>/behaviour.csv  one row per recorded tick: n, seeing_food, toward_food, mean_turn, mean_throttle,
+                     weight_sd, weight_drift (brain columns empty without brains; D-043)
+<out>/brains.csv     one row per organism with a brain: its 62 weights by name (header only without brains)
 ```
 
 - Default `<out>` is `data/runs/<run_id>`; run IDs look like `20261018T235501Z-s42-a1b2c3`.
@@ -164,7 +168,7 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 - **Retention:** every tick, organism and mutation; per-tick gene statistics; full genomes sampled every 50 ticks. A 20,000-tick evolution run is ~16 MB (gene_stats.csv 10 MB). No meal/death event logs.
 - Recording policy lives in `RunRecorder` (analytics), not the simulation; tests confirm recording never changes results.
 - `recording.ticks_every` samples ticks.csv and gene_stats.csv; flow columns are summed between rows (D-028). The simulation always fills `events_this_tick`; the recorder keeps the kinds listed in `recording.events`.
-- run.json (schema version 3) also records `condition`, `schema_version`, `config_hash` (SHA-256 of the canonical config, seed included), `ticks_every`, `events_recorded`; `ticks_run` counts ticks simulated, not rows written.
+- run.json (schema version 4 since Milestone 4; 3 added these fields) also records `condition`, `schema_version`, `config_hash` (SHA-256 of the canonical config, seed included), `ticks_every`, `events_recorded`; `ticks_run` counts ticks simulated, not rows written.
 - **Lineage:** `founder_id` is inherited; `lineages` counts distinct founder IDs alive.
 
 ## Mutation
@@ -354,7 +358,7 @@ Scope: [roadmap/04A](roadmap/04A_NEURAL_BRAINS.md) and [roadmap/04B](roadmap/04B
 | 4.4 | `controller: neural` in the tick; `configs/neural.yaml` | Rule-based runs byte-identical; ledger balances | done |
 | 4.5 | Recording: brains at birth, behaviour summaries; schema v4; lake tables; report charts | Lake checks; recount | done |
 | 4.6 | `genesis inspect`: inputs → hidden → outputs → action → state for one organism and tick | Replay = original run | done |
-| 4.7 | Pre-register E007: random vs seeker vs evolved brains, train/evaluation seed groups; neural golden values (Darwin done; Linux pending) | Smoke runs on throwaway seeds | done |
+| 4.7 | Pre-register E007: random vs seeker vs evolved brains, train/evaluation seed groups; neural golden values (Darwin arm64; Linux x86_64 added in the post-milestone review) | Smoke runs on throwaway seeds | done |
 | 4.8 | Run E007 and report | Results appended to the definition | done |
 | 4.9 | Wrap-up: docs, scope check; stop before Milestone 5 | | done |
 
@@ -391,4 +395,4 @@ Chunk 04A's checklist is above. Chunk 04B:
 | Comparison report with uncertainty and an unembellished conclusion | [E007 results](experiments/E007-neuroevolution.md): H12 reported as inconclusive although the difference is "significant" |
 | Rule-based runs still work, unchanged | Golden values; byte-identical CSVs against `main` after every increment |
 
-Open item: Linux x86_64 neural golden values (D-045) await a Linux session.
+Linux x86_64 neural golden values were recorded in the post-milestone review (D-045): the event digest matched the Mac's, the state digest is platform-specific as for rule-based runs (D-027). The same review re-ran E007 on Linux: every verdict agreed (H11 supported, H12 inconclusive, H13 equivalent, H14 lower cost per meal) although the numbers differ beyond the last bits, as expected when 20,000-tick runs diverge from last-bit differences.
