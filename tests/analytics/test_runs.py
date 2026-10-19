@@ -8,7 +8,7 @@ import pytest
 
 from genesis.analytics.metrics import ORGANISM_FIELDS, TICK_FIELDS, organism_rows
 from genesis.analytics.runs import VOLATILE_FIELDS, execute_run
-from genesis.core.config import load_config, with_overrides
+from genesis.core.config import SimulationConfig, load_config, with_overrides
 from genesis.core.energy import EnergyLedgerError
 from genesis.core.simulation import Simulation
 
@@ -127,3 +127,23 @@ def test_organism_rows_cover_everyone_in_id_order(config):
     assert [r["id"] for r in rows] == sorted(o.id for o in [*sim.organisms, *sim.dead])
     dead_row = next(r for r in rows if not r["alive"])
     assert dead_row["death_cause"] in {"starvation", "old_age"}
+
+
+def test_mutations_csv_and_gene_columns(tmp_path):
+    raw = load_config(DEFAULT_CONFIG).model_dump()
+    raw["run"]["max_ticks"] = 600
+    raw["mutation"].update(enabled=True, rate=0.3, size=0.1)
+    execute_run(SimulationConfig.model_validate(raw), tmp_path)
+    mutations = read_csv(tmp_path / "mutations.csv")
+    organisms = {int(r["id"]): r for r in read_csv(tmp_path / "organisms.csv")}
+    assert list(mutations[0]) == ["tick", "parent_id", "child_id", "gene", "before", "after"]
+    # A genome only changes at birth, so each mutation's "after" is the child's gene value.
+    for m in mutations:
+        assert float(organisms[int(m["child_id"])][f"gene_{m['gene']}"]) == float(m["after"])
+    meta = json.loads((tmp_path / "run.json").read_text())
+    assert meta["mutations"] == len(mutations)
+
+
+def test_mutations_csv_is_header_only_when_mutation_is_off(config, tmp_path):
+    execute_run(config, tmp_path)
+    assert (tmp_path / "mutations.csv").read_text() == "tick,parent_id,child_id,gene,before,after\n"

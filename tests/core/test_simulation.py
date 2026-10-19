@@ -389,3 +389,81 @@ def test_adding_the_mutation_stream_left_earlier_streams_unchanged():
                            old_children, strict=True):  # fmt: skip
         expected = np.random.default_rng(child).uniform(size=3)
         np.testing.assert_array_equal(getattr(new, name).uniform(size=3), expected)
+
+
+# --- Inheritance with mutation ------------------------------------------------------------
+
+MUTATING = {"mutation.enabled": True, "mutation.rate": 0.3, "mutation.size": 0.1}
+
+
+@pytest.fixture(scope="module")
+def mutated_run():
+    """One 1500-tick run with frequent mutation, shared by the lineage tests (it's slow-ish)."""
+    sim = Simulation(make_config(**MUTATING, **{"run.max_ticks": 1500}))
+    summaries = sim.run()
+    return sim, summaries
+
+
+def test_lineage_integrity_every_genome_is_parent_plus_recorded_changes(mutated_run):
+    # The core inheritance guarantee: for EVERY organism that ever lived, its genome equals its
+    # parent's genome with exactly the logged changes applied, and nothing else.
+    sim, _ = mutated_run
+    everyone = {o.id: o for o in [*sim.organisms, *sim.dead]}
+    changes_by_child: dict[int, list] = {}
+    for event in sim.mutation_log:
+        changes_by_child.setdefault(event.child_id, []).append(event)
+
+    initial = Genome.from_config(sim.config.genome)
+    for org in everyone.values():
+        if org.parent_id is None:
+            assert org.genome == initial
+            assert org.id not in changes_by_child
+            continue
+        parent = everyone[org.parent_id]
+        events = changes_by_child.get(org.id, [])
+        for e in events:
+            assert e.parent_id == parent.id and e.tick == org.birth_tick
+            assert e.before == getattr(parent.genome, e.gene)
+        expected = parent.genome.as_dict() | {e.gene: e.after for e in events}
+        assert org.genome.as_dict() == expected
+        assert org.traits == express(org.genome)
+
+
+def test_mutation_creates_variation_within_bounds(mutated_run):
+    sim, _ = mutated_run
+    genomes = {o.genome for o in [*sim.organisms, *sim.dead]}
+    assert len(genomes) > 100  # many distinct genomes, not just the founders'
+    for org in [*sim.organisms, *sim.dead]:
+        for name, value in org.genome.as_dict().items():
+            bounds = getattr(sim.config.genome, name)
+            assert bounds.min <= value <= bounds.max
+
+
+def test_mutation_counts_in_summaries_match_the_log(mutated_run):
+    sim, summaries = mutated_run
+    assert sum(s.mutations for s in summaries) == len(sim.mutation_log) > 0
+
+
+def test_ledger_and_determinism_hold_with_mutation():
+    a = Simulation(make_config(**MUTATING, **{"run.max_ticks": 800}))
+    b = Simulation(make_config(**MUTATING, **{"run.max_ticks": 800}))
+    a.run()  # step() checks the energy ledger every tick
+    b.run()
+    assert a.state_digest() == b.state_digest()
+    assert a.mutation_log == b.mutation_log
+
+
+def test_digest_sees_a_difference_in_an_unexpressed_gene():
+    a, b = Simulation(make_config()), Simulation(make_config())
+    org = b.organisms[0]
+    org.genome = Genome(**(org.genome.as_dict() | {"neutral_marker": 0.51}))
+    assert a.state_digest() != b.state_digest()
+
+
+def test_frozen_genes_stay_fixed_in_a_full_run():
+    changes = {"genome.speed.mutable": False, "genome.sense_range.mutable": False}
+    sim = Simulation(make_config(**MUTATING, **changes, **{"run.max_ticks": 800}))
+    sim.run()
+    assert {o.genome.speed for o in [*sim.organisms, *sim.dead]} == {1.5}
+    assert {o.genome.sense_range for o in [*sim.organisms, *sim.dead]} == {20.0}
+    assert not any(e.gene in ("speed", "sense_range") for e in sim.mutation_log)

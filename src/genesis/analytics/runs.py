@@ -7,7 +7,8 @@ Output directory layout:
 
     run.json        provenance and status (written first, updated at the end)
     ticks.csv       one row per tick (TickSummary)
-    organisms.csv   one row per organism that ever lived
+    organisms.csv   one row per organism that ever lived (genes and traits)
+    mutations.csv   one row per gene change at a birth (empty when mutation is off)
 
 Retention policy (spec section 9): every tick and every organism is recorded. At default
 settings that is ~5,000 tick rows and ~1,500 organism rows (well under 1 MB). Per-event
@@ -23,13 +24,21 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from genesis.analytics.metrics import ORGANISM_FIELDS, TICK_FIELDS, organism_rows, tick_row
+from genesis.analytics.metrics import (
+    MUTATION_FIELDS,
+    ORGANISM_FIELDS,
+    TICK_FIELDS,
+    mutation_rows,
+    organism_rows,
+    tick_row,
+)
 from genesis.analytics.provenance import environment, git_info
 from genesis.analytics.storage import write_csv, write_json
 from genesis.core.config import SimulationConfig
 from genesis.core.simulation import Simulation, TickSummary
 
 RUN_FILE, TICKS_FILE, ORGANISMS_FILE = "run.json", "ticks.csv", "organisms.csv"
+MUTATIONS_FILE = "mutations.csv"
 
 # run.json fields that legitimately differ between two otherwise identical runs.
 VOLATILE_FIELDS = {"run_id", "started_at", "finished_at", "duration_seconds"}
@@ -114,6 +123,7 @@ def execute_run(
 
     write_csv(out_dir / TICKS_FILE, TICK_FIELDS, (tick_row(s) for s in summaries))
     write_csv(out_dir / ORGANISMS_FILE, ORGANISM_FIELDS, organism_rows(sim))
+    write_csv(out_dir / MUTATIONS_FILE, MUTATION_FIELDS, mutation_rows(sim))
 
     stop_reason = "extinction" if not sim.organisms else "max_ticks"
     digest = sim.state_digest()
@@ -125,6 +135,7 @@ def execute_run(
         stop_reason=stop_reason,
         final_population=len(sim.organisms),
         organisms_ever=len(sim.organisms) + len(sim.dead),
+        mutations=len(sim.mutation_log),
         final_state_digest=digest,
     )
     write_json(run_path, meta)

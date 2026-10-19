@@ -60,6 +60,12 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-020 · Genes in the state digest; how golden values were updated (2026-10-18)
+
+**Decision:** `state_digest()` now includes every organism's genes.
+**Why:** an unexpressed gene (the neutral marker) never affects behaviour, so two runs differing only there would otherwise get identical digests forever.
+**Procedure (to keep the golden tests anchored to E001):** first wire mutation in and confirm the *old* golden digests still match with mutation off (behaviour unchanged); only then change the digest definition and record new golden values. The chain is documented in tests/test_regression.py. Digests in run.json files from before this change aren't comparable with later ones.
+
 ## D-019 · Mutation rule (2026-10-18)
 
 **Decision:** per gene, per birth: mutate with probability `rate`; step ~ Normal(0, `size × range`); reflect at the bounds. Every birth makes the same number of draws from a dedicated `mutation` stream (appended last). Per-gene `mutable` flag. Disabled by default.

@@ -29,6 +29,7 @@ from genesis.core.movement import move
 from genesis.core.organism import Organism
 from genesis.core.world import World
 from genesis.evolution.genome import Genome, express
+from genesis.evolution.mutation import mutate
 from genesis.evolution.reproduction import place_offspring, select_parents
 from genesis.intelligence.controllers import make_controller
 from genesis.intelligence.sensors import sense_food
@@ -74,6 +75,19 @@ class TickSummary:
     food_eaten: int
     mean_energy: float  # NaN when the population is empty: "no value", not zero
     lineages: int  # distinct founder lineages still alive
+    mutations: int  # gene changes in this tick's newborns
+
+
+@dataclass(frozen=True, slots=True)
+class MutationEvent:
+    """One gene change at one birth: the record that makes every genome traceable."""
+
+    tick: int
+    parent_id: int
+    child_id: int
+    gene: str
+    before: float
+    after: float
 
 
 class Simulation:
@@ -94,6 +108,8 @@ class Simulation:
         self.organisms: list[Organism] = self._make_founders()
         # Dead organisms are kept, not deleted: their lifetime records are experiment data.
         self.dead: list[Organism] = []
+        # Every gene change at every birth, in the order they happened.
+        self.mutation_log: list[MutationEvent] = []
         # Opened after founders and initial food exist: they make up the starting stock.
         self.ledger = EnergyLedger(initial_stock=self.energy_stock())
 
@@ -213,7 +229,9 @@ class Simulation:
 
         # 7. Reproduction. Only survivors are candidates, and newborns are added after them,
         #    so a newborn cannot act or reproduce in the tick it was born.
+        logged_before = len(self.mutation_log)
         newborns = self._reproduce(survivors)
+        mutations_this_tick = len(self.mutation_log) - logged_before
         self.organisms = survivors + newborns  # still ascending ID order: new IDs are larger
 
         # 8. Check conservation, then record. A failed check raises EnergyLedgerError.
@@ -233,6 +251,7 @@ class Simulation:
             mean_energy=(
                 float(np.mean([o.energy for o in population])) if population else math.nan
             ),
+            mutations=mutations_this_tick,
         )
 
         # 9. Advance time. Newborns stay at age 0: they have not lived through a tick yet.
@@ -262,17 +281,30 @@ class Simulation:
             parent.pay_for_offspring(cfg.offspring_energy, cfg.reproduction_overhead)
             # The transfer stays inside the organism account; only the overhead leaves.
             self.ledger.reproduction_overhead += cfg.reproduction_overhead
+
+            # Inheritance. With mutation disabled, mutate() returns the parent's own genome
+            # and draws nothing, which is exactly Milestone 1's behaviour.
+            genome, changes = mutate(
+                parent.genome, self.config.genome, self.config.mutation, self.rng.mutation
+            )
+            # Unchanged genome: reuse the parent's traits (identical, and frozen).
+            traits = parent.traits if genome is parent.genome else express(genome)
+            child_id = self._new_id()
+            for change in changes:
+                self.mutation_log.append(
+                    MutationEvent(
+                        self.tick, parent.id, child_id, change.gene, change.before, change.after
+                    )
+                )
             newborns.append(
                 Organism(
-                    id=self._new_id(),
+                    id=child_id,
                     parent_id=parent.id,
                     founder_id=parent.founder_id,
                     generation=parent.generation + 1,
                     birth_tick=self.tick,
-                    # Exact copy of the genome (mutation arrives in increment 2.2). Genome and
-                    # Traits are frozen, so sharing them between parent and child is safe.
-                    genome=parent.genome,
-                    traits=parent.traits,
+                    genome=genome,
+                    traits=traits,
                     x=float(x),
                     y=float(y),
                     heading=float(heading),
@@ -292,16 +324,20 @@ class Simulation:
         """A SHA-256 fingerprint of the full simulation state.
 
         Two simulations have the same digest only if every food position and every organism's
-        id, position, heading, energy, age and alive status match bit for bit. Used to check
-        determinism, and later recorded in run metadata.
+        id, position, heading, energy, age, alive status and genes match bit for bit. Used to
+        check determinism, and recorded in run metadata.
+
+        Genes are included because some never affect behaviour: two runs differing only in a
+        neutral marker would otherwise look identical forever.
         """
         h = hashlib.sha256()
         h.update(np.int64(self.tick).tobytes())
         h.update(np.ascontiguousarray(self.world.food.positions).tobytes())
         for org in [*self.organisms, *self.dead]:
+            genes = list(org.genome.as_dict().values())
             h.update(
                 np.array(
-                    [org.id, org.x, org.y, org.heading, org.energy, org.age, org.alive],
+                    [org.id, org.x, org.y, org.heading, org.energy, org.age, org.alive, *genes],
                     dtype=np.float64,
                 ).tobytes()
             )

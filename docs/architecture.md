@@ -102,7 +102,7 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 - Living organisms stay in ascending id order; dead organisms move to `sim.dead` and keep their records.
 - Snapshot: all per-organism arrays are built once at the start of the tick, before anyone moves.
 - Survivors' `age` increments at step 9, so a death check in step 6 sees the age *before* this tick's increment.
-- `state_digest()`: SHA-256 over tick, food positions, and every organism's id/x/y/heading/energy/age/alive. Equal digests mean bit-identical state.
+- `state_digest()`: SHA-256 over tick, food positions, and every organism's id/x/y/heading/energy/age/alive and genes. Equal digests mean bit-identical state.
 
 ## Eating and energy accounting
 
@@ -131,8 +131,9 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 <out>/run.json       run_id, experiment_id, status (running→completed|failed), seed, full config,
                      git {commit, dirty}, environment, ticks_run, stop_reason, final_state_digest
 <out>/ticks.csv      one row per TickSummary (tick, population, births, deaths, food_count,
-                     food_spawned, food_eaten, mean_energy, lineages)
-<out>/organisms.csv  one row per organism ever: lineage, birth/death, lifetime totals, trait_* columns
+                     food_spawned, food_eaten, mean_energy, lineages, mutations)
+<out>/organisms.csv  one row per organism ever: lineage, birth/death, lifetime totals, gene_* and trait_* columns
+<out>/mutations.csv  one row per gene change at a birth (header only when mutation is off)
 ```
 
 - Default `<out>` is `data/runs/<run_id>`; run IDs look like `20261018T235501Z-s42-a1b2c3`.
@@ -148,6 +149,8 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 - Per birth, per gene: mutate if `uniform < rate` and the gene is mutable; step ~ Normal(0, `size × (max − min)`); result reflected into `[min, max]`.
 - Two vectorized draws per birth (6 uniforms, 6 normals) whatever the outcome; none at all when disabled.
 - Returns the child genome and a `GeneChange(gene, before, after)` for each changed gene. The parent's genome is never modified.
+- **Inheritance (step 7):** child genome = `mutate(parent.genome)`, traits = `express(genome)` (the parent's traits are reused when nothing changed). Each change is appended to `sim.mutation_log` as a `MutationEvent(tick, parent_id, child_id, gene, before, after)`.
+- **Lineage integrity** (tested over every organism in a run): genome = parent's genome + exactly the logged changes.
 
 ## Randomness
 
@@ -177,7 +180,7 @@ Decisions: trade-off costs for sense range and speed; metabolic rate as a cost-f
 | 2.0 | Golden digests lock in Milestone 1 behaviour | Default run unchanged | done |
 | 2.1 | Genome: gene definitions, bounds, expression to traits | Bounds validated; Milestone 1 unchanged | done |
 | 2.2 | Mutation: per-gene rate and size, reflection, own RNG stream, off switch | In bounds; no pile-up; off = exact copy | done |
-| 2.3 | Inheritance wired in; `mutations.csv`; gene columns | Child = parent + recorded changes | |
+| 2.3 | Inheritance wired in; `mutations.csv`; gene columns | Child = parent + recorded changes | done |
 | 2.4 | Trade-off costs; positive control and neutral marker | Ledger balances; defaults = Milestone 1 | |
 | 2.5 | Trait statistics per tick; genome snapshots | Matches a recount from raw data | |
 | 2.6 | `genesis report`: Plotly HTML trait charts | Built from recorded files | |

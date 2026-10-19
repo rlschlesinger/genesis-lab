@@ -10,13 +10,20 @@ from __future__ import annotations
 from dataclasses import asdict, fields
 
 from genesis.core.organism import Organism, Traits
-from genesis.core.simulation import Simulation, TickSummary
+from genesis.core.simulation import MutationEvent, Simulation, TickSummary
+from genesis.evolution.genome import gene_names
 
 TICK_FIELDS: list[str] = [f.name for f in fields(TickSummary)]
 
 # Traits are flattened into prefixed columns (trait_speed, ...), so the organism table stays
 # one value per cell. Adding a trait to Traits adds a column automatically.
 TRAIT_FIELDS: list[str] = [f"trait_{f.name}" for f in fields(Traits)]
+
+# Genotype columns (gene_*) sit beside phenotype columns (trait_*). They agree for expressed
+# genes; gene_neutral_marker has no trait column because it is never expressed.
+GENE_FIELDS: list[str] = [f"gene_{name}" for name in gene_names()]
+
+MUTATION_FIELDS: list[str] = [f.name for f in fields(MutationEvent)]
 
 ORGANISM_FIELDS: list[str] = [
     "id",
@@ -34,6 +41,7 @@ ORGANISM_FIELDS: list[str] = [
     "energy_spent",
     "energy_invested",
     "offspring_count",
+    *GENE_FIELDS,
     *TRAIT_FIELDS,
 ]
 
@@ -61,6 +69,7 @@ def organism_row(org: Organism) -> dict:
         "energy_invested": org.energy_invested,
         "offspring_count": org.offspring_count,
     }
+    row.update({f"gene_{name}": value for name, value in org.genome.as_dict().items()})
     row.update({f"trait_{name}": value for name, value in asdict(org.traits).items()})
     return row
 
@@ -69,3 +78,8 @@ def organism_rows(sim: Simulation) -> list[dict]:
     """One row per organism that ever lived, living and dead, in ascending ID order."""
     everyone = sorted([*sim.organisms, *sim.dead], key=lambda o: o.id)
     return [organism_row(o) for o in everyone]
+
+
+def mutation_rows(sim: Simulation) -> list[dict]:
+    """One row per gene change, in the order the mutations happened."""
+    return [asdict(event) for event in sim.mutation_log]

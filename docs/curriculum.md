@@ -125,6 +125,15 @@ What has been covered, where it appears in the code, and what comes next.
 - **Frozen genes as experimental control:** letting only one gene vary isolates its effect.
 - **Testing randomness:** check rates and spreads against their expected values, with tolerances from the standard error.
 
+### 2.3 · Inheritance (`core/simulation.py` step 7, `mutations.csv`)
+- **Heredity:** children carry their parent's genome, with occasional mutations.
+- **Event logs:** recording every change makes every genome reconstructable, and makes the integrity test possible.
+- **Invariant tests over whole runs:** check a property (genome = parent + logged changes) for *every* organism, not a sample.
+- **Updating golden tests responsibly:** prove behaviour is unchanged under the old definition before changing the definition.
+- **Fingerprints need complete state:** leaving out anything that can differ (like an unexpressed gene) makes "identical" claims unreliable.
+- **Selective sweeps and hitchhiking:** when one family takes over, every gene it carries rises with it, neutral ones included (seed-42 demo: neutral marker sd only 0.031).
+- **Observation vs adaptation:** directional change in one unreplicated run, without trade-offs or a drift comparison, isn't evidence of adaptation.
+
 
 ## Future learning objectives
 - **Milestone 2:** mutation and heredity, variation vs selection vs drift, lineage trees, trait distributions.
