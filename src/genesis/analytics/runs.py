@@ -7,12 +7,15 @@ Output directory layout:
 
     run.json        provenance and status (written first, updated at the end)
     ticks.csv       one row per tick (TickSummary)
+    gene_stats.csv  one row per (tick, gene): n, mean, sd, min, max of the living population
+    genomes.csv     every living genome, every recording.genome_snapshot_every ticks + final
     organisms.csv   one row per organism that ever lived (genes and traits)
-    mutations.csv   one row per gene change at a birth (empty when mutation is off)
+    mutations.csv   one row per gene change at a birth (header only when mutation is off)
 
-Retention policy (spec section 9): every tick and every organism is recorded. At default
-settings that is ~5,000 tick rows and ~1,500 organism rows (well under 1 MB). Per-event
-logs (each birth, meal, death) are not recorded in Milestone 1.
+Retention policy (spec section 9): every tick, every organism and every mutation is recorded;
+full genomes are sampled (default every 50 ticks). Measured for a 20,000-tick evolution run
+(seed 42): gene_stats.csv 10 MB (120,000 rows), genomes.csv 3.8 MB, all files ~16 MB.
+Other per-event logs (each meal, each death) are not recorded.
 """
 
 from __future__ import annotations
@@ -30,15 +33,16 @@ from genesis.analytics.metrics import (
     TICK_FIELDS,
     mutation_rows,
     organism_rows,
-    tick_row,
 )
 from genesis.analytics.provenance import environment, git_info
+from genesis.analytics.recorder import GENE_STAT_FIELDS, GENOME_SNAPSHOT_FIELDS, RunRecorder
 from genesis.analytics.storage import write_csv, write_json
 from genesis.core.config import SimulationConfig
 from genesis.core.simulation import Simulation, TickSummary
 
 RUN_FILE, TICKS_FILE, ORGANISMS_FILE = "run.json", "ticks.csv", "organisms.csv"
 MUTATIONS_FILE = "mutations.csv"
+GENE_STATS_FILE, GENOMES_FILE = "gene_stats.csv", "genomes.csv"
 
 # run.json fields that legitimately differ between two otherwise identical runs.
 VOLATILE_FIELDS = {"run_id", "started_at", "finished_at", "duration_seconds"}
@@ -103,11 +107,11 @@ def execute_run(
 
     started = time.perf_counter()
     sim = Simulation(config)
-    summaries: list[TickSummary] = []
+    recorder = RunRecorder(config.recording.genome_snapshot_every)
     try:
         while not sim.finished:
             summary = sim.step()
-            summaries.append(summary)
+            recorder.observe(sim, summary)
             if on_tick is not None:
                 on_tick(summary)
     except Exception as exc:
@@ -121,7 +125,9 @@ def execute_run(
         write_json(run_path, meta)
         raise
 
-    write_csv(out_dir / TICKS_FILE, TICK_FIELDS, (tick_row(s) for s in summaries))
+    write_csv(out_dir / TICKS_FILE, TICK_FIELDS, recorder.ticks)
+    write_csv(out_dir / GENE_STATS_FILE, GENE_STAT_FIELDS, recorder.gene_stats)
+    write_csv(out_dir / GENOMES_FILE, GENOME_SNAPSHOT_FIELDS, recorder.genomes)
     write_csv(out_dir / ORGANISMS_FILE, ORGANISM_FIELDS, organism_rows(sim))
     write_csv(out_dir / MUTATIONS_FILE, MUTATION_FIELDS, mutation_rows(sim))
 
@@ -131,7 +137,7 @@ def execute_run(
         status="completed",
         finished_at=_now(),
         duration_seconds=round(time.perf_counter() - started, 3),
-        ticks_run=len(summaries),
+        ticks_run=len(recorder.ticks),
         stop_reason=stop_reason,
         final_population=len(sim.organisms),
         organisms_ever=len(sim.organisms) + len(sim.dead),
@@ -139,7 +145,8 @@ def execute_run(
         final_state_digest=digest,
     )
     write_json(run_path, meta)
-    return RunResult(run_id, out_dir, len(summaries), stop_reason, len(sim.organisms), digest)
+    ticks_run = len(recorder.ticks)
+    return RunResult(run_id, out_dir, ticks_run, stop_reason, len(sim.organisms), digest)
 
 
 def _now() -> str:

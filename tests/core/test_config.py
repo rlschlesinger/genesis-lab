@@ -216,3 +216,14 @@ def test_negative_costs_rejected(raw, field):
     raw["organisms"][field] = -0.1
     with pytest.raises(pydantic.ValidationError, match=field):
         validate(raw)
+
+
+def test_snapshot_interval_must_be_positive(raw):
+    raw["recording"]["genome_snapshot_every"] = 0
+    with pytest.raises(pydantic.ValidationError, match="genome_snapshot_every"):
+        validate(raw)
+
+
+def test_recording_section_is_optional(raw):
+    del raw["recording"]
+    assert validate(raw).recording.genome_snapshot_every == 50

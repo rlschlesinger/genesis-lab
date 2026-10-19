@@ -60,6 +60,12 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-022 · Trait statistics and genome snapshots (2026-10-18)
+
+**Decision:** a `RunRecorder` in analytics writes `gene_stats.csv` (tidy: tick, gene, n, mean, population sd, min, max, every tick) and `genomes.csv` (every living genome every `recording.genome_snapshot_every` ticks, default 50, plus the final tick).
+**Why:** trends need every tick; distributions need individual values, which would be ~2.6M numbers per run at every tick. Tidy format suits pandas, DuckDB and Plotly. Keeping recording out of `Simulation` keeps the core free of I/O policy.
+**Measured cost:** ~16 MB per 20,000-tick run (10 MB of it gene_stats.csv). Revisit (sample stats every k ticks, or Parquet in Milestone 3) if batches grow large.
+
 ## D-021 · Trade-off costs and the evolution config (2026-10-18)
 
 **Decision:** a sensing upkeep (`sense_cost_per_unit × sense_range` per tick) and drag on movement (`× (speed / founder speed) ^ exponent`). Metabolic rate stays cost-free as the positive control. `max_turn` is frozen in `evolution.yaml` because turning has no cost and would be a second free lunch. Evolution settings live in `configs/evolution.yaml`, a full copy of `default.yaml` with a test restricting the differences.

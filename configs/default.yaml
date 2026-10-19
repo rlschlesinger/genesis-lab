@@ -49,3 +49,7 @@ mutation:
   enabled: false
   rate: 0.1     # probability that each gene mutates at a birth
   size: 0.05    # standard deviation of a change, as a fraction of the gene's (max - min)
+
+# What a recorded run saves (never changes results, only what is kept).
+recording:
+  genome_snapshot_every: 50   # ticks between full-genome snapshots (genomes.csv)

@@ -14,7 +14,7 @@ uv run genesis run --seed 7 --ticks 2000 --out data/runs/try-seed-7
 uv run genesis run --help                           # every option
 ```
 
-Each run directory holds `run.json` (seed, config, code version, status), `ticks.csv` (one row per tick) and `organisms.csv` (one row per organism that ever lived). The same config and seed always produce identical CSV files.
+Each run directory holds `run.json` (seed, config, code version, status), `ticks.csv` (one row per tick), `gene_stats.csv` (gene mean/spread per tick), `genomes.csv` (genome snapshots), `organisms.csv` (one row per organism that ever lived) and `mutations.csv` (every gene change). The same config and seed always produce identical CSV files.
 
 ## Experiments and benchmarks
 

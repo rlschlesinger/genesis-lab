@@ -143,6 +143,16 @@ What has been covered, where it appears in the code, and what comes next.
 - **Config copies with a guard test:** a test lists exactly which settings may differ.
 - **Fresh seeds:** don't test a hypothesis on the data that suggested it.
 
+### 2.5 · Trait statistics (`analytics/recorder.py`)
+- **Describing distributions:** mean (centre), standard deviation (spread), min/max (extremes).
+- **Population vs sample sd:** divide by n to describe exactly these organisms; divide by n − 1 to estimate a larger group's spread.
+- **Tidy (long) data:** one observation per row; variable names as values, not column names.
+- **Sampling for storage:** summaries every tick, full detail at intervals.
+- **Recount tests:** derived statistics must be reproducible from the raw data they summarize.
+- **Observer pattern:** the recorder watches the simulation and never changes it (a test proves the digest is unaffected).
+- **Time series reveal timing:** the positive control's drop happened between ticks 1000 and 5000; a final value can't show when selection acted.
+- **Check estimates against measurements:** "a few MB" was really 16 MB.
+
 
 ## Future learning objectives
 - **Milestone 2:** mutation and heredity, variation vs selection vs drift, lineage trees, trait distributions.

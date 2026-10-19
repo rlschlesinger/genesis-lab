@@ -45,6 +45,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `analytics/metrics.py` | Flat rows: `tick_row`, `organism_rows`; column lists | Mutate state |
 | `analytics/storage.py` | Byte-stable CSV/JSON writers, atomic replace | Know about simulations |
 | `analytics/provenance.py` | Git commit/dirty flag, versions, platform | |
+| `analytics/recorder.py` | `RunRecorder.observe(sim, summary)` after each tick: tick rows, gene stats, genome snapshots | Change the simulation |
 | `analytics/runs.py` | `execute_run`: simulate + write run.json/ticks.csv/organisms.csv with status | |
 | `cli.py` | `genesis run` arguments → `execute_run`; exit codes 0/1/2 | Contain logic |
 
@@ -135,13 +136,16 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
                      food_spawned, food_eaten, mean_energy, lineages, mutations)
 <out>/organisms.csv  one row per organism ever: lineage, birth/death, lifetime totals, gene_* and trait_* columns
 <out>/mutations.csv  one row per gene change at a birth (header only when mutation is off)
+<out>/gene_stats.csv one row per (tick, gene): n, mean, sd (population), min, max; tidy format
+<out>/genomes.csv    every living genome every recording.genome_snapshot_every ticks (default 50) + final tick
 ```
 
 - Default `<out>` is `data/runs/<run_id>`; run IDs look like `20261018T235501Z-s42-a1b2c3`.
 - `run.json` is written before simulating and rewritten at the end; a failed run records `failed_at_tick` and `error` and writes no CSVs.
 - CSVs use fixed columns, `\n` line endings, shortest exact float form, so identical runs give byte-identical files. Only `VOLATILE_FIELDS` (run_id, timestamps, duration) differ in run.json.
 - Existing non-empty output directories are refused unless `--overwrite`.
-- **Retention:** every tick and every organism (~200 KB + ~130 KB at defaults). No per-event logs in Milestone 1.
+- **Retention:** every tick, organism and mutation; per-tick gene statistics; full genomes sampled every 50 ticks. A 20,000-tick evolution run is ~16 MB (gene_stats.csv 10 MB). No meal/death event logs.
+- Recording policy lives in `RunRecorder` (analytics), not the simulation; a test confirms recording never changes results.
 - **Lineage:** `founder_id` is inherited; `lineages` counts distinct founder IDs alive.
 
 ## Mutation
@@ -195,7 +199,7 @@ Decisions: trade-off costs for sense range and speed; metabolic rate as a cost-f
 | 2.2 | Mutation: per-gene rate and size, reflection, own RNG stream, off switch | In bounds; no pile-up; off = exact copy | done |
 | 2.3 | Inheritance wired in; `mutations.csv`; gene columns | Child = parent + recorded changes | done |
 | 2.4 | Trade-off costs; positive control and neutral marker | Ledger balances; defaults = Milestone 1 | done |
-| 2.5 | Trait statistics per tick; genome snapshots | Matches a recount from raw data | |
+| 2.5 | Trait statistics per tick; genome snapshots | Matches a recount from raw data | done |
 | 2.6 | `genesis report`: Plotly HTML trait charts | Built from recorded files | |
 | 2.7 | Permutation and sign tests | Known cases | |
 | 2.8 | E002 (machinery and controls), E003 (food scarcity), pre-registered | Reported against the drift baseline | |

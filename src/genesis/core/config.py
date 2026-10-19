@@ -151,6 +151,17 @@ class MutationConfig(_Strict):
     )
 
 
+class RecordingConfig(_Strict):
+    """What a recorded run saves beyond the per-tick summaries (genesis.analytics.recorder).
+
+    Not part of the simulation itself: changing it never changes results, only what is kept.
+    """
+
+    genome_snapshot_every: PositiveInt = Field(
+        default=50, description="Ticks between snapshots of every living genome (genomes.csv)."
+    )
+
+
 class SimulationConfig(_Strict):
     run: RunConfig
     world: WorldConfig
@@ -158,6 +169,7 @@ class SimulationConfig(_Strict):
     organisms: OrganismConfig
     genome: GenomeConfig
     mutation: MutationConfig
+    recording: RecordingConfig = RecordingConfig()
 
     @model_validator(mode="after")
     def _reproduction_affordable(self) -> Self:

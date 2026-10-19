@@ -67,7 +67,9 @@ def test_csv_values_round_trip_exactly(config, tmp_path):
 def test_identical_runs_give_byte_identical_results(config, tmp_path):
     execute_run(config, tmp_path / "a")
     execute_run(config, tmp_path / "b")
-    for name in ["ticks.csv", "organisms.csv"]:
+    names = sorted(p.name for p in (tmp_path / "a").glob("*.csv"))
+    assert names == ["gene_stats.csv", "genomes.csv", "mutations.csv", "organisms.csv", "ticks.csv"]
+    for name in names:
         assert (tmp_path / "a" / name).read_bytes() == (tmp_path / "b" / name).read_bytes()
     meta_a = json.loads((tmp_path / "a" / "run.json").read_text())
     meta_b = json.loads((tmp_path / "b" / "run.json").read_text())
