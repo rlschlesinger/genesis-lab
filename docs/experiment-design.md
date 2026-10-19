@@ -23,6 +23,12 @@ Formal experiments live in [experiments/](experiments/), one file per experiment
 
 - **H3 · Neutral drift.** With identical organisms, founder lineages are lost at random. Observed (seed 42, defaults): 30 → 22 at tick 1000 → 8 at tick 4999. Needs replicates to establish the typical rate and spread; this becomes the null model for Milestone 2's selection experiments.
 
+## Results so far (Milestone 2)
+
+- **E002:** machinery check passed; positive control detected (metabolic_rate, 20/20 seeds); selection raised speed (18/20) and reproduction_threshold relative to drift; no detectable selection on sense_range with plentiful food.
+- **E003:** scarcity raised selected sense_range relative to drift (H7a, adjusted p = 0.031; weakest confirmed result, worth replicating); no detectable interaction for speed, threshold, or metabolic rate. Its plentiful arm replicated E002 on new seeds.
+- **Leads for future pre-registered tests:** (1) selected speed ≈ the energy-per-distance optimum (~2.05); vary the drag exponent and predict the shift. (2) Replicate H7a with more seeds and several scarcity levels. (3) E001's lineage-retention lead.
+
 ## Statistical tests (genesis.analytics.significance)
 
 - **Paired designs** (shared seeds): `paired_permutation_test` on per-seed differences (uses sizes); `sign_test` (direction only, robust to outliers). Exact for ≤ 16 pairs; otherwise sampled with a seeded generator and the +1 correction.

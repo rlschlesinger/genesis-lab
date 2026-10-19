@@ -183,6 +183,14 @@ What has been covered, where it appears in the code, and what comes next.
 - **Smoke tests:** run the full pipeline on throwaway inputs to test the code without peeking at results.
 - **Predicting null results honestly:** a floor effect (metabolic rate near 0.02) can hide real effects; a non-significant result isn't evidence of no effect.
 
+### 2.8b · Running the experiments
+- **When a run fails mid-experiment:** reproduce, find the root cause, fix, record a protocol deviation *before* any results, and re-run everything from one commit.
+- **Floating-point accumulation:** adding small numbers one by one to a huge total loses precision; sum exactly per batch (`math.fsum`) and scale tolerances to what has flowed through.
+- **Positive control success:** the method detected the known effect in 20/20 seeds, so the other results can be trusted to mean something.
+- **Tests that disagree:** permutation (uses sizes) vs sign (direction only); report both, decide by the one pre-registered.
+- **Replication:** E003's control arm reproduced E002 on new seeds, the strongest kind of evidence available here.
+- **Correcting yourself in writing:** earlier claims about drift were wrong in size; the record says so.
+
 
 ## Future learning objectives
 - **Milestone 2:** mutation and heredity, variation vs selection vs drift, lineage trees, trait distributions.

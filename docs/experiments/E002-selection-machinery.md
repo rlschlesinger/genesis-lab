@@ -55,3 +55,39 @@ Under drift with reflection, a gene's mean moves toward the middle of its own ra
 ### Protocol deviation (recorded before any results)
 
 The first attempt, at the pre-registration commit `13a1561`, stopped with `EnergyLedgerError` before producing any results (E002: tick 13,820 of seed 1000 in the *off* condition; E003: tick 17,476). The cause was floating-point drift in the ledger's running totals, not an accounting error. It was fixed at commit `609c39b` (decision D-026). Simulation behaviour is unchanged (the ledger isn't part of the state; the golden regression tests pass). **No hypothesis, metric, seed, condition, window or analysis was changed, and no partial output was analysed.** All runs were re-executed from the commit that adds this note.
+
+### Run
+
+Commit `fb169c5` (clean; all 60 runs `dirty: false`), Python 3.12.13, NumPy 2.5.4, arm64 macOS. 60/60 runs completed 20,000 ticks; no extinctions, no pairs dropped. Raw files in `data/experiments/E002/` (not in Git; regenerate with `uv run python experiments/e002_selection_machinery.py`, re-analyse with `--analyse-only`).
+
+### Checks
+
+- **C1 (machinery): PASS.** 20/20 *off* runs: every genome equal to the founders', zero mutations recorded.
+- **C2 (calibration): PASS.** neutral_marker selection − neutral: 9/11 split, permutation p = 0.55.
+- **C3 (drift expectation):** neutral runs whose mean moved toward its range midpoint: metabolic_rate 9/20, speed 12/20, sense_range 7/20, reproduction_threshold 12/20. (neutral_marker 0/20 is uninformative: it starts at its midpoint, so it can't move closer. That's a flaw in how C3 was worded.) **Drift moved means little over 20,000 ticks:** neutral medians stayed near the founders' values (metabolic_rate 0.199, speed 1.54, sense_range 19.2, reproduction_threshold 82.0).
+
+### Hypotheses: settled means, ticks 19,000–19,999
+
+| | gene | neutral median | selection median | median S − N (of range) | +/− | sign p | permutation p | Holm-adjusted | verdict |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---|
+| H6a | metabolic_rate | 0.199 | 0.037 | −0.160 (−33.2%) | 0/20 | 1.9e-6 | ≤ 5e-5* | 0.0002 | **supported** (lower, as predicted) |
+| H6b | speed | 1.54 | 2.03 | +0.61 (+16.3%) | 18/2 | 0.0004 | ≤ 5e-5* | 0.0002 | **supported** (higher) |
+| H6c | sense_range | 19.19 | 19.95 | +1.09 (+1.8%) | 12/8 | 0.50 | 0.78 | 0.78 | not supported |
+| H6d | reproduction_threshold | 82.0 | 91.1 | +11.7 (+6.0%) | 14/6 | 0.12 | 0.0056 | 0.011 | **supported** (higher) |
+
+\* None of the 20,000 sampled sign patterns was as extreme; with the +1 correction, 1/20,001 ≈ 5e-5 is the smallest value this analysis can report.
+
+### Interpretation
+
+- **The positive control worked:** the cost-free gene evolved in the predicted direction in every seed, against no drift trend. The method can detect selection.
+- **Selection favoured faster organisms (18/20)** and **higher reproduction thresholds**. The threshold result rests on the pre-registered permutation test; the sign test alone (14/20) would not reach significance, so a few seeds with large differences carry it.
+- **Sense range:** no detectable selection relative to drift. Not evidence that none exists.
+- **Observation, not a tested prediction:** the selected speed (median 2.03) is close to the speed that minimises energy per unit distance under these costs (~2.05, increment 2.4 exercise). Testing that link needs its own pre-registered experiment (for example, varying the drag exponent and predicting the shift).
+
+### Corrections to earlier statements
+
+- D-025 and increment 2.4–2.5 commentary suggested drift would pull reproduction_threshold strongly upward (toward 152) and that selection might be holding it down. Over 20,000 ticks, drift moved it only from 80 to ~82, and selection raised it relative to drift. The neutral twin remains the right control; it showed the drift effect was small.
+
+### Limits observed
+
+Settled population: neutral median 89 (85–93), selection median 102 (58–177). Similar depth of ancestry (median maximum generation 72 vs 70.5). The size difference means drift strength wasn't identical between conditions; the effects above are large relative to the neutral marker's spread, so this is unlikely to explain them, but it isn't formally excluded.

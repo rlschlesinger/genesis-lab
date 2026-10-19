@@ -57,3 +57,43 @@ A non-zero interaction means scarcity changes what selection does, after removin
 ### Protocol deviation (recorded before any results)
 
 The first attempt, at the pre-registration commit `13a1561`, stopped with `EnergyLedgerError` before producing any results (E002: tick 13,820 of seed 1000 in the *off* condition; E003: tick 17,476). The cause was floating-point drift in the ledger's running totals, not an accounting error. It was fixed at commit `609c39b` (decision D-026). Simulation behaviour is unchanged (the ledger isn't part of the state; the golden regression tests pass). **No hypothesis, metric, seed, condition, window or analysis was changed, and no partial output was analysed.** All runs were re-executed from the commit that adds this note.
+
+### Run
+
+Commit `fb169c5` (clean; all 80 runs `dirty: false`), Python 3.12.13, NumPy 2.5.4, arm64 macOS. 80/80 runs completed 20,000 ticks; no extinctions; 20/20 seeds usable. Raw files in `data/experiments/E003/` (regenerate with `uv run python experiments/e003_food_scarcity.py`, re-analyse with `--analyse-only`).
+
+### Settled values (median over seeds, ticks 19,000–19,999)
+
+| gene | S_plenty | N_plenty | S_scarce | N_scarce |
+|---|---:|---:|---:|---:|
+| sense_range | 19.80 | 20.31 | **26.40** | 20.46 |
+| speed | 2.05 | 1.49 | 2.32 | 1.55 |
+| reproduction_threshold | 94.3 | 86.0 | 98.0 | 85.1 |
+| metabolic_rate | 0.035 | 0.201 | 0.039 | 0.217 |
+| neutral_marker | 0.524 | 0.511 | 0.503 | 0.522 |
+| *population* | *100 (60–155)* | *89 (85–93)* | *40 (26–70)* | *45 (44–46)* |
+
+### Hypotheses: interaction = (S_scarce − N_scarce) − (S_plenty − N_plenty)
+
+| | gene | median interaction | range | +/− | sign p | permutation p | Holm-adjusted | verdict |
+|---|---|---:|---|---:|---:|---:|---:|---|
+| H7a | sense_range | +5.12 | −10.5 to +22.7 | 14/6 | 0.12 | 0.0077 | 0.031 | **supported** (positive, as predicted) |
+| H7b | speed | +0.37 | −1.31 to +1.51 | 13/7 | 0.26 | 0.16 | 0.47 | not supported |
+| H7c | reproduction_threshold | −11.5 | −53.6 to +33.6 | 9/11 | 0.82 | 0.36 | 0.71 | not supported |
+| H7d | metabolic_rate | −0.014 | −0.17 to +0.14 | 9/11 | 0.82 | 0.51 | 0.71 | no interaction detected (as predicted; floor effect) |
+
+**Calibration:** neutral_marker interaction p = 0.34: PASS.
+
+### Interpretation
+
+- **Scarcity changes what selection does to sense range:** with scarce food, selection settles it ~6 units above its drift baseline; with plentiful food, it shows no detectable selection (E002 and this experiment agree). This matches the pre-registered reasoning (seeing farther is worth more when food is sparse), though the experiment shows *that* it happens, not *why*.
+- **How strong is it?** The weakest of the confirmed results. It passes the pre-registered test (adjusted p = 0.031), but the sign test alone (14/6) wouldn't, and per-seed interactions vary widely. It isn't one outlier: without the largest value the median is still +4.7, with 13/19 positive. **It should be replicated before being built on.**
+- **No detectable interaction for speed, threshold, or metabolic rate.** For metabolic rate this was predicted (both food levels sit near the 0.02 floor), so it says nothing about whether scarcity would matter without the floor.
+
+### Independent replication of E002 (descriptive; not a pre-registered test)
+
+The plentiful-food arm here is E002's design on 20 new seeds. Selection − neutral directions: metabolic_rate 0/20 (E002: 0/20), speed 17/3 (18/2), reproduction_threshold 14/6 (14/6), sense_range 12/8 (12/8), with similar sizes (e.g. speed +0.72 vs +0.61). E002's findings reproduce.
+
+### Limits observed
+
+Scarce populations are small (S_scarce median 40, as low as 26), so drift is stronger there; the neutral twin at the same food level is what controls for this. One scarcity level; one cost setting.

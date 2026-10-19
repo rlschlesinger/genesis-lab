@@ -216,5 +216,5 @@ Decisions: trade-off costs for sense range and speed; metabolic rate as a cost-f
 | 2.6 | `genesis report`: Plotly HTML trait charts | Built from recorded files | done |
 | 2.7 | Permutation and sign tests | Known cases | done |
 | 2.8a | Neutral-twin control; E002 + E003 pre-registered; experiment helpers | Smoke runs on throwaway seeds | done |
-| 2.8b | Run E002 + E003 and report (after review) | Results appended to definitions | |
+| 2.8b | Run E002 + E003 and report (after review) | Results appended to definitions | done |
 | 2.9 | Docs, curriculum, push, stop for review | | |

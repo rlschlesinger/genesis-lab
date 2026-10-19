@@ -2,7 +2,7 @@
 
 A local-first artificial life laboratory. Digital organisms live in a simulated 2D world, eat, reproduce and (from Milestone 2) evolve. Everything runs on your machine: no cloud services, no API keys.
 
-**Status:** Milestone 1 (The Petri Dish) complete: a running, deterministic ecosystem with recorded results and a first controlled experiment ([E001](docs/experiments/E001-controller-comparison.md)). Organisms sense, decide, move, eat, reproduce (exact copies), and die, with every unit of energy accounted for. Populations level off at a size set by the food supply.
+**Status:** Milestone 2 (Genetics and Evolution) experiments complete: heritable genomes with mutation, trade-off costs, per-tick trait statistics, HTML reports, and three pre-registered experiments ([E001](docs/experiments/E001-controller-comparison.md), [E002](docs/experiments/E002-selection-machinery.md), [E003](docs/experiments/E003-food-scarcity.md)). Organisms sense, decide, move, eat, reproduce (exact copies), and die, with every unit of energy accounted for. Populations level off at a size set by the food supply.
 
 A **tick** is one step of simulated time: every organism senses, acts and pays its energy costs once per tick.
 
