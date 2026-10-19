@@ -102,7 +102,7 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 ## Simulation loop
 
 - `Simulation(config)` builds streams, world, controller and founders (ids `0..n-1`, generation 0).
-- `step()` runs one tick and returns a `TickSummary` (tick, population, deaths, food_count, food_spawned, mean_energy). Population and energy are end-of-tick values; `mean_energy` is NaN for an empty population.
+- `step()` runs one tick and returns a `TickSummary` (tick, population, births, deaths, food_count, food_spawned, food_eaten, mean_energy, lineages, mutations). Population and energy are end-of-tick values; `mean_energy` is NaN for an empty population.
 - `run()` steps until `max_ticks`, or extinction if `stop_on_extinction`.
 - Living organisms stay in ascending id order; dead organisms move to `sim.dead` and keep their records.
 - Snapshot: all per-organism arrays are built once at the start of the tick, before anyone moves.

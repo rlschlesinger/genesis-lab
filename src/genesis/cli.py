@@ -1,7 +1,8 @@
-"""Command-line interface: ``genesis run ...``.
+"""Command-line interface: ``genesis run ...`` and ``genesis report ...``.
 
-Deliberately thin: it parses arguments, calls ``execute_run``, and reports. All behaviour
-lives in the library, so batch experiments and the API can do anything the CLI can.
+Deliberately thin: it parses arguments, calls ``execute_run`` or ``write_report``, and
+reports. All behaviour lives in the library, so batch experiments and the API can do anything
+the CLI can.
 
 Exit codes: 0 success, 1 the run failed while simulating, 2 bad input (arguments, config,
 output directory).

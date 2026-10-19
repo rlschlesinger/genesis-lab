@@ -1,7 +1,8 @@
 """Reproduction: choosing who reproduces this tick, and where offspring appear (tick step 7).
 
-Milestone 1 reproduction is asexual and exact: a child copies its parent's traits. Mutation
-arrives in Milestone 2 and will live in this package.
+Reproduction is asexual: one parent, one child. What the child inherits is decided by
+``genesis.evolution.mutation`` (an exact copy when mutation is off); this module only decides
+*who* reproduces and *where* the child appears.
 
 Both functions are pure. They take a random generator (the run's *reproduction* stream) and
 return results without touching organisms; the simulation applies them.
