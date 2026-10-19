@@ -123,8 +123,8 @@ uv run ruff format .       # auto-format
 
 ```text
 src/genesis/core/          world, food, organisms, movement, feeding, costs, energy ledger, simulation
-src/genesis/intelligence/  sensing and controllers
-src/genesis/evolution/     genome, mutation, reproduction
+src/genesis/intelligence/  sensing, controllers, the neural brain and its inputs
+src/genesis/evolution/     genome, mutation, reproduction, brains as genes
 src/genesis/analytics/     run recording, provenance, experiments, significance tests
 src/genesis/report/        HTML run reports
 src/genesis/lake/          ETL into the Parquet lake, DuckDB views, exports

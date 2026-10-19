@@ -78,6 +78,7 @@ Each entry records a decision, why it was made, and what would make us revisit i
 - Golden values for `configs/neural.yaml` (seed 42, 1,000 ticks): Darwin arm64 state and event digests recorded. The event test runs only where confirmed (`NEURAL_EVENTS_CONFIRMED`): unlike the rule-based runs, neural runs depend on `tanh` from the platform's maths library, so cross-platform event agreement is not assumed. Linux x86_64 values are to be recorded in a Linux session.
 **Why:** E007's evaluation must run brains evolved elsewhere, reproducibly and identifiably; a file reference would leave the config hash blind to the brains. Per-condition seeds keep one spec (and one batch run, resumable and parallel) for the whole evaluation. Golden values lock E007's code before it runs.
 **Alternatives:** a path to a brains file in the config (hash doesn't cover the content); one spec per evaluation world (dozens of files); assuming neural event digests are portable (untested).
+**Linux outcome (2026-10-19, post-milestone review):** on Linux x86_64 (NumPy 2.5.4, commit 5bfe976) the neural event digest equals the Mac's, so one event value holds on both platforms and Linux was added to `NEURAL_EVENTS_CONFIRMED`; the Linux state digest was recorded alongside the Mac's. E007 re-run on Linux gives different numbers beyond the last bits (e.g. evolved − seeker +0.0021 instead of +0.0024, 21 instead of 23 of 24 worlds ahead) but the same four verdicts; the Mac results in the definition stand.
 
 ## D-044 · Inspecting a decision by replay (2026-10-19)
 
