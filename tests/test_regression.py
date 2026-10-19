@@ -15,10 +15,13 @@ There are two kinds of golden value, because floating-point bits are not portabl
   systems, so these values hold only on the platform they were recorded on. The test runs
   on recorded platforms and is skipped elsewhere.
 * **Event digests** (``GOLDEN_EVENTS``) hash only the integer counts in every tick summary:
-  population, births, deaths, food counts, meals, lineages, mutations. A last-bit difference
-  in a position doesn't change who ate or who died, so these values hold on every platform
-  (verified: E001's per-run metrics reproduce exactly on arm64 macOS and x86_64 Linux).
-  This test always runs.
+  population, births, deaths, food counts, meals, lineages, mutations. In the runs checked
+  so far (this test's 1,000 ticks; E001's 5,000-tick metrics on arm64 macOS and x86_64
+  Linux), last-bit differences didn't change who ate or who died, so these values hold on
+  both platforms. That is observed, not guaranteed: the simulation is sensitive to small
+  differences, so over long runs a last-bit difference could eventually flip a close call
+  (an organism right at the eat radius), and long runs such as E002/E003's 20,000 ticks may
+  not reproduce event for event on another platform. This test always runs.
 
 If the state test fails but the event test passes, only the low bits of some floats changed:
 a platform or library difference, not a change in what happened. If the event test fails,
