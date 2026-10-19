@@ -1,0 +1,19 @@
+# E002 · Selection machinery and the positive control. Definition and results:
+# docs/experiments/E002-selection-machinery.md
+experiment_id: E002
+title: Does the evolution machinery work, and can selection be detected?
+definition: docs/experiments/E002-selection-machinery.md
+base_config: configs/evolution.yaml
+seeds: {first: 1000, count: 20}
+conditions:
+  - label: "off"          # quoted: YAML would otherwise read a bare off as false
+    changes: {mutation.enabled: false}
+  - label: neutral        # every gene inherited and mutating, but without effect (D-025)
+    changes:
+      genome.speed.neutral: true
+      genome.sense_range.neutral: true
+      genome.max_turn.neutral: true
+      genome.metabolic_rate.neutral: true
+      genome.reproduction_threshold.neutral: true
+  - label: selection
+    changes: {}

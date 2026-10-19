@@ -48,6 +48,8 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `analytics/recorder.py` | `RunRecorder.observe(sim, summary)` after each tick: tick rows, gene stats, genome snapshots | Change the simulation |
 | `analytics/significance.py` | Sign test, paired and two-group permutation tests (exact or seeded sampling), Holm correction | Use per-organism data as replicates |
 | `analytics/experiments.py` | Conditions (dotted config changes), `run_condition`, `settled_gene_means`, `paired`, `genomes_never_changed` | Decide hypotheses |
+| `analytics/spec.py` | `ExperimentSpec` (experiments/specs/*.yaml): base config, conditions, seeds; validates every run's config on load | Run anything |
+| `analytics/batch.py` | `plan`, `task_status` (missing/completed/stale/incomplete), `run_experiment` (process pool, resume, ingest) | |
 | `analytics/runs.py` | `execute_run`: simulate + write run.json/ticks.csv/organisms.csv with status | |
 | `report/` | `genesis report`: `data.py` (load run folder, downsample), `theme.py` (design tokens), `figures.py` (charts), `render.py` + `template.html` + `report.css` | Run simulations; read anything outside the run folder |
 | `lake/` | ETL: `tables.py` (data dictionary as Arrow schemas), `ingest.py` (extract, transform, load), `validate.py` (the five checks) | Modify run folders |
@@ -196,6 +198,15 @@ Founders pay exactly the Milestone 1 movement price at any exponent. Defaults re
 - Back-fill 2026-10-19: 165 runs, 25.2 M rows, 206 MB (from ~1.94 GB of CSV), 8.7 s.
 - **SQL** (`genesis sql "..."`, or `genesis.lake.db.connect()` in Python): views read `data/lake/<table>/*.parquet` directly and are created on every connect (instant, always current). A table with no files yet gets a typed empty view. `genesis lake rebuild-db` writes the same views to `data/genesis.duckdb` (absolute paths) for other tools. Examples: [sql-examples.md](sql-examples.md), each executed by the tests.
 
+## Experiments as files (`genesis experiment run|status SPEC`)
+
+- `experiments/specs/E00N.yaml`: `experiment_id`, `title`, `definition` (the pre-registered document), `base_config`, optional `base_changes`, `seeds` (list or `{first, count}`), `conditions` (label + dotted config changes), optional `output` (default `data/experiments/<id>`).
+- Loading builds and validates every run's config first; a typo anywhere fails before any run starts.
+- Each (condition, seed) writes `<output>/<label>-s<seed>/`. Status: **completed** (same config hash) is skipped; **stale** (completed with a different config) stops the batch unless `--rerun-stale`; **missing/incomplete** runs.
+- Runs execute in worker processes (default: cores − 1); tasks are sent as plain config data. Order and worker count don't affect results (byte-identical test; 12 runs: 17.5 s on 1 worker, 2.6 s on 13).
+- Results are ingested into the lake afterwards (`--no-ingest` to skip).
+- E001–E003 have spec files; their existing runs show as **stale** because configs gained fields since (recording settings; for E001 the whole genome section). Their configs otherwise match the specs exactly (checked).
+
 ## Randomness
 
 One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`, `mutation` (added in 2.2; a test checks the first five are unchanged). New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
@@ -264,7 +275,7 @@ Decisions: Parquet files are the source of truth with DuckDB views over them; ru
 | 3.1 | Tick sampling, optional event log, schema version, condition, config hash in run.json | Defaults give identical results | done |
 | 3.2 | ETL: run folder → Parquet with validation; back-fill E001–E003 | Rows and values match the CSVs | done |
 | 3.3 | DuckDB views; `genesis sql`; join and lineage examples | SQL = independent Python from the CSVs (pandas arrives in 3.5) | done |
-| 3.4 | Batch runner: experiment file → parallel, resumable runs | Parallel = sequential, byte for byte | |
+| 3.4 | Batch runner: experiment file → parallel, resumable runs | Parallel = sequential, byte for byte | done |
 | 3.5 | pandas + SciPy analysis: descriptive stats, bootstrap/Wilson CIs, effect sizes; cross-check hand-written tests | Known answers | |
 | 3.6 | Experiment dashboards: individual runs vs aggregates | Built from the database | |
 | 3.7 | Export to CSV/Parquet; reload and re-analyse | Round trip | |

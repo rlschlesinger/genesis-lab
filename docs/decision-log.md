@@ -60,6 +60,13 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-031 · Experiment spec files and a parallel, resumable runner (2026-10-19)
+
+**Decision:** experiments are YAML spec files run by `genesis experiment run`; runs execute in a process pool; completed runs with the same config hash are skipped; completed runs with a different hash ("stale") stop the batch unless `--rerun-stale`.
+**Why:** one runner instead of a script per experiment; parallelism cuts wall time ~7× on this machine with byte-identical results; resume makes interruptions cheap; refusing stale runs prevents silently mixing two versions of an experiment. Processes, not threads: Python runs one thread of Python code at a time (the GIL), so threads wouldn't speed up CPU-bound simulation.
+**Consequence:** a config field added later (even one that doesn't affect results, like recording settings) makes older runs stale. That is deliberate: "same config" is checked literally, never by judgement.
+**Alternatives:** threads (no speed-up here); a job queue or workflow tool (Snakemake, Prefect: more infrastructure than one machine needs); comparing configs ignoring "result-neutral" fields (needs a judgement call per field, easy to get wrong).
+
 ## D-030 · DuckDB views created on connect (2026-10-19)
 
 **Decision:** `connect()` returns an in-memory DuckDB connection and defines every view each time (a view per lake table, derived views, a table macro, and an `experiments` table built from the experiment documents and git history). A database file is optional (`genesis lake rebuild-db`) and uses absolute paths.

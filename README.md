@@ -76,7 +76,8 @@ Each experiment is defined (question, hypotheses, seeds, analysis) and committed
 | [E003](docs/experiments/E003-food-scarcity.md) | Does food scarcity change selection? | It raised selected sense range (adjusted p = 0.031; worth replicating); its control arm reproduced E002 |
 
 ```bash
-uv run python experiments/e002_selection_machinery.py                 # 60 runs, ~8 min
+uv run genesis experiment status experiments/specs/E002.yaml          # which runs exist / are stale
+uv run genesis experiment run experiments/specs/E00N.yaml             # parallel, resumable, loads the lake
 uv run python experiments/e002_selection_machinery.py --analyse-only  # re-analyse saved runs
 uv run python experiments/benchmark.py                                # speed at population 30-1000
 ```

@@ -1,0 +1,12 @@
+# E001 · Nearest-food seeker vs random walk (Milestone 1). Definition and results:
+# docs/experiments/E001-controller-comparison.md
+experiment_id: E001
+title: Nearest-food seeker vs random walk
+definition: docs/experiments/E001-controller-comparison.md
+base_config: configs/default.yaml
+seeds: {first: 0, count: 10}
+conditions:
+  - label: random_walk
+    changes: {organisms.controller: random_walk}
+  - label: nearest_food_seeker
+    changes: {organisms.controller: nearest_food_seeker}

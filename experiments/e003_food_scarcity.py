@@ -14,55 +14,50 @@ from pathlib import Path
 
 import numpy as np
 
+from genesis.analytics.batch import run_experiment
 from genesis.analytics.experiments import (
-    Condition,
-    apply_changes,
-    run_condition,
     run_dir_for,
     settled_gene_means,
 )
 from genesis.analytics.significance import holm, paired_permutation_test, sign_test
-from genesis.core.config import load_config
+from genesis.analytics.spec import load_spec
 
 EXPERIMENT_ID = "E003"
 ROOT = Path(__file__).parents[1]
 GENES = ["sense_range", "speed", "reproduction_threshold", "metabolic_rate"]  # H7a-H7d
 PREDICTED_SIGN = {"sense_range": +1}  # H7a; the others have no predicted direction
-NEUTRALIZE = {f"genome.{g}.neutral": True for g in [*GENES, "max_turn"]}
-SCARCE = {"food.regrowth_per_tick": 1.0}
-CONDITIONS = {
-    "S_plenty": Condition("S_plenty", {}),
-    "N_plenty": Condition("N_plenty", NEUTRALIZE),
-    "S_scarce": Condition("S_scarce", SCARCE),
-    "N_scarce": Condition("N_scarce", {**SCARCE, **NEUTRALIZE}),
-}
+SPEC = load_spec(ROOT / "experiments" / "specs" / "E003.yaml")
+CONDITIONS = {c.label: SPEC.condition(c.label) for c in SPEC.conditions}
 
 
 def settings(smoke: bool) -> dict:
+    """Seeds, conditions and output come from the spec file (the single definition)."""
+    spec = SPEC
+    window, samples = (19_000, 19_999), 20_000
     if smoke:
-        return dict(
-            seeds=range(9100, 9102),
-            ticks=600,
-            window=(500, 599),
-            samples=500,
-            out=ROOT / "data" / "experiments" / "E003-smoke",
+        spec = SPEC.model_copy(
+            update={
+                "seeds": [9100, 9101],
+                "base_changes": {**SPEC.base_changes, "run.max_ticks": 600},
+                "output": "data/experiments/E003-smoke",
+            }
         )
+        window, samples = (500, 599), 500
     return dict(
-        seeds=range(2000, 2020),
-        ticks=20_000,
-        window=(19_000, 19_999),
-        samples=20_000,
-        out=ROOT / "data" / "experiments" / EXPERIMENT_ID,
+        spec=spec,
+        seeds=spec.seed_list(),
+        window=window,
+        samples=samples,
+        out=spec.output_dir(),
+        ingest=not smoke,
     )
 
 
-def run(s: dict) -> None:
-    base = apply_changes(
-        load_config(ROOT / "configs" / "evolution.yaml"), {"run.max_ticks": s["ticks"]}
-    )
-    for condition in CONDITIONS.values():
-        print(f"running {condition.label} x {len(s['seeds'])} seeds ...", flush=True)
-        run_condition(base, condition, s["seeds"], s["out"], EXPERIMENT_ID)
+def run(s: dict, rerun_stale: bool) -> None:
+    print(f"running {len(s['seeds'])} seeds x {len(CONDITIONS)} conditions in parallel ...")
+    outcomes = run_experiment(s["spec"], rerun_stale=rerun_stale, ingest=s["ingest"])
+    failed = [o for o in outcomes if not o.ok]
+    print(f"ran {len(outcomes)} runs, {len(failed)} failed")
 
 
 def analyse(s: dict) -> None:
@@ -125,10 +120,15 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--analyse-only", action="store_true")
+    parser.add_argument(
+        "--rerun-stale",
+        action="store_true",
+        help="re-run completed runs whose config differs from the spec",
+    )
     args = parser.parse_args()
     s = settings(args.smoke)
     if not args.analyse_only:
-        run(s)
+        run(s, args.rerun_stale)
     analyse(s)
     return 0
 

@@ -14,6 +14,15 @@ How formal experiments in Genesis Lab are specified and analyzed. This document 
 - Simulation duration and stopping conditions (including extinction)
 - Analysis method
 
+## Running experiments
+
+Define the experiment in `docs/experiments/E00N-*.md` (pre-registration) and its runs in `experiments/specs/E00N.yaml`, commit both, then:
+
+```bash
+uv run genesis experiment status experiments/specs/E00N.yaml   # what exists, what's stale
+uv run genesis experiment run experiments/specs/E00N.yaml      # parallel, resumable, loads the lake
+```
+
 ## Working hypotheses
 
 Formal experiments live in [experiments/](experiments/), one file per experiment, defined before running.

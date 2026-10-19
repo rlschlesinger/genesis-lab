@@ -232,6 +232,15 @@ What has been covered, where it appears in the code, and what comes next.
 - **Testing queries:** compare with an independent computation; break the code on purpose to check the test can fail.
 - **Test isolation:** "passes alone, fails in the suite" means tests share state (here: a shared temporary folder).
 
+### 3.4 · Batch experiments (`analytics/spec.py`, `analytics/batch.py`)
+- **Configuration as data:** an experiment is a file (conditions × seeds), not a script.
+- **Validate everything up front:** build every run's config before running any.
+- **Processes vs threads:** CPU-bound Python needs processes (the GIL); tasks must be serializable plain data.
+- **Embarrassingly parallel work:** independent runs give identical results in any order (byte-identical test), ~7× faster here.
+- **Idempotent, resumable jobs:** skip what's done; detect "done, but with different settings" and refuse to mix.
+- **YAML features:** anchors and merge keys (`&neutral`, `<<: *neutral`); quoting `"off"`, which YAML would otherwise read as `false`.
+- **Refactoring safely:** after moving conditions into spec files, re-analysing the saved data reproduced every published number.
+
 ## Future learning objectives
 - **Milestone 3:** pandas, SQL with DuckDB, Parquet, significance tests and effect sizes with SciPy, batch experiment design.
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.

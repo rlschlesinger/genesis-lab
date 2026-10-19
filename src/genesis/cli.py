@@ -18,7 +18,9 @@ from pathlib import Path
 import duckdb
 import pydantic
 
+from genesis.analytics.batch import StaleRunsError, plan, run_experiment, task_status
 from genesis.analytics.runs import execute_run, new_run_id
+from genesis.analytics.spec import load_spec
 from genesis.core.config import ConfigError, load_config, with_overrides
 from genesis.lake.db import DEFAULT_DB, connect, rebuild_db
 from genesis.lake.ingest import DEFAULT_LAKE, ingest_paths
@@ -70,6 +72,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--db", type=Path, default=DEFAULT_DB, help="database file (default: %(default)s)"
     )
 
+    experiment = commands.add_parser("experiment", help="run experiment spec files")
+    exp_commands = experiment.add_subparsers(dest="experiment_command", required=True)
+    exp_run = exp_commands.add_parser("run", help="run every condition x seed not yet completed")
+    exp_run.add_argument("spec", type=Path, help="e.g. experiments/specs/E002.yaml")
+    exp_run.add_argument("--workers", type=int, help="parallel runs (default: cores - 1)")
+    exp_run.add_argument(
+        "--rerun-stale",
+        action="store_true",
+        help="re-run completed runs whose config differs from the spec",
+    )
+    exp_run.add_argument("--no-ingest", action="store_true", help="don't load into the lake")
+    exp_run.add_argument("--lake", type=Path, default=DEFAULT_LAKE)
+    exp_status = exp_commands.add_parser("status", help="which runs exist, are stale, or missing")
+    exp_status.add_argument("spec", type=Path)
+
     sql = commands.add_parser("sql", help="run a SQL query against the lake (docs/sql-examples.md)")
     sql.add_argument("query", help="the SQL query, in quotes")
     sql.add_argument("--lake", type=Path, default=DEFAULT_LAKE)
@@ -80,8 +97,62 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    handlers = {"run": _run, "report": _report, "lake": _lake, "sql": _sql}
+    handlers = {
+        "run": _run,
+        "report": _report,
+        "lake": _lake,
+        "sql": _sql,
+        "experiment": _experiment,
+    }
     return handlers[args.command](args)
+
+
+def _experiment(args: argparse.Namespace) -> int:
+    try:
+        spec = load_spec(args.spec)
+    except (OSError, ValueError, KeyError) as exc:  # includes pydantic.ValidationError
+        print(f"error: invalid experiment spec {args.spec}\n{exc}", file=sys.stderr)
+        return 2
+    tasks = plan(spec)
+    if args.experiment_command == "status":
+        counts: dict[str, int] = {}
+        for task in tasks:
+            status = task_status(task)
+            counts[status] = counts.get(status, 0) + 1
+        print(f"{spec.experiment_id}: {len(tasks)} runs planned in {spec.output_dir()}")
+        for status, n in sorted(counts.items()):
+            print(f"  {status:<11} {n}")
+        return 0
+
+    def progress(outcome, done: int, total: int) -> None:
+        t = outcome.task
+        mark = "ok  " if outcome.ok else "FAIL"
+        print(
+            f"  [{done:>3}/{total}] {mark} {t.condition}-s{t.seed}: {outcome.message}", flush=True
+        )
+
+    print(
+        f"{spec.experiment_id}: {len(tasks)} runs planned; running what isn't completed ...",
+        flush=True,
+    )
+    try:
+        outcomes = run_experiment(
+            spec,
+            workers=args.workers,
+            rerun_stale=args.rerun_stale,
+            ingest=not args.no_ingest,
+            lake=args.lake,
+            on_outcome=progress,
+        )
+    except StaleRunsError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    failed = [o for o in outcomes if not o.ok]
+    print(
+        f"ran {len(outcomes)}, skipped {len(tasks) - len(outcomes)} already completed, "
+        f"{len(failed)} failed" + ("" if args.no_ingest else f"; lake: {args.lake}")
+    )
+    return 1 if failed else 0
 
 
 def _sql(args: argparse.Namespace) -> int:

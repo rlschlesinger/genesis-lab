@@ -1,0 +1,23 @@
+# E003 · Food scarcity and selection, 2 x 2. Definition and results:
+# docs/experiments/E003-food-scarcity.md
+experiment_id: E003
+title: Does food scarcity change what selection favours?
+definition: docs/experiments/E003-food-scarcity.md
+base_config: configs/evolution.yaml
+seeds: {first: 2000, count: 20}
+conditions:
+  - label: S_plenty
+    changes: {}
+  - label: N_plenty
+    changes: &neutral
+      genome.speed.neutral: true
+      genome.sense_range.neutral: true
+      genome.max_turn.neutral: true
+      genome.metabolic_rate.neutral: true
+      genome.reproduction_threshold.neutral: true
+  - label: S_scarce
+    changes: {food.regrowth_per_tick: 1.0}
+  - label: N_scarce
+    changes:
+      <<: *neutral
+      food.regrowth_per_tick: 1.0
