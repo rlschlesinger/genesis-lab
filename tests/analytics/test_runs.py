@@ -6,7 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from genesis.analytics.metrics import ORGANISM_FIELDS, TICK_FIELDS, organism_rows
+from genesis.analytics.metrics import (
+    MUTATION_FIELDS,
+    ORGANISM_FIELDS,
+    TICK_FIELDS,
+    organism_rows,
+)
+from genesis.analytics.recorder import GENE_STAT_FIELDS, GENOME_SNAPSHOT_FIELDS
 from genesis.analytics.runs import VOLATILE_FIELDS, execute_run
 from genesis.core.config import SimulationConfig, load_config, with_overrides
 from genesis.core.energy import EnergyLedgerError
@@ -28,12 +34,25 @@ def read_csv(path: Path) -> list[dict]:
 # --- Output files -------------------------------------------------------------------------
 
 
-def test_run_writes_three_files_with_expected_columns(config, tmp_path):
+def read_header(path: Path) -> list[str]:
+    with path.open(newline="") as f:
+        return next(csv.reader(f))
+
+
+def test_run_writes_every_output_file_with_expected_columns(config, tmp_path):
     result = execute_run(config, tmp_path)
+    expected_headers = {
+        "ticks.csv": TICK_FIELDS,
+        "organisms.csv": ORGANISM_FIELDS,
+        "gene_stats.csv": GENE_STAT_FIELDS,
+        "genomes.csv": GENOME_SNAPSHOT_FIELDS,
+        "mutations.csv": MUTATION_FIELDS,
+    }
+    assert sorted(p.name for p in tmp_path.glob("*.csv")) == sorted(expected_headers)
+    for name, fields in expected_headers.items():
+        assert read_header(tmp_path / name) == fields, name
     ticks = read_csv(tmp_path / "ticks.csv")
     organisms = read_csv(tmp_path / "organisms.csv")
-    assert list(ticks[0]) == TICK_FIELDS
-    assert list(organisms[0]) == ORGANISM_FIELDS
     assert len(ticks) == result.ticks_run == 300
     meta = json.loads((tmp_path / "run.json").read_text())
     assert len(organisms) == meta["organisms_ever"]

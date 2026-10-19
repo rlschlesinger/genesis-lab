@@ -6,11 +6,14 @@ from genesis.core.energy import EnergyLedger, EnergyLedgerError
 
 
 def test_expected_stock_is_initial_plus_in_minus_out():
-    ledger = EnergyLedger(initial_stock=100.0, food_spawned=40.0, metabolism=10.0,
-                          movement=5.0, lost_at_death=3.0)  # fmt: skip
+    # Every outflow has a distinct value, so leaving any one of them out of `outflow` would
+    # change the total and fail this test.
+    ledger = EnergyLedger(initial_stock=100.0, food_spawned=40.0, metabolism=10.0, sensing=1.0,
+                          movement=5.0, lost_at_death=3.0, reproduction_overhead=7.0)  # fmt: skip
     assert ledger.inflow == 40.0
-    assert ledger.outflow == 18.0
-    assert ledger.expected_stock == 122.0
+    assert ledger.outflow == 26.0
+    assert ledger.expected_stock == 114.0
+    assert ledger.gross_flow == 166.0
 
 
 def test_balanced_books_pass():

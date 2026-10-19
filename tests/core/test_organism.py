@@ -39,12 +39,14 @@ def test_new_organism_starts_alive_with_zeroed_totals():
     org = make_organism()
     assert org.alive and org.age == 0
     assert org.death_tick is None and org.death_cause is None
-    assert (org.energy_gained, org.energy_spent, org.food_eaten, org.offspring_count) == (
-        0,
-        0,
-        0,
-        0,
+    totals = (
+        org.energy_gained,
+        org.energy_spent,
+        org.energy_invested,
+        org.food_eaten,
+        org.offspring_count,
     )
+    assert totals == (0, 0, 0, 0, 0)
 
 
 def test_misspelled_attribute_raises():

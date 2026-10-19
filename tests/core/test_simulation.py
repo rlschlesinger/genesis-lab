@@ -269,6 +269,7 @@ def test_eligible_organism_produces_an_exact_copy():
     assert child.parent_id == parent.id
     assert child.generation == parent.generation + 1
     assert child.birth_tick == 0
+    assert child.genome == parent.genome  # mutation is off: an exact copy
     assert child.traits == parent.traits
     assert child.energy == cfg.offspring_energy
     assert parent.offspring_count == 1
@@ -368,10 +369,12 @@ def test_founder_lineage_is_inherited():
 
 def test_lineages_can_only_disappear_never_appear():
     # No mutation and no immigration: a lineage that dies out can never come back.
-    summaries = Simulation(make_config(**{"run.max_ticks": 2000})).run()
-    counts = [s.lineages for s in summaries]
-    assert counts[0] <= 30
+    sim = Simulation(make_config(**{"run.max_ticks": 2000}))
+    counts = [s.lineages for s in sim.run()]
+    # Every founder starts its own lineage, and none can die on tick 0 (50 EU, ~0.35 EU cost).
+    assert counts[0] == sim.config.organisms.initial_count
     assert all(later <= earlier for earlier, later in zip(counts, counts[1:], strict=False))
+    assert counts[-1] < counts[0]  # some lineages did die out, so the rule was exercised
 
 
 # --- Genome -------------------------------------------------------------------------------
