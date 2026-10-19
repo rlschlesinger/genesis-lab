@@ -61,8 +61,17 @@ What has been covered, where it appears in the code, and what comes next.
 - **Determinism checks:** the same digest in two separate processes is stronger evidence than two runs in one process.
 - **Reviewing your own tests:** an assertion that compares a value with itself can never fail. Check that a test can fail.
 
+### 1.6 · Eating and the energy ledger (`core/feeding.py`, `core/energy.py`)
+- **Conflict resolution:** sort candidate pairs, then greedily accept those whose sides are both still free.
+- **`np.nonzero`:** the (row, column) of every True entry, here the in-reach pairs.
+- **`np.lexsort`:** sorting by several keys (distance, then a random tie-breaker).
+- **Fairness testing:** over 400 seeds, each side of an exact tie wins about half the time; an ID-based rule would win all 400.
+- **Conservation accounting:** stocks, inflows, outflows and transfers, like a bank balance; check it every tick.
+- **Floating-point tolerance:** `math.isclose` with relative and absolute tolerances; `math.fsum` for accurate sums.
+- **Mutation testing by hand:** plant a bug and confirm the safety net catches it.
+- **Feedback loops:** consumption changes how much food can spawn, so inflow depends on behaviour.
+
 ## Upcoming (Milestone 1)
-- Simultaneous update and conflict resolution; invariants and conservation checks (1.6)
 - Population dynamics and carrying capacity (1.7)
 - CLI design; CSV output (1.8)
 - Profiling and benchmarking (1.9)

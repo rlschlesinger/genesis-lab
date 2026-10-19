@@ -9,6 +9,7 @@ import pytest
 import yaml
 
 from genesis.core.config import SimulationConfig
+from genesis.core.energy import EnergyLedgerError
 from genesis.core.organism import DeathCause
 from genesis.core.simulation import RngStreams, Simulation
 
@@ -167,3 +168,57 @@ def test_mean_energy_is_nan_for_empty_population():
 def test_both_controllers_run(controller):
     sim = Simulation(make_config(**{"organisms.controller": controller, "run.max_ticks": 50}))
     assert len(sim.run()) == 50
+
+
+# --- Eating and the energy ledger ---------------------------------------------------------
+
+
+def test_ledger_balances_every_tick_with_eating():
+    # step() checks the ledger itself and raises on a mismatch; 1000 ticks of the default
+    # world (eating, starving, regrowth at the cap) completing is the test.
+    sim = Simulation(make_config(**{"run.max_ticks": 1000}))
+    summaries = sim.run()
+    assert sum(s.food_eaten for s in summaries) > 0
+    assert sim.ledger.expected_stock == pytest.approx(sim.energy_stock())
+
+
+def test_ledger_detects_energy_created_by_a_bug():
+    sim = Simulation(make_config())
+    sim.step()
+    sim.organisms[0].energy += 5.0  # simulate a bug: energy from nowhere
+    with pytest.raises(EnergyLedgerError, match="tick 1"):
+        sim.step()
+
+
+def test_organism_on_top_of_food_eats_it():
+    sim = Simulation(make_config(**{"food.regrowth_per_tick": 0.0}))
+    org = sim.organisms[0]
+    org.x, org.y = (float(v) for v in sim.world.food.positions[0])
+    org.heading = 0.0
+    food_before = sim.world.food.count
+    summary = sim.step()
+    assert org.food_eaten == 1
+    assert summary.food_eaten >= 1
+    assert sim.world.food.count == food_before - summary.food_eaten
+
+
+def test_food_eaten_summaries_match_organism_records():
+    sim = Simulation(make_config(**{"run.max_ticks": 500}))
+    summaries = sim.run()
+    per_organism = sum(o.food_eaten for o in [*sim.organisms, *sim.dead])
+    assert sum(s.food_eaten for s in summaries) == per_organism
+
+
+def test_energy_left_at_old_age_death_is_recorded_as_lost():
+    sim = Simulation(make_config(**{"organisms.max_age": 10}))
+    sim.run()
+    assert sim.ledger.lost_at_death == pytest.approx(sum(o.energy for o in sim.dead))
+    assert sim.ledger.lost_at_death > 0
+
+
+def test_determinism_holds_with_eating():
+    a, b = Simulation(make_config()), Simulation(make_config())
+    for _ in range(300):
+        a.step()
+        b.step()
+    assert a.state_digest() == b.state_digest()

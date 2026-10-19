@@ -16,10 +16,10 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
              2 observations = sense(snapshot)          every organism sees the same frozen world
              3 actions = controller.decide(obs, rng.controller)
              4 apply movement, clamp to walls
-             5 resolve eating (closest wins, rng.tiebreak), apply energy costs, update ledger
+             5 eat (closest pairs first, rng.tiebreak), then pay energy costs; ledger records flows
              6 process deaths
              7 process reproduction; newborns queued, active next tick
-             8 metrics.record(state)                   read-only
+             8 ledger.check(stock); metrics.record(state)  read-only
              9 tick += 1
 ```
 
@@ -35,6 +35,8 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `intelligence/controllers.py` | `Observations` → `Actions` (pure) | Mutate world state |
 | `core/movement.py` | Apply `Actions` within trait limits; walls; distance moved | Decide anything |
 | `core/geometry.py` | `wrap_angle` | |
+| `core/feeding.py` | Who eats what: closest-pair matching, random tie-break | Change energy itself |
+| `core/energy.py` | `EnergyLedger`: flows and the per-tick conservation check | |
 | `core/simulation.py` | Tick order, RNG streams, founders, deaths, `TickSummary`, `state_digest` | Do I/O |
 | `analytics/metrics.py` *(planned)* | Per-tick measurements | Mutate state |
 | `cli.py` *(planned)* | Arguments, file output | Contain simulation rules |
@@ -94,6 +96,19 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 - Survivors' `age` increments at step 9, so a death check in step 6 sees the age *before* this tick's increment.
 - `state_digest()`: SHA-256 over tick, food positions, and every organism's id/x/y/heading/energy/age/alive. Equal digests mean bit-identical state.
 
+## Eating and energy accounting
+
+- **Reach:** food within `eat_radius` of an organism's *post-move* position.
+- **One meal per organism per tick; each item eaten once.**
+- **Closest pairs first:** all in-reach pairs sorted by distance (ties: random key from the tiebreak stream); a pair eats if neither side is taken. Each item goes to the closest organism still competing for it.
+- **Eat, then pay costs** (metabolism, movement), so a nearly-empty organism that reaches food survives.
+- **Ledger:** stock = energy in living organisms + `food.count * energy_value`.
+  - In: food spawned after the start.
+  - Out: metabolism, movement, energy held at death.
+  - Transfers: eating.
+  - `step()` raises `EnergyLedgerError` if `initial + in - out` differs from the actual stock (tolerance: relative 1e-9, absolute 1e-6 EU).
+- **Feedback:** spawning is blocked at `max_count`, so inflow depends on how much the population eats.
+
 ## Randomness
 
 One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`. New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
@@ -108,7 +123,7 @@ One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one
 | 1.3 | `organism.py`: state, Traits, energy, death | Zero energy → dead | done |
 | 1.4 | Controllers, movement, wall clamping | Walls hold; seeker approaches food | done |
 | 1.5 | `simulation.py`: tick loop, RNG streams | Determinism | done |
-| 1.6 | Eating, tie rule, energy ledger | Tie rule; ledger balances | |
+| 1.6 | Eating, tie rule, energy ledger | Tie rule; ledger balances | done |
 | 1.7 | Cloning, population cap, newborn delay | Newborns inactive on birth tick | |
 | 1.8 | Metrics, CLI, CSV output | Identical files from repeated runs | |
 | 1.9 | Benchmark, seeker-vs-random observation, docs | Numbers recorded | |

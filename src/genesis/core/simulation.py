@@ -6,10 +6,10 @@ Tick order (docs/architecture.md). Steps marked *later* are wired in by the name
     2. sense: every organism observes the same snapshot
     3. decide: the controller turns observations into actions
     4. move
-    5. energy costs (metabolism + movement); eating *later: 1.6*
+    5. eat (closest pairs first), then pay energy costs (metabolism + movement)
     6. deaths, all decided first and then applied
     7. reproduction *later: 1.7*
-    8. record a TickSummary (full metrics *later: 1.8*)
+    8. check the energy ledger; record a TickSummary (full metrics *later: 1.8*)
     9. survivors age by one tick; the clock advances
 """
 
@@ -22,6 +22,8 @@ from dataclasses import dataclass, fields
 import numpy as np
 
 from genesis.core.config import SimulationConfig
+from genesis.core.energy import EnergyLedger
+from genesis.core.feeding import resolve_feeding
 from genesis.core.movement import move
 from genesis.core.organism import Organism, Traits
 from genesis.core.world import World
@@ -64,6 +66,7 @@ class TickSummary:
     deaths: int
     food_count: int
     food_spawned: int
+    food_eaten: int
     mean_energy: float  # NaN when the population is empty: "no value", not zero
 
 
@@ -85,6 +88,8 @@ class Simulation:
         self.organisms: list[Organism] = self._make_founders()
         # Dead organisms are kept, not deleted: their lifetime records are experiment data.
         self.dead: list[Organism] = []
+        # Opened after founders and initial food exist: they make up the starting stock.
+        self.ledger = EnergyLedger(initial_stock=self.energy_stock())
 
     # --- Setup --------------------------------------------------------------------------
 
@@ -111,7 +116,7 @@ class Simulation:
                 y=float(y),
                 heading=float(h),
                 energy=cfg.initial_energy,
-            )  # fmt: skip
+            )
             for (x, y), h in zip(positions, headings, strict=True)
         ]
 
@@ -135,8 +140,11 @@ class Simulation:
         cfg = self.config.organisms
         living = self.organisms
 
+        food_value = self.config.food.energy_value
+
         # 1. Environment.
         food_spawned = self.world.food.regrow(self.rng.food)
+        self.ledger.food_spawned += food_spawned * food_value
 
         # 2. Snapshot: copy the state into arrays *once*, before anyone moves. Every organism
         #    senses this same frozen picture, so processing order cannot matter.
@@ -159,10 +167,22 @@ class Simulation:
         for org, (x, y), heading in zip(living, moved.positions, moved.headings, strict=True):
             org.x, org.y, org.heading = float(x), float(y), float(heading)
 
-        # 5. Energy costs. Eating is added here in increment 1.6.
+        # 5a. Eat, using post-move positions. Eating is a transfer between the two energy
+        #     accounts (food -> organism), so the ledger's in/out totals don't change.
+        meals = resolve_feeding(
+            moved.positions, self.world.food.positions, self.config.food.eat_radius,
+            self.rng.tiebreak,
+        )  # fmt: skip
+        for i in meals.eaters:
+            living[i].eat(food_value)
+        self.world.food.remove(meals.foods)
+
+        # 5b. Pay costs *after* eating, so a nearly-empty organism that reaches food gets to
+        #     eat before its energy hits zero. spend() returns what was actually paid, and
+        #     that (not the amount requested) is what the ledger records.
         for org, distance in zip(living, moved.distances, strict=True):
-            org.spend(org.traits.metabolic_rate)
-            org.spend(cfg.move_cost_per_distance * float(distance))
+            self.ledger.metabolism += org.spend(org.traits.metabolic_rate)
+            self.ledger.movement += org.spend(cfg.move_cost_per_distance * float(distance))
 
         # 6. Deaths: ask every organism first, then apply. Nobody dies mid-update.
         causes = [org.cause_of_death(cfg.max_age) for org in living]
@@ -171,29 +191,39 @@ class Simulation:
             if cause is None:
                 survivors.append(org)
             else:
+                # Energy still held at death leaves the system (D-011). The organism's own
+                # record keeps the value, so analysis can see what it died with.
+                self.ledger.lost_at_death += org.energy
                 org.die(self.tick, cause)
                 self.dead.append(org)
+        self.organisms = survivors
 
         # 7. Reproduction is added here in increment 1.7.
 
-        # 8. Record.
+        # 8. Check conservation, then record. A failed check raises EnergyLedgerError.
+        self.ledger.check(self.energy_stock(), self.tick)
         summary = TickSummary(
             tick=self.tick,
             population=len(survivors),
             deaths=len(living) - len(survivors),
             food_count=self.world.food.count,
             food_spawned=food_spawned,
+            food_eaten=len(meals),
             mean_energy=(float(np.mean([o.energy for o in survivors])) if survivors else math.nan),
         )
 
         # 9. Advance time.
         for org in survivors:
             org.age += 1
-        self.organisms = survivors
         self.tick += 1
         return summary
 
     # --- Inspection ---------------------------------------------------------------------
+
+    def energy_stock(self) -> float:
+        """Total energy currently in the system: living organisms plus uneaten food."""
+        in_organisms = math.fsum(o.energy for o in self.organisms)
+        return in_organisms + self.world.food.count * self.config.food.energy_value
 
     def state_digest(self) -> str:
         """A SHA-256 fingerprint of the full simulation state.
