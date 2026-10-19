@@ -192,8 +192,9 @@ What has been covered, where it appears in the code, and what comes next.
 - **Correcting yourself in writing:** earlier claims about drift were wrong in size; the record says so.
 
 
+## Milestone 2 complete
+
 ## Future learning objectives
-- **Milestone 2:** mutation and heredity, variation vs selection vs drift, lineage trees, trait distributions.
 - **Milestone 3:** pandas, SQL with DuckDB, Parquet, significance tests and effect sizes with SciPy, batch experiment design.
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Milestone 1 complete** (2026-10-18). Milestone 2 (genetics and evolution) not started; it needs the user's approval.
+Status: **Milestones 1 and 2 complete** (2026-10-18). Milestone 3 (The Science Lab: persistence, SQL, statistics) not started; it needs the user's approval.
 
 ## Component map
 
@@ -8,7 +8,7 @@ Status: **Milestone 1 complete** (2026-10-18). Milestone 2 (genetics and evoluti
 configs/default.yaml ──► core/config.py (Pydantic) ──► SimulationConfig
                                                             │
 cli.py ──► core/simulation.py ──owns──► World       (core/world.py: bounds, food positions)
-                │                 ├──► Organisms   (core/organism.py: state + Traits)
+                │                 ├──► Organisms   (core/organism.py: state, Genome, Traits)
                 │                 └──► RNG streams {setup, food, controller, reproduction, tiebreak, mutation}
                 │
            tick():
@@ -18,7 +18,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
              4 apply movement, clamp to walls
              5 eat (closest pairs first, rng.tiebreak), then pay energy costs; ledger records flows
              6 process deaths
-             7 reproduction: eligible survivors clone once; newborns join, first act next tick
+             7 reproduction: eligible survivors have one child (mutated genome); newborns act next tick
              8 ledger.check(stock); metrics.record(state)  read-only
              9 tick += 1
 ```
@@ -127,7 +127,7 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 - **Eligible:** survivors of this tick's deaths with `energy >= traits.reproduction_threshold`. At most one child per parent per tick.
 - **Cap:** room = `max_population - survivors`. If more are eligible than there is room for, parents are chosen uniformly at random from the reproduction stream (never by ID).
 - **Cost:** the parent pays `offspring_energy + reproduction_overhead`; the child starts with `offspring_energy`; the overhead is a ledger outflow. Recorded on the parent as `energy_invested` (separate from `energy_spent`, which is living costs only).
-- **Child:** exact copy of the parent's `Traits` (shared frozen object), `generation = parent + 1`, `birth_tick = current tick`, placed uniformly in a disc of radius `parent.traits.speed` around the parent (clamped), random heading.
+- **Child:** genome = `mutate(parent.genome)` (an exact copy when mutation is off; see Mutation), traits = `express(genome, config)`, `generation = parent + 1`, `birth_tick = current tick`, placed uniformly in a disc of radius `parent.traits.speed` around the parent (clamped), random heading.
 - **Timing:** newborns are appended after survivors (IDs stay ascending), are not aged at step 9, and first act on tick `birth_tick + 1`. Founders act from tick 0. With `max_age = A`, everyone gets exactly `A` active ticks.
 
 ## Run output
@@ -217,4 +217,26 @@ Decisions: trade-off costs for sense range and speed; metabolic rate as a cost-f
 | 2.7 | Permutation and sign tests | Known cases | done |
 | 2.8a | Neutral-twin control; E002 + E003 pre-registered; experiment helpers | Smoke runs on throwaway seeds | done |
 | 2.8b | Run E002 + E003 and report (after review) | Results appended to definitions | done |
-| 2.9 | Docs, curriculum, push, stop for review | | |
+| 2.9 | Docs, curriculum, benchmarks, push, stop for review | | done |
+
+### Milestone 2 scope check (2026-10-18)
+
+| Scope item / acceptance criterion | Evidence |
+|---|---|
+| Genome with explicit gene definitions and bounds | `evolution/genome.py` (`GENES`), `GenomeConfig` validation; tests/evolution/test_genome.py |
+| Heritable speed, sense range, metabolic efficiency, reproduction threshold | Genes + `express()`; lineage-integrity test; E002 |
+| Asexual reproduction; offspring energy and parental cost | 1.7 (D-008, D-014) |
+| Configurable mutation probability and magnitude; off switch | `mutation: {enabled, rate, size}`, per-gene `mutable`; tests/evolution/test_mutation.py |
+| Mutations stay within bounds | Reflection (D-019); 5000 huge mutations stay in bounds; no pile-up test |
+| Reproduction obeys energy requirements | Config rejects unaffordable threshold ranges; `pay_for_offspring` raises; energy ledger every tick |
+| Lineage information consistent | `founder_id`, `parent_id`, mutation log; genome = parent + logged changes for every organism |
+| Births, deaths, offspring counts, trait distributions recorded | ticks.csv, organisms.csv, gene_stats.csv, genomes.csv, mutations.csv; recount test |
+| Population limits, safeguards against runaway consumption | Population cap, one meal per tick, ledger with gross-flow tolerance (D-026) |
+| Simple visualization of trait distributions | `genesis report` (D-023) |
+| Evolutionary change measurable across generations | gene_stats time series; E002/E003 |
+| Extinction handled without crashing | Tests for extinct runs in simulation, recorder, report, experiments |
+| No-mutation runs preserve genomes | E002 check C1 (20/20); tests |
+| Scenario A (neutral baseline) and B (resource scarcity) | E002 (off + neutral twins + positive control), E003 (scarcity, 2 × 2) |
+| No adaptation claims without controls and statistics | Pre-registration, neutral twins, permutation/sign tests, Holm correction, recorded corrections |
+| No neural networks | None added |
+

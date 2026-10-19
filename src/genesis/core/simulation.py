@@ -6,11 +6,12 @@ Tick order (docs/architecture.md):
     2. sense: every organism observes the same snapshot
     3. decide: the controller turns observations into actions
     4. move
-    5. eat (closest pairs first), then pay energy costs (metabolism + movement)
+    5. eat (closest pairs first), then pay living costs (metabolism, sensing, movement)
     6. deaths, all decided first and then applied
-    7. reproduction: eligible survivors each produce one exact copy; newborns join the
+    7. reproduction: eligible survivors each produce one child with a mutated copy of their
+       genome (an exact copy when mutation is off); newborns join the
        population but have not acted, and will first act next tick
-    8. check the energy ledger; record a TickSummary (full metrics in increment 1.8)
+    8. check the energy ledger; record a TickSummary
     9. organisms that were alive at the start of the tick age by one; the clock advances
 """
 

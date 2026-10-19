@@ -1,1 +1,1 @@
-"""Evolution: reproduction now; heredity with mutation and selection from Milestone 2."""
+"""Evolution: genomes and their expression, mutation, and reproduction."""

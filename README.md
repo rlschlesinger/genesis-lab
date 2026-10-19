@@ -1,49 +1,74 @@
 # Genesis Lab
 
-A local-first artificial life laboratory. Digital organisms live in a simulated 2D world, eat, reproduce and (from Milestone 2) evolve. Everything runs on your machine: no cloud services, no API keys.
+A local-first artificial life laboratory. Digital organisms live in a 2D world: they sense food, move, eat, reproduce, mutate and evolve, and every experiment is recorded so it can be reproduced and analysed. Everything runs on your machine: no cloud services, no API keys.
 
-**Status:** Milestone 2 (Genetics and Evolution) experiments complete: heritable genomes with mutation, trade-off costs, per-tick trait statistics, HTML reports, and three pre-registered experiments ([E001](docs/experiments/E001-controller-comparison.md), [E002](docs/experiments/E002-selection-machinery.md), [E003](docs/experiments/E003-food-scarcity.md)). Organisms sense, decide, move, eat, reproduce (exact copies), and die, with every unit of energy accounted for. Populations level off at a size set by the food supply.
+Built as a learning project: the [curriculum](docs/curriculum.md) tracks the concepts covered so far.
+
+**Status:** Milestones 1 (The Petri Dish) and 2 (Genetics and Evolution) complete. Milestone 3 (The Science Lab) not started.
+
+## What it does
+
+- **Ecosystem:** a bounded world with regrowing food. Organisms sense the nearest food, decide (random walk or food seeker), move, eat, pay energy costs, reproduce and die. Every unit of energy is accounted for and checked every tick.
+- **Evolution:** each organism carries a genome (speed, sense range, turning, metabolic rate, reproduction threshold, and a neutral marker). Children inherit a mutated copy; trade-off costs make each gene's value matter.
+- **Reproducibility:** the same config and seed always produce byte-identical results. Each run records its config, seed, code version and a fingerprint of the final state.
+- **Science:** pre-registered experiments with paired seeds, drift-only control runs and hand-written significance tests.
 
 A **tick** is one step of simulated time: every organism senses, acts and pays its energy costs once per tick.
 
-## Running a simulation
+## Setup
+
+Requires [uv](https://docs.astral.sh/uv/) 0.11 or newer. uv installs and manages Python 3.12 for you.
 
 ```bash
-uv run genesis run                                  # default config, results in data/runs/<run id>/
-uv run genesis run --seed 7 --ticks 2000 --out data/runs/try-seed-7
-uv run genesis run --help                           # every option
-uv run genesis report data/runs/seed-1             # charts: writes data/runs/seed-1/report.html
+uv sync            # creates .venv and installs the locked dependencies
 ```
 
-Each run directory holds `run.json` (seed, config, code version, status), `ticks.csv` (one row per tick), `gene_stats.csv` (gene mean/spread per tick), `genomes.csv` (genome snapshots), `organisms.csv` (one row per organism that ever lived) and `mutations.csv` (every gene change). The same config and seed always produce identical CSV files.
-
-## Experiments and benchmarks
+## Quick start
 
 ```bash
-uv run python experiments/e001_controller_comparison.py   # E001: 20 runs, ~45 s
-uv run python experiments/benchmark.py                    # speed at population 30-1000
+uv run genesis run --seed 7 --out data/runs/first             # ecosystem, no evolution
+uv run genesis run --config configs/evolution.yaml --out data/runs/evo   # with evolution (~6 s)
+uv run genesis report data/runs/evo                           # writes data/runs/evo/report.html
+open data/runs/evo/report.html
 ```
 
-Experiment definitions and results: [docs/experiments/](docs/experiments/). Recorded benchmarks: [docs/benchmarks.md](docs/benchmarks.md).
+`uv run genesis run --help` lists every option.
+
+## What a run writes
+
+| File | Contents |
+|---|---|
+| `run.json` | Seed, full config, git commit (and whether the code had uncommitted changes), versions, status, final-state fingerprint |
+| `ticks.csv` | One row per tick: population, births, deaths, food, mean energy, founder lineages, mutations |
+| `gene_stats.csv` | Per tick and gene: count, mean, standard deviation, min, max |
+| `genomes.csv` | Every living genome, every 50 ticks and on the final tick |
+| `organisms.csv` | One row per organism that ever lived: lineage, birth, death, lifetime totals, genes and traits |
+| `mutations.csv` | Every gene change at every birth |
+| `report.html` | Charts, after `genesis report` (self-contained, works offline) |
 
 ## Configuration
 
-`configs/evolution.yaml` is the Milestone 2 setup: mutation on, trade-off costs on. Compare it with `default.yaml` to see exactly what changes.
+Runs are described by YAML files in `configs/`:
 
-Runs are described by YAML files in `configs/`. [configs/default.yaml](configs/default.yaml) documents every field and its unit. Invalid files are rejected before anything runs:
+- [`default.yaml`](configs/default.yaml): the Milestone 1 ecosystem, with mutation and trade-off costs off. Every field is documented with its unit.
+- [`evolution.yaml`](configs/evolution.yaml): the same, plus mutation, trade-off costs (drag and sensing upkeep), a frozen turning gene and 20,000 ticks. A test keeps the two files from differing anywhere else.
+
+Invalid configs are rejected before anything runs, with an error naming the field.
+
+## Experiments
+
+Each experiment is defined (question, hypotheses, seeds, analysis) and committed **before** it runs; results are appended afterwards.
+
+| | Question | Finding |
+|---|---|---|
+| [E001](docs/experiments/E001-controller-comparison.md) | Food seeker vs random walk | Seekers reach the population limit faster and leave less food; both settle at a similar size, set by the food supply |
+| [E002](docs/experiments/E002-selection-machinery.md) | Does the evolution machinery work? | Yes: the positive control (cost-free metabolism) evolved down in 20/20 seeds; selection raised speed and reproduction threshold relative to drift |
+| [E003](docs/experiments/E003-food-scarcity.md) | Does food scarcity change selection? | It raised selected sense range (adjusted p = 0.031; worth replicating); its control arm reproduced E002 |
 
 ```bash
-uv run python -c "from genesis.core.config import load_config; print(load_config('configs/default.yaml'))"
-```
-
-## Requirements
-
-- [uv](https://docs.astral.sh/uv/) 0.11 or newer. uv installs and manages Python for you, so you don't need a system Python 3.12.
-
-## Setup
-
-```bash
-uv sync            # creates .venv with Python 3.12 and installs the locked dependencies
+uv run python experiments/e002_selection_machinery.py                 # 60 runs, ~8 min
+uv run python experiments/e002_selection_machinery.py --analyse-only  # re-analyse saved runs
+uv run python experiments/benchmark.py                                # speed at population 30-1000
 ```
 
 ## Everyday commands
@@ -54,17 +79,25 @@ uv run ruff check .        # lint
 uv run ruff format .       # auto-format
 ```
 
-`uv run` executes a command inside the project's virtual environment, so you never need to activate it by hand.
-
 ## Layout
 
 ```text
-src/genesis/   the importable package (simulation, evolution, analytics, ...)
-tests/         automated tests (pytest)
-configs/       YAML run configurations
-experiments/   experiment and benchmark scripts
-docs/          architecture, decisions, curriculum, experiment methodology
-data/          generated run output (ignored by Git)
+src/genesis/core/          world, food, organisms, movement, feeding, costs, energy ledger, simulation
+src/genesis/intelligence/  sensing and controllers
+src/genesis/evolution/     genome, mutation, reproduction
+src/genesis/analytics/     run recording, provenance, experiments, significance tests
+src/genesis/report/        HTML run reports
+tests/                     automated tests (pytest)
+configs/                   YAML run configurations
+experiments/               experiment and benchmark scripts
+docs/                      architecture, decisions, curriculum, methodology, experiments, benchmarks
+data/                      generated run output (ignored by Git)
 ```
 
-See [docs/architecture.md](docs/architecture.md) for how the pieces fit together.
+## Documentation
+
+- [Architecture](docs/architecture.md): how the pieces fit together, tick order, data formats
+- [Decision log](docs/decision-log.md): each design decision, why, and the alternatives
+- [Experiment design](docs/experiment-design.md): methodology and statistical rules
+- [Curriculum](docs/curriculum.md): concepts covered, milestone by milestone
+- [Benchmarks](docs/benchmarks.md): recorded performance
