@@ -274,6 +274,13 @@ What has been covered, where it appears in the code, and what comes next.
 - **Resolution floor again:** with 6 pairs, p can't go below 2/64 ≈ 0.031, however big the effect (d_z = −7.6 here).
 - **Floating-point residue:** 0 computed as a difference of nearly equal numbers can come out as 2.8e-17; make exact cases exact.
 
+### 3.9 · SQL exercises (`docs/sql-exercises.md`)
+- **Ten questions about E001–E003:** filters, aggregates, `FILTER`, joins on composite keys, final-tick joins, `lag` windows, `QUALIFY`, `WITH RECURSIVE`, `LEFT JOIN` counting, JSON-derived parameters.
+- **Unit of analysis in SQL:** summarize per run first (a `WITH` sub-query), then compare runs.
+- **Maximums describe spread, not centre:** drift-only conditions had the highest single seeds despite lower medians.
+- **Mutation rate vs selection:** 7 metabolic mutations in 76 births matches the 10% rate; selection changes which lines survive, not how often mutations happen.
+- **Documents that test themselves:** printed results are re-checked against the data; a one-digit change is caught.
+
 ## Future learning objectives
 - **Milestone 3:** pandas, SQL with DuckDB, Parquet, significance tests and effect sizes with SciPy, batch experiment design.
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.

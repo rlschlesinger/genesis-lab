@@ -41,7 +41,7 @@ uv run genesis lake ingest data/runs data/experiments    # writes data/lake/<tab
 uv run genesis sql "SELECT condition, count(*) FROM completed_runs GROUP BY condition"
 ```
 
-Worked SQL examples (joins, window functions, a recursive family tree): [docs/sql-examples.md](docs/sql-examples.md).
+Worked SQL examples (joins, window functions, a recursive family tree): [docs/sql-examples.md](docs/sql-examples.md). Ten exercises about the real experiments, with hidden answers: [docs/sql-exercises.md](docs/sql-exercises.md).
 
 A dashboard for a whole experiment (every run, plus medians and confidence intervals), built from the lake:
 

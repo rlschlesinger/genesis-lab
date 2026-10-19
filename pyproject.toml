@@ -56,6 +56,10 @@ select = [
     "NPY",  # NumPy: flags legacy np.random global-state calls
 ]
 
+[tool.ruff.lint.per-file-ignores]
+# Exercise text (questions, hints, notes) is prose: long sentences read better unbroken.
+"scripts/build_sql_exercises.py" = ["E501"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers --strict-config --import-mode=importlib"
