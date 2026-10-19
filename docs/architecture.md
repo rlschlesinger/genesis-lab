@@ -43,6 +43,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `core/energy.py` | `EnergyLedger`: flows and the per-tick conservation check | |
 | `evolution/genome.py` | `GENES` (units, descriptions), `Genome` (genotype), `express()` → `Traits` (phenotype) | Import config at runtime from organism.py |
 | `evolution/mutation.py` | `mutate()` → child genome + `GeneChange` list; `reflect()` at bounds | Modify the parent genome |
+| `evolution/brain.py` | `founder_brains` (one random brain per founder), `mutate_brain`, `reflect_array` (D-041) | Modify a parent's brain; use any stream but `brain` |
 | `evolution/reproduction.py` | Who reproduces (random at the cap) and where offspring appear | Touch organisms |
 | `core/simulation.py` | Tick order, RNG streams, founders, deaths, `TickSummary`, `state_digest` | Do I/O |
 | `analytics/metrics.py` | Flat rows: `tick_row`, `organism_rows`; column lists | Mutate state |
@@ -236,7 +237,7 @@ Founders pay exactly the Milestone 1 movement price at any exponent. Defaults re
 
 ## Randomness
 
-One integer seed per run → `numpy.random.SeedSequence` → `.spawn(5)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`, `mutation` (added in 2.2; a test checks the first five are unchanged). New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
+One integer seed per run → `numpy.random.SeedSequence` → `.spawn(7)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`, `mutation` (added in 2.2), `brain` (added in 4.3: founders' weights and brain mutation; unused when there are no brains). Tests check that each addition left the earlier streams unchanged. New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
 
 ## Milestone 1 plan
 
@@ -347,7 +348,7 @@ Scope: [roadmap/04A](roadmap/04A_NEURAL_BRAINS.md) and [roadmap/04B](roadmap/04B
 |---|---|---|---|
 | 4.1 | Forward pass in NumPy: `Brain`, parameter layout, worked example ([neural-networks.md](neural-networks.md)) | Hand-computed example; batch = one at a time, bit for bit | done |
 | 4.2 | Sensor vector: 7 normalised inputs including a wall sensor and noise | Every input in [−1, 1] for extreme states | done |
-| 4.3 | Brains as inherited genes: `brain` RNG stream (appended), founder initialisation, bounded mutation, inheritance, digest | Golden values unchanged; child = parent + mutation | |
+| 4.3 | Brains as inherited genes: `brain` RNG stream (appended), founder initialisation, bounded mutation, inheritance, digest | Golden values unchanged; child = parent + mutation | done |
 | 4.4 | `controller: neural` in the tick; `configs/neural.yaml` | Rule-based runs byte-identical; ledger balances | |
 | 4.5 | Recording: brains at birth, behaviour summaries; schema v4; lake tables; report charts | Lake checks; recount | |
 | 4.6 | `genesis inspect`: inputs → hidden → outputs → action → state for one organism and tick | Replay = original run | |

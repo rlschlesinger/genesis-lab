@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     # Imported only for type annotations. genome.py imports Traits from this module, so a
     # runtime import here would be circular.
     from genesis.evolution.genome import Genome
+    from genesis.intelligence.neural import Brain
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61,6 +62,9 @@ class Organism:
     birth_tick: int
     genome: Genome  # genotype: what is inherited
     traits: Traits  # phenotype: express(genome, config), computed once at birth
+    # Neural brain, inherited like the genome (Milestone 4); None in rule-based runs. kw_only
+    # lets this defaulted field sit with the identity fields it belongs to.
+    brain: Brain | None = None
 
     # Physical state: changed by the simulation each tick.
     x: float

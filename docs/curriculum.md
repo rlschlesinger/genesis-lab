@@ -326,6 +326,13 @@ What has been covered, where it appears in the code, and what comes next.
 - **Ray casting:** distance to the first wall along a heading, from one division per wall.
 - **Property-based testing found a real edge case:** a heading whose sine is ~10⁻³⁰⁸ overflows the division; the answer (infinity) was right, the warning was not.
 
+### 4.3 · Brains as inherited genes (`evolution/brain.py`)
+- **Genotype → controller:** 62 numbers inherited at birth fully determine how an organism will react to anything it senses.
+- **Standing variation:** founders start with different random brains, so selection can act from the first generation.
+- **Mutation in many dimensions:** each weight mutates independently; on average 6 of 62 change per birth.
+- **Append-only random streams, tested:** a seventh stream leaves the first six untouched; brains carried along but unused change nothing else.
+- **Backward compatibility:** an optional config section is left out of the saved config when absent, so old runs keep their fingerprints.
+
 ## Future learning objectives
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

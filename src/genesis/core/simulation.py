@@ -32,6 +32,7 @@ from genesis.core.feeding import resolve_feeding
 from genesis.core.movement import move
 from genesis.core.organism import DeathCause, Organism, spend_all
 from genesis.core.world import World
+from genesis.evolution.brain import founder_brains, mutate_brain
 from genesis.evolution.genome import Genome, express
 from genesis.evolution.mutation import mutate
 from genesis.evolution.reproduction import place_offspring, select_parents
@@ -53,6 +54,7 @@ class RngStreams:
     reproduction: np.random.Generator  # who reproduces at the cap; newborn placement
     tiebreak: np.random.Generator  # food contention ties
     mutation: np.random.Generator  # offspring genome mutation (added in Milestone 2, at the end)
+    brain: np.random.Generator  # founders' brains and brain mutation (Milestone 4, at the end)
 
     @classmethod
     def from_seed(cls, seed: int) -> RngStreams:
@@ -151,14 +153,19 @@ class Simulation:
         cfg = self.config.organisms
         n = cfg.initial_count
         # All founders share one genome (no initial variation): any variation that appears
-        # later comes from mutation alone.
+        # later comes from mutation alone. Brains are the exception (D-041): each founder
+        # gets its own random weights, drawn from the brain stream after placement.
         genome = Genome.from_config(self.config.genome)
         traits = express(genome, self.config.genome)
         # Draw all positions, then all headings, as two vectorized calls on the setup stream.
         positions = self.rng.setup.uniform(0.0, [self.world.width, self.world.height], size=(n, 2))
         headings = self.rng.setup.uniform(-np.pi, np.pi, size=n)
+        brain_cfg = self.config.brain
+        brains = (
+            founder_brains(n, brain_cfg, self.rng.brain) if brain_cfg is not None else [None] * n
+        )
         founders = []
-        for (x, y), h in zip(positions, headings, strict=True):
+        for (x, y), h, brain in zip(positions, headings, brains, strict=True):
             new_id = self._new_id()
             founders.append(
                 Organism(
@@ -169,6 +176,7 @@ class Simulation:
                     birth_tick=0,
                     genome=genome,
                     traits=traits,
+                    brain=brain,
                     x=float(x),
                     y=float(y),
                     heading=float(h),
@@ -375,6 +383,12 @@ class Simulation:
             traits = (
                 parent.traits if genome is parent.genome else express(genome, self.config.genome)
             )
+            # The brain is inherited the same way, from its own stream (D-041). Its changes
+            # are not logged in mutation_log, which is about the named genes; 4.5 records
+            # every brain at birth instead. Mutation disabled: the parent's brain, unchanged.
+            brain = parent.brain
+            if brain is not None and self.config.mutation.enabled:
+                brain, _ = mutate_brain(brain, self.config.brain, self.rng.brain)
             child_id = self._new_id()
             for change in changes:
                 self.mutation_log.append(
@@ -391,6 +405,7 @@ class Simulation:
                     birth_tick=self.tick,
                     genome=genome,
                     traits=traits,
+                    brain=brain,
                     x=float(x),
                     y=float(y),
                     heading=float(heading),
@@ -417,7 +432,9 @@ class Simulation:
         check determinism, and recorded in run metadata.
 
         Genes are included because some never affect behaviour: two runs differing only in a
-        neutral marker would otherwise look identical forever.
+        neutral marker would otherwise look identical forever. Brain weights are included for
+        organisms that have one; organisms without a brain add nothing, so digests of
+        rule-based runs are unchanged by Milestone 4.
         """
         h = hashlib.sha256()
         h.update(np.int64(self.tick).tobytes())
@@ -430,4 +447,6 @@ class Simulation:
                     dtype=np.float64,
                 ).tobytes()
             )
+            if org.brain is not None:
+                h.update(org.brain.to_vector().tobytes())
         return h.hexdigest()

@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Annotated, Literal, Self
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 PositiveFloat = Annotated[float, Field(gt=0)]
 NonNegativeFloat = Annotated[float, Field(ge=0)]
@@ -162,6 +162,29 @@ class MutationConfig(_Strict):
     )
 
 
+class BrainConfig(_Strict):
+    """Neural brains (Milestone 4, genesis.intelligence.neural): how founders' weights are drawn
+    and how they mutate. The network's shape is fixed (7 inputs, 6 hidden, 2 outputs; D-039).
+
+    Weights are in their own units (a weight of 1 passes an input through unscaled), so the
+    mutation size is an absolute standard deviation, not a fraction of a range as for genes.
+    """
+
+    weight_limit: PositiveFloat = Field(
+        default=4.0,
+        description="Every weight and bias stays within [-limit, limit] (reflected, as genes).",
+    )
+    initial_sd: PositiveFloat = Field(
+        default=0.5, description="Founders' weights: Normal(0, initial_sd), one brain each."
+    )
+    mutation_rate: float = Field(
+        default=0.1, ge=0, le=1, description="Probability that each weight mutates at a birth."
+    )
+    mutation_size: NonNegativeFloat = Field(
+        default=0.2, description="Standard deviation of one weight's mutation step."
+    )
+
+
 class RecordingConfig(_Strict):
     """What a recorded run saves beyond the per-tick summaries (genesis.analytics.recorder).
 
@@ -197,6 +220,22 @@ class SimulationConfig(_Strict):
     genome: GenomeConfig
     mutation: MutationConfig
     recording: RecordingConfig = RecordingConfig()
+    # None: no brains (rule-based controllers). Present: every organism carries a brain.
+    brain: BrainConfig | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_absent_brain(self, handler):  # noqa: ANN001, ANN202 (pydantic's own signature)
+        """Leave ``brain`` out of the dumped config when it is None.
+
+        A config's dump is hashed (``config_hash``) and saved in run.json. Without this, every
+        rule-based config would gain ``"brain": null``, change its hash, and make every
+        completed run of E001-E006 look stale to the batch runner, though nothing about those
+        runs changed. Omitting the empty section keeps old configs byte-identical.
+        """
+        data = handler(self)
+        if self.brain is None:
+            data.pop("brain", None)
+        return data
 
     @model_validator(mode="after")
     def _reproduction_affordable(self) -> Self:

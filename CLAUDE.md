@@ -34,7 +34,7 @@ uv run genesis lake export --experiment E00N --out data/exports/E00N   # + READM
 
 ## Simulation invariants (do not break)
 
-- **Determinism:** same config + seed + environment → identical output. All randomness comes from `numpy.random.Generator` streams spawned from one `SeedSequence` per run, one stream per subsystem, in fixed order (setup, food, controller, reproduction, tiebreak, mutation); new streams are appended only at the end. Never use `random`, `np.random.<function>` global state, or iterate over sets/unordered collections in simulation code. Organisms are processed in ascending ID order.
+- **Determinism:** same config + seed + environment → identical output. All randomness comes from `numpy.random.Generator` streams spawned from one `SeedSequence` per run, one stream per subsystem, in fixed order (setup, food, controller, reproduction, tiebreak, mutation, brain); new streams are appended only at the end. Never use `random`, `np.random.<function>` global state, or iterate over sets/unordered collections in simulation code. Organisms are processed in ascending ID order.
 - **Snapshot observation:** all organisms observe the same frozen world state before any action is applied.
 - **Newborns** are inactive until the tick after their birth.
 - **Food contention:** one meal per organism per tick; in-reach pairs resolved closest-first; exact ties are broken with the tiebreak stream (never by ID, which would bias toward older lineages). Organisms eat *before* paying costs.
@@ -42,6 +42,7 @@ uv run genesis lake export --experiment E00N --out data/exports/E00N   # + READM
 - **Separation of concerns:** controllers are pure (observation → action) and never mutate the world; metrics are read-only.
 - **Boundaries:** hard walls (positions clamped), not wrap-around.
 - **Bit-identical optimizations only (D-036, D-038):** a speed-up may change *how* a value is computed only if every float comes out identical. The spatial grid (`core/spatial.py`) only proposes candidate pairs; the same `np.hypot` and `<=` decide. Array versions of scalar rules (`costs.living_costs`, `organism.spend_all`) must apply the same IEEE operations in the same order per element, and tests must assert equality with the scalar rule. Known traps: `math.hypot` ≠ `np.hypot`, `np.power` ≠ Python `**` (except exponents 0 and 1), reductions along a non-contiguous axis sum in a different order. Verify with `tests/test_regression.py` *and* a fresh digest comparison of long and large runs before merging.
+- **Configs stay hashable across versions:** a new optional config section must be omitted from `model_dump` when absent (see `SimulationConfig._omit_absent_brain`), or every existing run's `config_hash` changes and completed experiments look stale.
 - **Run records:** CSV output must stay byte-identical for identical config + seed + environment. A new TickSummary/organism field goes into the metrics column lists; never write nondeterministic values (timestamps, run IDs) into the CSVs.
 
 ## Code conventions

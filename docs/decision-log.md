@@ -60,6 +60,17 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-041 · Brains are inherited like genes, with their own stream (2026-10-19)
+
+**Decision:** an optional `brain:` config section (`weight_limit` 4, `initial_sd` 0.5, `mutation_rate` 0.1 per weight, `mutation_size` 0.2). When present, every founder gets its own brain, weights Normal(0, 0.5) reflected into ±4, drawn in founder order; at each birth every weight mutates with probability 0.1 by a Normal(0, 0.2) step, reflected into ±4. All draws come from a seventh stream, `brain`, appended after `mutation`. Both draws happen for all 62 weights at every birth. `mutation.enabled: false` freezes brains too. Brain changes are not written to `mutations.csv` (whole brains are recorded at birth in 4.5). The state digest includes weights when present. When the section is absent it is omitted from the config dump, so existing config hashes are unchanged.
+**Why:**
+- **One random brain per founder** (unlike the shared scalar genome): identical founder brains would give selection nothing to act on until mutation built up variation; zero weights would make every founder behave the same.
+- **Own stream, appended:** rule-based runs and the scalar-gene mutation draws stay bit-identical; verified by the golden tests, a stream test, and byte-identical recorded runs against `main`.
+- **Fixed draws per birth:** one mutation's outcome cannot shift every later one (D-009).
+- **Reflection, not clamping:** the gene rule (D-019); clamping would pile weights up on ±4.
+- **Sizes are judgment calls:** ±4 bounds every sum (D-039); initial_sd 0.5 gives founders varied but mostly unsaturated hidden units; about 6 of 62 weights change per birth by ~5% of the range. E007's pilot (4.7) may revise them before pre-registration.
+**Alternatives:** brain weights as 62 named genes in `Genome` (would flood gene_stats and mutations.csv, and change their schemas); crossover between parents (there is no sexual reproduction); per-weight mutation sizes that themselves evolve (self-adaptation; another layer to explain).
+
 ## D-040 · The brain's seven inputs (2026-10-19)
 
 **Decision:** the input vector is, in order: food_seen (0/1), food_ahead = cos(bearing), food_left = sin(bearing), food_closeness = 1 − distance/sense range, energy = energy/reproduction threshold capped at 1, wall_ahead = 1 − (distance to the wall along the heading)/sense range clipped to [0, 1], and noise, uniform in [−1, 1], drawn from the controller stream. Food inputs are 0 when no food is in sight. Built by `intelligence/brain_inputs.py`; rule-based sensing is unchanged.
