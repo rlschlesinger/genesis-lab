@@ -210,6 +210,12 @@ Founders pay exactly the Milestone 1 movement price at any exponent. Defaults re
 - Results are ingested into the lake afterwards (`--no-ingest` to skip).
 - E001–E003 have spec files; their existing runs show as **stale** because configs gained fields since (recording settings; for E001 the whole genome section). Their configs otherwise match the specs exactly (checked).
 
+## Analysis notebook (`notebooks/analysis-workflow.ipynb`)
+
+- The whole pipeline on a demo experiment (E990: 2 conditions × 6 seeds × 1500 ticks): spec → batch run → lake → SQL (join, window function) → pandas → descriptive statistics → bootstrap and Wilson intervals → paired effect and practical significance → permutation and sign tests (with SciPy cross-checks) → dashboard chart → export, verify, reload with pandas only.
+- Writes to `data/notebook-demo/` (or `$GENESIS_NOTEBOOK_DIR`); runs in ~6 s.
+- `tests/test_notebook.py` executes it in a fresh kernel (nbclient) and checks it is committed without outputs.
+
 ## Exports (`genesis lake export`, `genesis lake verify`)
 
 - `--experiment E003 --out DIR [--format parquet|csv] [--tables a,b]`: one file per table with rows (sorted by primary key; `runs` includes failed runs; config as JSON text), `README.md` (conventions and table sections cut from the data dictionary) and `manifest.json` (source commit, row counts, SHA-256 per file).
@@ -297,7 +303,7 @@ Decisions: Parquet files are the source of truth with DuckDB views over them; ru
 | 3.5 | pandas + SciPy analysis: descriptive stats, bootstrap/Wilson CIs, effect sizes; cross-check hand-written tests | Known answers; SciPy agreement | done |
 | 3.6 | Experiment dashboards: individual runs vs aggregates | Built from the database | done |
 | 3.7 | Export to CSV/Parquet; reload and re-analyse | Round trip; independent re-analysis | done |
-| 3.8 | Analysis notebook, executed in tests | Runs clean | |
+| 3.8 | Analysis notebook, executed in tests | Runs clean | done |
 | 3.9 | SQL exercises (hints, hidden answers) | Answers verified | |
 | 3.10 | Experiments A, B, C: blind pilots, pre-registration, runs, reports | Defined before running | |
 | 3.11 | Wrap-up; stop before neural networks | | |

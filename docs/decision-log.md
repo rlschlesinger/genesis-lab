@@ -60,6 +60,12 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-035 · An executed, output-free notebook (2026-10-19)
+
+**Decision:** one Jupyter notebook demonstrating the full workflow on a small demo experiment, built with nbformat, executed by the test suite with nbclient, committed without outputs (a test enforces it). New dev-only dependencies: ipykernel 7.4.0, nbclient 0.11.0, nbformat 5.11.1.
+**Why:** notebooks rot when not re-run; executing them in tests catches that. Saved outputs make noisy diffs and can contradict the code; output-free commits avoid both. A demo experiment keeps it fast (~6 s) and keeps real data untouched.
+**Alternatives:** nbstripout as a git filter (strips automatically, but must be installed per clone); papermill (parameter injection, not needed); marimo (plain-Python notebooks, not chosen in the Milestone 3 plan).
+
 ## D-034 · Self-describing, verifiable exports (2026-10-19)
 
 **Decision:** exports carry their own documentation (README cut from the data dictionary) and a manifest with row counts and SHA-256 checksums; Parquet by default, CSV on request; rows sorted by primary key.

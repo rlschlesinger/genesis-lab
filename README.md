@@ -97,6 +97,10 @@ uv run python experiments/e002_selection_machinery.py --analyse-only  # re-analy
 uv run python experiments/benchmark.py                                # speed at population 30-1000
 ```
 
+## Notebook
+
+[notebooks/analysis-workflow.ipynb](notebooks/analysis-workflow.ipynb) walks through the whole workflow (define → run → SQL → pandas → intervals → tests → charts → export) on a small demo experiment. Open it in VS Code, pick the `.venv` kernel and *Run All* (~6 s). Clear its outputs before committing.
+
 ## Everyday commands
 
 ```bash

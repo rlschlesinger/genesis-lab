@@ -266,6 +266,14 @@ What has been covered, where it appears in the code, and what comes next.
 - **Reproducing from an export alone:** the real test of independence is re-analysis with no project code.
 - **Sampling noise in p-values:** two samplers of 20,000 patterns gave 0.0077 and 0.0082; the standard error of a sampled p is about √(p(1−p)/n) ≈ 0.0006.
 
+### 3.8 · The analysis notebook (`notebooks/analysis-workflow.ipynb`)
+- **Notebooks as narrative:** explanation and code interleaved, run top to bottom.
+- **Kernels:** the notebook runs in this project's Python (ipykernel, `.venv`).
+- **Executable documentation:** tests run the notebook, so it can't silently break.
+- **Outputs out of version control:** commit code, not results; results are regenerated.
+- **Resolution floor again:** with 6 pairs, p can't go below 2/64 ≈ 0.031, however big the effect (d_z = −7.6 here).
+- **Floating-point residue:** 0 computed as a difference of nearly equal numbers can come out as 2.8e-17; make exact cases exact.
+
 ## Future learning objectives
 - **Milestone 3:** pandas, SQL with DuckDB, Parquet, significance tests and effect sizes with SciPy, batch experiment design.
 - **Milestone 4:** neural networks from scratch in NumPy (forward pass, activation functions), neuroevolution; later PyTorch.

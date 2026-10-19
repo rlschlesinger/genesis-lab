@@ -117,7 +117,8 @@ def test_wilson_matches_scipy(k, n):
 
 def test_wilson_stays_sensible_at_the_edges():
     none = wilson_interval(0, 50)
-    assert none.estimate == 0 and none.low == 0 and none.high > 0.05  # not zero width
+    assert none.estimate == 0 and none.low == 0.0 and none.high > 0.05  # exact 0, not zero width
+    assert wilson_interval(50, 50).high == 1.0
     simple_high = 0 + 1.96 * math.sqrt(0 * 1 / 50)  # the textbook interval: [0, 0]
     assert simple_high == 0
 

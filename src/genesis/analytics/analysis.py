@@ -151,7 +151,11 @@ def wilson_interval(successes: int, n: int, confidence: float = 0.95) -> Interva
     p = successes / n
     centre = (p + z**2 / (2 * n)) / (1 + z**2 / n)
     half = z / (1 + z**2 / n) * math.sqrt(p * (1 - p) / n + z**2 / (4 * n**2))
-    return Interval(p, max(0.0, centre - half), min(1.0, centre + half), confidence)
+    # At 0 (or n) successes the bound is exactly 0 (or 1); computing it as centre - half would
+    # leave a rounding residue like 2.8e-17.
+    low = 0.0 if successes == 0 else max(0.0, centre - half)
+    high = 1.0 if successes == n else min(1.0, centre + half)
+    return Interval(p, low, high, confidence)
 
 
 # --- Effect sizes and practical significance ----------------------------------------------
