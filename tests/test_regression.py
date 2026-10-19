@@ -134,17 +134,20 @@ def test_milestone_1_state_is_unchanged(controller):
 # configs/neural.yaml, seed 42, TICKS ticks: brains drawn, inherited, mutated and used. Locks
 # in E007's code before it runs (4.7). Recorded on Darwin arm64 at the commit after 4b777b0
 # (4.7a). tanh and the other transcendental functions come from the platform's maths
-# library, so unlike the rule-based event digests these are not yet known to hold on Linux:
-# the event test runs only on platforms listed in NEURAL_EVENTS_CONFIRMED, until a Linux run
-# records and confirms its values (D-045).
+# library, so unlike the rule-based event digests these were not assumed to hold on Linux:
+# the event test runs only on platforms listed in NEURAL_EVENTS_CONFIRMED (D-045). Linux
+# x86_64 (NumPy 2.5.4) was checked after Milestone 4 at commit 5bfe976: its state digest
+# differs from the Mac's, as for the rule-based runs (D-027), but its event digest is the
+# same, so the one event value holds on both platforms.
 
 NEURAL_CONFIG = Path(__file__).parents[1] / "configs" / "neural.yaml"
 
 GOLDEN_NEURAL_STATE = {
     ("Darwin", "arm64"): "9e3edc8b9cba8cc363505e4cbc2735b183014c579043c04065c11836cd46b124",
+    ("Linux", "x86_64"): "104ee8dfa1802ad281d8c7fc12f845a11324327c173def7cc440bac22facd092",
 }
 GOLDEN_NEURAL_EVENTS = "e800207b96172bcb53d0a30de4e4a37a762cd610cdce159d26c57b70c008757c"
-NEURAL_EVENTS_CONFIRMED = {("Darwin", "arm64")}
+NEURAL_EVENTS_CONFIRMED = {("Darwin", "arm64"), ("Linux", "x86_64")}
 
 
 def run_neural() -> tuple[Simulation, list[TickSummary]]:
