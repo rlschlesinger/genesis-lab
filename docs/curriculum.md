@@ -103,6 +103,20 @@ What has been covered, where it appears in the code, and what comes next.
 
 ## Milestone 1 complete
 
+## Milestone 2: Genetics and evolution
+
+### 2.0 · Golden tests (`tests/test_regression.py`)
+- **Characterization tests:** record what the code *does* (a state digest) to catch accidental behaviour changes during refactors.
+- **Refactor vs behaviour change:** a refactor keeps every result identical; anything else must be a deliberate, logged decision.
+
+### 2.1 · Genome (`evolution/genome.py`)
+- **Genotype vs phenotype:** the inherited information vs the expressed characteristics. `express()` is the mapping.
+- **Unexpressed genes:** the neutral marker is inherited but has no effect, so nothing can select for it. Its changes are pure drift.
+- **Bounds:** every value a gene could ever reach must be physically valid, not just its starting value.
+- **Circular imports:** `typing.TYPE_CHECKING` lets two modules mention each other's types without importing each other at runtime.
+- **Single source of truth:** one gene list, plus a test that the three places naming genes agree.
+
+
 ## Future learning objectives
 - **Milestone 2:** mutation and heredity, variation vs selection vs drift, lineage trees, trait distributions.
 - **Milestone 3:** pandas, SQL with DuckDB, Parquet, significance tests and effect sizes with SciPy, batch experiment design.

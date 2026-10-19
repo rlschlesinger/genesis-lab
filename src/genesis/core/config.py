@@ -66,16 +66,47 @@ class FoodConfig(_Strict):
         return self
 
 
-class TraitsConfig(_Strict):
-    """Initial per-organism traits. Fixed in Milestone 1; heritable from Milestone 2."""
+class GeneConfig(_Strict):
+    """One gene: every founder's starting value, and the range mutation must stay within."""
 
-    speed: PositiveFloat = Field(description="Max distance moved per tick.")
-    sense_range: PositiveFloat = Field(description="Max distance at which food is detected.")
-    max_turn: float = Field(gt=0, le=math.pi, description="Max heading change per tick.")
-    metabolic_rate: NonNegativeFloat = Field(description="EU spent per tick just staying alive.")
-    reproduction_threshold: PositiveFloat = Field(
-        description="Energy at or above which an organism reproduces."
-    )
+    initial: float
+    min: float
+    max: float
+
+    @model_validator(mode="after")
+    def _ordered(self) -> Self:
+        if not self.min < self.max:
+            raise ValueError(f"min ({self.min}) must be less than max ({self.max})")
+        if not self.min <= self.initial <= self.max:
+            raise ValueError(f"initial ({self.initial}) must lie in [{self.min}, {self.max}]")
+        return self
+
+
+class GenomeConfig(_Strict):
+    """The heritable genes. Units as in genesis.evolution.genome.GENES.
+
+    Each gene's whole range must be physically valid, not just its starting value: from
+    Milestone 2, mutation can carry a gene anywhere between its min and max.
+    """
+
+    speed: GeneConfig
+    sense_range: GeneConfig
+    max_turn: GeneConfig
+    metabolic_rate: GeneConfig
+    reproduction_threshold: GeneConfig
+    neutral_marker: GeneConfig
+
+    @model_validator(mode="after")
+    def _physical_ranges(self) -> Self:
+        if self.speed.min <= 0:
+            raise ValueError("speed.min must be positive")
+        if self.sense_range.min <= 0:
+            raise ValueError("sense_range.min must be positive")
+        if self.max_turn.min <= 0 or self.max_turn.max > math.pi:
+            raise ValueError("max_turn must stay within (0, pi]")
+        if self.metabolic_rate.min < 0:
+            raise ValueError("metabolic_rate.min must be >= 0")
+        return self
 
 
 class OrganismConfig(_Strict):
@@ -89,7 +120,6 @@ class OrganismConfig(_Strict):
         description="EU lost by the parent when reproducing, beyond the transfer."
     )
     controller: ControllerName
-    traits: TraitsConfig
 
     @model_validator(mode="after")
     def _check_consistency(self) -> Self:
@@ -97,13 +127,6 @@ class OrganismConfig(_Strict):
             raise ValueError(
                 f"initial_count ({self.initial_count}) exceeds "
                 f"max_population ({self.max_population})"
-            )
-        cost = self.offspring_energy + self.reproduction_overhead
-        if self.traits.reproduction_threshold <= cost:
-            raise ValueError(
-                f"traits.reproduction_threshold ({self.traits.reproduction_threshold}) must exceed "
-                f"offspring_energy + reproduction_overhead ({cost}), "
-                "or parents would reach zero energy by reproducing"
             )
         return self
 
@@ -113,6 +136,21 @@ class SimulationConfig(_Strict):
     world: WorldConfig
     food: FoodConfig
     organisms: OrganismConfig
+    genome: GenomeConfig
+
+    @model_validator(mode="after")
+    def _reproduction_affordable(self) -> Self:
+        # Checked against the *lowest* threshold mutation could reach, not just the starting
+        # value: an organism anywhere in the range must be able to afford a child.
+        cost = self.organisms.offspring_energy + self.organisms.reproduction_overhead
+        lowest = self.genome.reproduction_threshold.min
+        if lowest <= cost:
+            raise ValueError(
+                f"genome.reproduction_threshold.min ({lowest}) must exceed "
+                f"offspring_energy + reproduction_overhead ({cost}), "
+                "or parents could reach zero energy by reproducing"
+            )
+        return self
 
     # This rule compares two sections (food and world), so it must live here: SimulationConfig
     # is the only model that can see both. A validator inside FoodConfig only sees food fields.

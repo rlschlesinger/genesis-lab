@@ -60,6 +60,13 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-018 · Genome representation (2026-10-18)
+
+**Decision:** `Genome` is a frozen dataclass with one float per gene, stored in trait units. `express()` maps it to `Traits`. Gene limits come from the config's `genome` section; units and descriptions live in `GENES`. All founders share one genome.
+**Why:** rescaling genes to 0–1 and back can change values by one rounding step, which would have changed Milestone 1 results (the golden test would fail). Named fields are clearer to read and inspect than an array. Identical founders mean any variation is attributable to mutation.
+**Alternatives:** 0–1 normalized genes (uniform mutation scale; rounding problem); a NumPy array (faster en masse, less readable); initial standing variation (a possible config option later).
+**Consequence:** the config's `organisms.traits` section was replaced by `genome`. Configs from Milestone 1 need migrating; behaviour is unchanged (verified by tests/test_regression.py).
+
 ## D-017 · No performance optimization in Milestone 1 (2026-10-18)
 
 **Decision:** keep the all-pairs distance calculations in sensing and feeding.

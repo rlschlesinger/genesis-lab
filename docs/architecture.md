@@ -37,6 +37,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `core/geometry.py` | `wrap_angle` | |
 | `core/feeding.py` | Who eats what: closest-pair matching, random tie-break | Change energy itself |
 | `core/energy.py` | `EnergyLedger`: flows and the per-tick conservation check | |
+| `evolution/genome.py` | `GENES` (units, descriptions), `Genome` (genotype), `express()` → `Traits` (phenotype) | Import config at runtime from organism.py |
 | `evolution/reproduction.py` | Who reproduces (random at the cap) and where offspring appear | Touch organisms |
 | `core/simulation.py` | Tick order, RNG streams, founders, deaths, `TickSummary`, `state_digest` | Do I/O |
 | `analytics/metrics.py` | Flat rows: `tick_row`, `organism_rows`; column lists | Mutate state |
@@ -49,11 +50,12 @@ The API (Milestone 5) will drive the same `Simulation` object as the CLI.
 
 ## Configuration
 
-`load_config(path)` → `SimulationConfig` with sections `run`, `world`, `food`, `organisms` (including `organisms.traits`). Models forbid unknown keys and are frozen. Cross-field rules:
+`load_config(path)` → `SimulationConfig` with sections `run`, `world`, `food`, `organisms`, `genome`. Models forbid unknown keys and are frozen. Cross-field rules:
 
 - `food.initial_count <= food.max_count`
 - `organisms.initial_count <= organisms.max_population`
-- `traits.reproduction_threshold > offspring_energy + reproduction_overhead`
+- `genome.reproduction_threshold.min > offspring_energy + reproduction_overhead` (the whole range, since mutation can reach its minimum)
+- each gene: `min < max`, `min <= initial <= max`; speed and sense_range min > 0; max_turn within (0, pi]
 
 Reproduction energy model: the parent pays `offspring_energy + reproduction_overhead`; the child starts with `offspring_energy`; the overhead leaves the system (recorded as outflow in the energy ledger).
 
@@ -67,7 +69,8 @@ Reproduction energy model: the parent pays `offspring_energy + reproduction_over
 
 ## Organisms
 
-- `Traits`: frozen dataclass; fixed for a lifetime (heritable from Milestone 2).
+- `Genome` (genotype): frozen dataclass of six genes in trait units, inherited. `Traits` (phenotype) = `express(genome)`, computed once at birth. The `neutral_marker` gene is inherited but not expressed.
+- Founders all share the configured initial genome; variation can only come from mutation.
 - `Organism`: mutable dataclass with `slots=True, kw_only=True`. Identity/lineage fields are set at birth; physical state (`x`, `y`, `heading`, `energy`) is changed by the simulation.
 - **Time:** a *tick* is one step of simulated time, during which the 9-step sequence runs once for every organism. `age` counts ticks survived.
 - `spend(amount)` never takes energy below zero and returns the amount actually deducted (the ledger records that, not the amount requested).
@@ -164,7 +167,7 @@ Decisions: trade-off costs for sense range and speed; metabolic rate as a cost-f
 | # | Increment | Key test | Status |
 |---|---|---|---|
 | 2.0 | Golden digests lock in Milestone 1 behaviour | Default run unchanged | done |
-| 2.1 | Genome: gene definitions, bounds, expression to traits | Bounds validated; Milestone 1 unchanged | |
+| 2.1 | Genome: gene definitions, bounds, expression to traits | Bounds validated; Milestone 1 unchanged | done |
 | 2.2 | Mutation: per-gene rate and size, reflection, own RNG stream, off switch | In bounds; no pile-up; off = exact copy | |
 | 2.3 | Inheritance wired in; `mutations.csv`; gene columns | Child = parent + recorded changes | |
 | 2.4 | Trade-off costs; positive control and neutral marker | Ledger balances; defaults = Milestone 1 | |

@@ -10,20 +10,21 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
-from genesis.core.config import TraitsConfig
+if TYPE_CHECKING:
+    # Imported only for type annotations. genome.py imports Traits from this module, so a
+    # runtime import here would be circular.
+    from genesis.evolution.genome import Genome
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Traits:
-    """Fixed per-organism characteristics. Units as in config.py.
+    """The phenotype: the characteristics that actually affect the organism.
 
-    frozen=True: traits cannot change during a lifetime. In Milestone 2 they become heritable,
-    and changes happen only between generations, through mutation, never mid-life.
-
-    Why not reuse ``TraitsConfig`` directly? That class describes what is allowed in a *file*.
-    ``Traits`` is the runtime value an individual carries. In Milestone 2, offspring traits
-    come from mutation, not from a file, so the two will diverge.
+    Produced from a Genome by ``genesis.evolution.genome.express``; never built from config
+    directly. frozen=True: traits cannot change during a lifetime. Change happens only between
+    generations, through mutation.
     """
 
     speed: float
@@ -31,16 +32,6 @@ class Traits:
     max_turn: float
     metabolic_rate: float
     reproduction_threshold: float
-
-    @classmethod
-    def from_config(cls, config: TraitsConfig) -> Traits:
-        return cls(
-            speed=config.speed,
-            sense_range=config.sense_range,
-            max_turn=config.max_turn,
-            metabolic_rate=config.metabolic_rate,
-            reproduction_threshold=config.reproduction_threshold,
-        )
 
 
 class DeathCause(StrEnum):
@@ -65,7 +56,8 @@ class Organism:
     founder_id: int  # the founding ancestor this organism descends from (itself, if a founder)
     generation: int  # parent's generation + 1; generations overlap (see architecture.md)
     birth_tick: int
-    traits: Traits
+    genome: Genome  # genotype: what is inherited
+    traits: Traits  # phenotype: express(genome), computed once at birth
 
     # Physical state: changed by the simulation each tick.
     x: float

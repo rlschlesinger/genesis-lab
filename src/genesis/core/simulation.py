@@ -26,8 +26,9 @@ from genesis.core.config import SimulationConfig
 from genesis.core.energy import EnergyLedger
 from genesis.core.feeding import resolve_feeding
 from genesis.core.movement import move
-from genesis.core.organism import Organism, Traits
+from genesis.core.organism import Organism
 from genesis.core.world import World
+from genesis.evolution.genome import Genome, express
 from genesis.evolution.reproduction import place_offspring, select_parents
 from genesis.intelligence.controllers import make_controller
 from genesis.intelligence.sensors import sense_food
@@ -105,7 +106,10 @@ class Simulation:
     def _make_founders(self) -> list[Organism]:
         cfg = self.config.organisms
         n = cfg.initial_count
-        traits = Traits.from_config(cfg.traits)
+        # All founders share one genome (no initial variation): any variation that appears
+        # later comes from mutation alone.
+        genome = Genome.from_config(self.config.genome)
+        traits = express(genome)
         # Draw all positions, then all headings, as two vectorized calls on the setup stream.
         positions = self.rng.setup.uniform(0.0, [self.world.width, self.world.height], size=(n, 2))
         headings = self.rng.setup.uniform(-np.pi, np.pi, size=n)
@@ -119,6 +123,7 @@ class Simulation:
                     founder_id=new_id,  # each founder starts its own lineage
                     generation=0,
                     birth_tick=0,
+                    genome=genome,
                     traits=traits,
                     x=float(x),
                     y=float(y),
@@ -263,8 +268,9 @@ class Simulation:
                     founder_id=parent.founder_id,
                     generation=parent.generation + 1,
                     birth_tick=self.tick,
-                    # Exact copy (Milestone 1). Traits are frozen, so sharing one object
-                    # between parent and child is safe: neither can change it.
+                    # Exact copy of the genome (mutation arrives in increment 2.2). Genome and
+                    # Traits are frozen, so sharing them between parent and child is safe.
+                    genome=parent.genome,
                     traits=parent.traits,
                     x=float(x),
                     y=float(y),

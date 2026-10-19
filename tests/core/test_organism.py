@@ -6,32 +6,25 @@ from pathlib import Path
 import pytest
 
 from genesis.core.config import load_config
-from genesis.core.organism import DeathCause, Organism, Traits
+from genesis.core.organism import DeathCause, Organism
+from genesis.evolution.genome import Genome, express
 
 DEFAULT_CONFIG = Path(__file__).parents[2] / "configs" / "default.yaml"
 
-TRAITS = Traits(
-    speed=1.5, sense_range=20.0, max_turn=0.5, metabolic_rate=0.2, reproduction_threshold=80.0
-)
+GENOME = Genome.from_config(load_config(DEFAULT_CONFIG).genome)
+TRAITS = express(GENOME)
 
 
 def make_organism(**overrides) -> Organism:
     fields = dict(
         id=1, parent_id=None, founder_id=1, generation=0, birth_tick=0,
-        traits=TRAITS, x=10.0, y=10.0, heading=0.0, energy=50.0,
+        genome=GENOME, traits=TRAITS, x=10.0, y=10.0, heading=0.0, energy=50.0,
     )  # fmt: skip
     fields.update(overrides)
     return Organism(**fields)
 
 
 # --- Traits -------------------------------------------------------------------------------
-
-
-def test_traits_from_config_copies_every_value():
-    config = load_config(DEFAULT_CONFIG).organisms.traits
-    traits = Traits.from_config(config)
-    # Compare field by field, so adding a trait to one class but not the other fails here.
-    assert dataclasses.asdict(traits) == config.model_dump()
 
 
 def test_traits_are_immutable():
@@ -63,7 +56,7 @@ def test_misspelled_attribute_raises():
 def test_positional_construction_rejected():
     # kw_only=True: guards against swapping two numbers by position.
     with pytest.raises(TypeError):
-        Organism(1, None, 0, 0, TRAITS, 10.0, 10.0, 0.0, 50.0)
+        Organism(1, None, 1, 0, 0, GENOME, TRAITS, 10.0, 10.0, 0.0, 50.0)
 
 
 # --- Energy -------------------------------------------------------------------------------

@@ -53,9 +53,36 @@ def test_out_of_range_values_rejected(raw, section, field, bad_value):
         validate(raw)
 
 
-def test_max_turn_above_pi_rejected(raw):
-    raw["organisms"]["traits"]["max_turn"] = 4.0
+def test_max_turn_range_above_pi_rejected(raw):
+    raw["genome"]["max_turn"]["max"] = 4.0
     with pytest.raises(pydantic.ValidationError, match="max_turn"):
+        validate(raw)
+
+
+@pytest.mark.parametrize(
+    ("gene", "bounds"),
+    [
+        ("speed", {"initial": 1.0, "min": 2.0, "max": 3.0}),  # initial below min
+        ("speed", {"initial": 1.0, "min": 1.0, "max": 1.0}),  # empty range
+        ("sense_range", {"initial": 5.0, "min": 3.0, "max": 1.0}),  # min above max
+    ],
+)
+def test_badly_ordered_gene_rejected(raw, gene, bounds):
+    raw["genome"][gene] = bounds
+    with pytest.raises(pydantic.ValidationError, match=gene):
+        validate(raw)
+
+
+@pytest.mark.parametrize("gene", ["speed", "sense_range"])
+def test_gene_range_that_reaches_zero_rejected(raw, gene):
+    raw["genome"][gene]["min"] = 0.0
+    with pytest.raises(pydantic.ValidationError, match=f"{gene}.min must be positive"):
+        validate(raw)
+
+
+def test_missing_gene_rejected(raw):
+    del raw["genome"]["neutral_marker"]
+    with pytest.raises(pydantic.ValidationError, match="neutral_marker"):
         validate(raw)
 
 
@@ -89,10 +116,13 @@ def test_initial_population_above_cap_rejected(raw):
         validate(raw)
 
 
-def test_reproduction_that_would_kill_parent_rejected(raw):
+def test_reproduction_that_could_kill_parent_rejected(raw):
+    # The *lowest* threshold mutation could reach must still pay for a child.
     org = raw["organisms"]
-    org["traits"]["reproduction_threshold"] = org["offspring_energy"] + org["reproduction_overhead"]
-    with pytest.raises(pydantic.ValidationError, match="reproduction_threshold"):
+    raw["genome"]["reproduction_threshold"]["min"] = (
+        org["offspring_energy"] + org["reproduction_overhead"]
+    )
+    with pytest.raises(pydantic.ValidationError, match="reproduction_threshold.min"):
         validate(raw)
 
 

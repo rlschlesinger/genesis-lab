@@ -12,6 +12,7 @@ from genesis.core.config import SimulationConfig
 from genesis.core.energy import EnergyLedgerError
 from genesis.core.organism import DeathCause
 from genesis.core.simulation import RngStreams, Simulation
+from genesis.evolution.genome import Genome, express
 
 DEFAULT_CONFIG = Path(__file__).parents[2] / "configs" / "default.yaml"
 
@@ -102,7 +103,7 @@ def test_energy_costs_are_charged_each_tick():
     config = make_config()
     sim = Simulation(config)
     sim.step()
-    t, cfg = config.organisms.traits, config.organisms
+    t, cfg = express(Genome.from_config(config.genome)), config.organisms
     max_cost = t.metabolic_rate + cfg.move_cost_per_distance * t.speed
     for org in sim.organisms:
         # Spent at least metabolism, at most metabolism + a full-speed move (less at walls).
@@ -360,3 +361,20 @@ def test_lineages_can_only_disappear_never_appear():
     counts = [s.lineages for s in summaries]
     assert counts[0] <= 30
     assert all(later <= earlier for earlier, later in zip(counts, counts[1:], strict=False))
+
+
+# --- Genome -------------------------------------------------------------------------------
+
+
+def test_every_organism_carries_a_genome_whose_expression_is_its_traits():
+    sim = Simulation(make_config(**{"run.max_ticks": 500}))
+    sim.run()
+    for org in [*sim.organisms, *sim.dead]:
+        assert org.traits == express(org.genome)
+
+
+def test_without_mutation_every_genome_equals_the_founders():
+    sim = Simulation(make_config(**{"run.max_ticks": 500}))
+    founder_genome = sim.organisms[0].genome
+    sim.run()
+    assert all(o.genome == founder_genome for o in [*sim.organisms, *sim.dead])
