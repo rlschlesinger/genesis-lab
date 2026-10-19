@@ -522,3 +522,15 @@ def test_neutral_twin_without_mutation_is_identical_to_a_normal_run():
     a.run()
     b.run()
     assert a.state_digest() == b.state_digest()
+
+
+def test_long_run_that_once_failed_the_ledger_now_completes():
+    # Regression test for D-026: E002's 'off' condition, seed 1000, failed at tick 13,820
+    # because rounding drift outgrew a tolerance scaled to stock rather than to flow.
+    raw = yaml.safe_load(DEFAULT_CONFIG.with_name("evolution.yaml").read_text())
+    raw["mutation"]["enabled"] = False
+    raw["run"]["seed"] = 1000
+    raw["run"]["max_ticks"] = 14_000
+    sim = Simulation(SimulationConfig.model_validate(raw))
+    sim.run()  # raised EnergyLedgerError before the fix
+    assert sim.tick == 14_000

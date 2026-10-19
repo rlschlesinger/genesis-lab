@@ -60,6 +60,13 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-026 · Ledger: exact per-tick sums; tolerance scaled to energy flowed (2026-10-18)
+
+**Problem:** the first E002/E003 runs (commit `13a1561`) stopped with `EnergyLedgerError`: +3.5e-6 EU at tick 13,820 (E002, mutation off, seed 1000) and −2.7e-6 EU at tick 17,476 (E003). No accounting was wrong. Millions of small payments added one at a time to running totals near 10⁶ each lost a rounding sliver, and the drift outgrew a tolerance scaled to the current *stock* (~3,500), while ~1.1 M EU had flowed through (314x the stock).
+**Decision:** (1) sum each tick's payments per flow exactly with `math.fsum` and add once per tick; (2) tolerance = 1e-6 + 1e-12 × gross flow.
+**Evidence:** worst drift over four full 20,000-tick runs after (1): ~6e-9 EU, ≤ 4e-15 of gross flow (600x smaller than the failure). The tolerance (2.6e-6 at 1.6 M gross) is ~450x above that and ~1500x below the smallest real error (one missed 0.004 EU sensing payment). The old drift would still be rejected: the fix is (1), not a looser check.
+**Simulation behaviour unchanged:** the ledger isn't part of the state; golden regression tests pass.
+
 ## D-025 · Neutral-twin controls instead of the neutral marker alone (2026-10-18)
 
 **Decision:** a per-gene `neutral` flag: the gene is inherited and mutates, but `express()` uses its initial value. Selection is judged by comparing normal runs with all-neutral runs on the same seeds.

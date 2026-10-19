@@ -31,7 +31,7 @@ uv run genesis report data/runs/<name>               # HTML report (Plotly, offl
 - **Snapshot observation:** all organisms observe the same frozen world state before any action is applied.
 - **Newborns** are inactive until the tick after their birth.
 - **Food contention:** one meal per organism per tick; in-reach pairs resolved closest-first; exact ties are broken with the tiebreak stream (never by ID, which would bias toward older lineages). Organisms eat *before* paying costs.
-- **Energy ledger:** initial + inflow − outflow == current total, checked by `Simulation.step()` every tick (`EnergyLedgerError`). Every new energy flow must be recorded in `EnergyLedger`.
+- **Energy ledger:** initial + inflow − outflow == current total within `EnergyLedger.tolerance` (scaled to gross flow), checked by `Simulation.step()` every tick (`EnergyLedgerError`). Every new energy flow must be recorded in `EnergyLedger`, summed per tick with `math.fsum` (D-026).
 - **Separation of concerns:** controllers are pure (observation → action) and never mutate the world; metrics are read-only.
 - **Boundaries:** hard walls (positions clamped), not wrap-around.
 - **Run records:** CSV output must stay byte-identical for identical config + seed + environment. A new TickSummary/organism field goes into the metrics column lists; never write nondeterministic values (timestamps, run IDs) into the CSVs.

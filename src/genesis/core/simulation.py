@@ -215,12 +215,19 @@ class Simulation:
         #     that (not the amount requested) is what the ledger records.
         #     Order matters only when energy runs out mid-payment (spend() never goes below
         #     zero): metabolism first, then sensing, then movement. See core/costs.py.
+        #     Each flow's payments are summed exactly (math.fsum) and added to the ledger once
+        #     per tick. Adding millions of small payments one by one to a running total of
+        #     ~10^6 loses a sliver to rounding each time, and those slivers add up (D-026).
+        metabolism_paid, sensing_paid, movement_paid = [], [], []
         for org, distance in zip(living, moved.distances, strict=True):
-            self.ledger.metabolism += org.spend(metabolic_cost(org.traits))
-            self.ledger.sensing += org.spend(sensing_cost(org.traits, cfg))
-            self.ledger.movement += org.spend(
-                movement_cost(org.traits, float(distance), cfg, self._reference_speed)
+            metabolism_paid.append(org.spend(metabolic_cost(org.traits)))
+            sensing_paid.append(org.spend(sensing_cost(org.traits, cfg)))
+            movement_paid.append(
+                org.spend(movement_cost(org.traits, float(distance), cfg, self._reference_speed))
             )
+        self.ledger.metabolism += math.fsum(metabolism_paid)
+        self.ledger.sensing += math.fsum(sensing_paid)
+        self.ledger.movement += math.fsum(movement_paid)
 
         # 6. Deaths: ask every organism first, then apply. Nobody dies mid-update.
         causes = [org.cause_of_death(cfg.max_age) for org in living]

@@ -54,15 +54,29 @@ class EnergyLedger:
     def expected_stock(self) -> float:
         return self.initial_stock + self.inflow - self.outflow
 
-    def check(self, actual_stock: float, tick: int) -> None:
-        """Raise if ``actual_stock`` differs from what the recorded flows predict.
+    @property
+    def gross_flow(self) -> float:
+        """Everything that has ever passed through the books: start + all in + all out."""
+        return self.initial_stock + self.inflow + self.outflow
 
-        The tolerance allows for floating-point rounding (thousands of additions of values
-        like 0.35 that binary can't represent exactly) but is far smaller than any real
-        accounting error, such as one missed food item (20 EU by default).
+    @property
+    def tolerance(self) -> float:
+        """How far actual and expected stock may differ through floating-point rounding alone.
+
+        Rounding error grows with the amount of energy that has *flowed through* the books,
+        not with the current stock: a long run can move 300x its stock. So the tolerance
+        scales with gross flow (D-026). Measured worst drift over full 20,000-tick runs:
+        ~6e-9 EU, at most 4e-15 of gross flow. This tolerance (2.6e-6 EU at 1.6M gross) sits
+        ~450x above that and ~1500x below the smallest real error, one missed sensing payment
+        at the minimum sense range (1 x 0.004 = 0.004 EU).
         """
+        return 1e-6 + 1e-12 * self.gross_flow
+
+    def check(self, actual_stock: float, tick: int) -> None:
+        """Raise if ``actual_stock`` differs from what the recorded flows predict by more than
+        rounding can explain (``tolerance``)."""
         expected = self.expected_stock
-        if not math.isclose(actual_stock, expected, rel_tol=1e-9, abs_tol=1e-6):
+        if abs(actual_stock - expected) > self.tolerance:
             raise EnergyLedgerError(
                 f"tick {tick}: energy stock is {actual_stock!r} but the ledger expects "
                 f"{expected!r} (difference {actual_stock - expected:+.9g} EU). {self}"
