@@ -173,6 +173,13 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
   - `step()` raises `EnergyLedgerError` if `initial + in - out` differs from the actual stock (tolerance: relative 1e-9, absolute 1e-6 EU).
 - **Feedback:** spawning is blocked at `max_count`, so inflow depends on how much the population eats.
 
+## Senses with predators (6.3, D-059)
+
+- **Predators** sense the nearest prey within their sense range exactly as prey sense food (`sense_food` with prey positions from the start-of-tick snapshot). So `nearest_prey_seeker` is the food seeker's rule unchanged, and a neural predator's seven inputs are the prey's seven with "food" meaning prey. Predator controllers: `random_walk`, `nearest_prey_seeker`, `neural` (with `predators.brain`, brains from the predators' `brain` stream).
+- **Prey with brains** in a world with predators get three more inputs about the nearest predator (`sense_threats`): seen, side (sin of the bearing), closeness. 10 inputs, 80 parameters. Rule-based prey are told nothing about predators.
+- **The brain size follows the config, not the population:** a `predators:` section with `initial_count: 0` gives prey the same 10-input brains, drawn identically on the same seed, with the predator inputs always 0. That world is E008's matched control.
+- `sim.last_predator_decision` holds the predators' observations, actions and (neural) thought, as `sim.last_decision` does for prey.
+
 ## Capture (predators, 6.2, D-058)
 
 - **When:** right after the prey eat (step 5), before anyone pays costs, using everyone's post-move positions.
@@ -288,7 +295,7 @@ Founders pay exactly the Milestone 1 movement price at any exponent. Defaults re
 
 ## Randomness
 
-One integer seed per run → `numpy.random.SeedSequence` → `.spawn(8)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`, `mutation` (added in 2.2), `brain` (added in 4.3: founders' weights and brain mutation; unused when there are no brains), `predators` (added in 6.1, D-057: unused without predators; split with `Generator.spawn` into the predators' own setup, controller, reproduction and mutation streams, so predator draws never shift the prey's, and a world with predators starts with the same prey and food as one without). Tests check that each addition left the earlier streams unchanged. New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
+One integer seed per run → `numpy.random.SeedSequence` → `.spawn(8)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`, `mutation` (added in 2.2), `brain` (added in 4.3: founders' weights and brain mutation; unused when there are no brains), `predators` (added in 6.1, D-057: unused without predators; split with `Generator.spawn` into the predators' own setup, controller, reproduction, mutation, capture (6.2) and brain (6.3) streams, so predator draws never shift the prey's, and a world with predators starts with the same prey and food as one without). Tests check that each addition left the earlier streams unchanged. New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
 
 ## Milestone 1 plan
 
@@ -502,7 +509,7 @@ Scope: [roadmap/06A](roadmap/06A_PREDATOR_PREY.md). After trying the lab, the us
 | 6.0 | Chart sizes from the design tokens (Milestone 5 review recommendation) | Lengths in rem/px converted exactly; charts unchanged in the lab | done |
 | 6.1 | Species and predator bodies: optional `predators:` config section (own body, costs and genes; brains come with senses in 6.3), no capture yet | Old configs: hashes, golden values and CSVs unchanged; matched seeds give the same prey and food | done |
 | 6.2 | Capture phase after eating: one capture per predator per tick, contested prey closest-first with seeded tie-breaks, energy transfer through the ledger, captured prey never act again | One prey can't be eaten twice; energy as specified; no crash when either species dies out; replay reproducible | done |
-| 6.3 | Senses: predators sense the nearest prey; prey sense the nearest predator (3 inputs) | Sensor values against hand-worked cases; old brains unchanged | |
+| 6.3 | Senses: predators sense the nearest prey; prey sense the nearest predator (3 inputs) | Sensor values against hand-worked cases; old brains unchanged | done |
 | 6.4 | Recording: counts per species, capture attempts and successes, extinctions, traits per species; schema version; lake tables; report sections | Saved-run schema compatibility; lake validation | |
 | 6.5 | The lab redrawn: cell bodies, species, energy, capture marks; predator/prey charts and phase plot; species in the specimen panel | Snapshot contract (fixtures) and drawing rules unit-tested; checked in Chrome | |
 | 6.6 | E008 pre-registered (after labelled tuning pilots): prey evolved with vs without predators, plus a designed fleeing rule, tested against the same frozen predators | Spec and definition committed before running | |

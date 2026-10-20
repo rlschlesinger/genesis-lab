@@ -20,7 +20,7 @@ from genesis.api.runs import LiveRun, RunNotFound
 from genesis.api.schemas import BrainThought, OrganismDetail
 from genesis.core.organism import Organism
 from genesis.core.simulation import Simulation
-from genesis.intelligence.brain_inputs import INPUT_NAMES, parameter_names
+from genesis.intelligence.brain_inputs import input_names, parameter_names
 
 
 def deciders(sim: Simulation) -> list[int]:
@@ -62,7 +62,7 @@ def thought(sim: Simulation, organism_id: int) -> BrainThought | None:
     max_turn = float(decision.max_turn[k])
     return BrainThought(
         tick=sim.tick - 1,
-        input_names=list(INPUT_NAMES),
+        input_names=list(input_names(t.inputs.shape[1])),
         inputs=t.inputs[k].tolist(),
         hidden_sum=act.hidden_sum.tolist(),
         hidden=act.hidden.tolist(),
@@ -79,7 +79,8 @@ def organism_detail(run: LiveRun, organism_id: int) -> OrganismDetail:
     children = sorted(o.id for o in (*sim.organisms, *sim.dead) if o.parent_id == organism_id)
     weights = None
     if org.brain is not None:
-        weights = dict(zip(parameter_names(), org.brain.to_vector().tolist(), strict=True))
+        names = parameter_names(input_names(org.brain.shape[0]))
+        weights = dict(zip(names, org.brain.to_vector().tolist(), strict=True))
     return OrganismDetail(
         id=org.id,
         alive=org.alive,

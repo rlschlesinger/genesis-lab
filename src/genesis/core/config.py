@@ -29,10 +29,12 @@ NonNegativeInt = Annotated[int, Field(ge=0)]
 # Parameters in one brain: 7 inputs x 6 hidden + 6 + 6 x 2 outputs + 2 (D-039). Kept here as a
 # number so config validation doesn't import the network code; a test checks it matches.
 BRAIN_PARAMETERS = 62
+# Prey in a world with predators have 3 more inputs (D-059): 10 x 6 + 6 + 6 x 2 + 2.
+PREY_BRAIN_PARAMETERS = 80
 
 ControllerName = Literal["random_walk", "nearest_food_seeker", "neural"]
-# Predators can't use the food seeker (they don't eat food). 6.3 adds prey-seeking and neural.
-PredatorControllerName = Literal["random_walk"]
+# Predators can't use the food seeker (they don't eat food); they chase prey instead (D-059).
+PredatorControllerName = Literal["random_walk", "nearest_prey_seeker", "neural"]
 EventKind = Literal["birth", "death", "meal"]
 
 
@@ -168,8 +170,14 @@ class PredatorConfig(OrganismConfig):
     uses the shared ``mutation`` section, applied to these ranges.
     """
 
+    # 0 is allowed: a world ready for predators with none in it, where prey have the same
+    # 10-input brains (their predator inputs stay 0). That is E008's matched control (D-059).
+    initial_count: NonNegativeInt  # type: ignore[assignment]
     controller: PredatorControllerName = "random_walk"  # type: ignore[assignment]
     genome: GenomeConfig
+    # Predators' brains (D-059): the standard 7-input brain, with "food" meaning prey. Needed by
+    # the neural controller; carried, inherited and mutated but unused by the others.
+    brain: BrainConfig | None = None
     # Capture (6.2, D-058; core/predation.py).
     capture_radius: PositiveFloat = Field(
         description="Max distance at which a predator can strike a prey (both after moving)."
@@ -185,6 +193,26 @@ class PredatorConfig(OrganismConfig):
             "(the energy ledger's predation flow)."
         ),
     )
+
+    @model_serializer(mode="wrap")
+    def _omit_absent_brain(self, handler):  # noqa: ANN001, ANN202 (pydantic's own signature)
+        # As SimulationConfig does for its optional sections: no "brain": null in the dump.
+        data = handler(self)
+        if self.brain is None:
+            data.pop("brain", None)
+        return data
+
+    @model_validator(mode="after")
+    def _neural_predators_need_brains(self) -> Self:
+        if self.controller == "neural" and self.brain is None:
+            raise ValueError("predators.controller 'neural' needs a predators.brain: section")
+        weights = None if self.brain is None else self.brain.founder_weights
+        if weights is not None and len(weights) != self.initial_count:
+            raise ValueError(
+                f"predators.brain.founder_weights has {len(weights)} brains for "
+                f"{self.initial_count} predator founders"
+            )
+        return self
 
     @model_validator(mode="after")
     def _reproduction_affordable(self) -> Self:
@@ -234,22 +262,20 @@ class BrainConfig(_Strict):
     founder_weights: list[list[float]] | None = Field(
         default=None,
         description=(
-            "Explicit brains for the founders, one 62-number vector per founder (in "
-            "Brain.to_vector() order), e.g. brains evolved in another run (E007). None: draw "
-            "random brains. Stored in the config so its hash identifies the exact brains."
+            "Explicit brains for the founders, one vector per founder (in Brain.to_vector() "
+            "order: 62 numbers, or 80 for prey in a world with predators), e.g. brains "
+            "evolved in another run (E007). None: draw random brains. Stored in the config "
+            "so its hash identifies the exact brains."
         ),
     )
 
     @model_validator(mode="after")
     def _founder_weights_valid(self) -> Self:
+        # How many numbers each vector needs depends on the world (prey sense predators only
+        # where there are predators), so that is checked by SimulationConfig._brain_sizes.
         if self.founder_weights is None:
             return self
         for k, vector in enumerate(self.founder_weights):
-            if len(vector) != BRAIN_PARAMETERS:
-                raise ValueError(
-                    f"founder_weights[{k}] has {len(vector)} numbers; "
-                    f"a brain has {BRAIN_PARAMETERS}"
-                )
             if not all(math.isfinite(w) and abs(w) <= self.weight_limit for w in vector):
                 raise ValueError(
                     f"founder_weights[{k}] has a value that is not finite or exceeds "
@@ -331,6 +357,25 @@ class SimulationConfig(_Strict):
                     f"brain.founder_weights has {given} brains for {needed} founders "
                     "(organisms.initial_count)"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def _brain_sizes(self) -> Self:
+        # Given brains must fit the network they'll be put in: prey brains have 10 inputs
+        # where there are predators (even 0 of them), 7 otherwise; predators' have 7 (D-059).
+        prey = PREY_BRAIN_PARAMETERS if self.predators is not None else BRAIN_PARAMETERS
+        given = [("brain", self.brain, prey)]
+        if self.predators is not None:
+            given.append(("predators.brain", self.predators.brain, BRAIN_PARAMETERS))
+        for name, brain, size in given:
+            if brain is None or brain.founder_weights is None:
+                continue
+            for k, vector in enumerate(brain.founder_weights):
+                if len(vector) != size:
+                    raise ValueError(
+                        f"{name}.founder_weights[{k}] has {len(vector)} numbers; "
+                        f"a brain here has {size}"
+                    )
         return self
 
     @model_validator(mode="after")

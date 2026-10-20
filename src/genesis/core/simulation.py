@@ -45,10 +45,10 @@ from genesis.evolution.brain import founder_brains, mutate_brain
 from genesis.evolution.genome import Genome, express
 from genesis.evolution.mutation import mutate
 from genesis.evolution.reproduction import place_offspring, select_parents
-from genesis.intelligence.brain_inputs import wall_distance_ahead
+from genesis.intelligence.brain_inputs import PREY_INPUT_NAMES, wall_distance_ahead
 from genesis.intelligence.controllers import Actions, Thought, make_controller
-from genesis.intelligence.neural import Brain, BrainStack
-from genesis.intelligence.sensors import BodySenses, Observations, nothing_sensed, sense_food
+from genesis.intelligence.neural import N_HIDDEN, N_INPUTS, N_OUTPUTS, Brain, BrainStack
+from genesis.intelligence.sensors import BodySenses, Observations, sense_food, sense_threats
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +97,7 @@ class PredatorStreams:
     reproduction: np.random.Generator  # who reproduces at the cap; newborn placement
     mutation: np.random.Generator  # offspring genome mutation
     capture: np.random.Generator  # strike ties and success (6.2, D-058)
+    brain: np.random.Generator  # founders' brains and brain mutation (6.3, D-059)
 
     @classmethod
     def from_generator(cls, parent: np.random.Generator) -> PredatorStreams:
@@ -244,6 +245,8 @@ class Simulation:
         self.world = World.from_config(config, self.rng.food)
         self.controller = make_controller(config.organisms.controller)
         self._neural = config.organisms.controller == "neural"
+        # Prey brains have 10 inputs in a world with predators (even none), 7 otherwise (D-059).
+        self._prey_inputs = len(PREY_INPUT_NAMES) if config.predators is not None else N_INPUTS
         # Founders' speed: the drag cost is relative to it (core/costs.py).
         self._reference_speed = config.genome.speed.initial
         self.tick = 0
@@ -264,12 +267,15 @@ class Simulation:
         self.predator_summary: PredatorSummary | None = None
         self.predator_events_this_tick: list[Event] = []
         self.predator_mutation_log: list[MutationEvent] = []
+        # The predators' latest decision, as last_decision is the prey's (None until tick 0).
+        self.last_predator_decision: Decision | None = None
         if hunters is not None:
             self.predator_controller = make_controller(hunters.controller)
+            self._neural_predators = hunters.controller == "neural"
             self._predator_reference_speed = hunters.genome.speed.initial
             self._predator_lineage = Lineage(
                 hunters, hunters.genome, self.predator_rng.reproduction,
-                self.predator_rng.mutation,
+                self.predator_rng.mutation, hunters.brain, self.predator_rng.brain,
             )  # fmt: skip
             self.predators = self._make_predator_founders()
         # Every gene change at every birth, in the order they happened.
@@ -305,9 +311,10 @@ class Simulation:
             brains = [None] * n
         elif brain_cfg.founder_weights is not None:
             # Given brains (e.g. evolved elsewhere, E007): nothing is drawn from the stream.
-            brains = [Brain.from_vector(w) for w in brain_cfg.founder_weights]
+            shape = (self._prey_inputs, N_HIDDEN, N_OUTPUTS)
+            brains = [Brain.from_vector(w, shape) for w in brain_cfg.founder_weights]
         else:
-            brains = founder_brains(n, brain_cfg, self.rng.brain)
+            brains = founder_brains(n, brain_cfg, self.rng.brain, self._prey_inputs)
         founders = []
         for (x, y), h, brain in zip(positions, headings, brains, strict=True):
             new_id = self._new_id()
@@ -340,14 +347,21 @@ class Simulation:
         rng = self.predator_rng.setup
         positions = rng.uniform(0.0, [self.world.width, self.world.height], size=(n, 2))
         headings = rng.uniform(-np.pi, np.pi, size=n)
+        # Brains as for prey (D-041): one random brain each, from the predators' own stream.
+        if cfg.brain is None:
+            brains = [None] * n
+        elif cfg.brain.founder_weights is not None:
+            brains = [Brain.from_vector(w) for w in cfg.brain.founder_weights]
+        else:
+            brains = founder_brains(n, cfg.brain, self.predator_rng.brain)
         founders = []
-        for (x, y), h in zip(positions, headings, strict=True):
+        for (x, y), h, brain in zip(positions, headings, brains, strict=True):
             new_id = self._new_id()
             founders.append(
                 Organism(
                     id=new_id, parent_id=None, founder_id=new_id, generation=0, birth_tick=0,
-                    genome=genome, traits=traits, x=float(x), y=float(y), heading=float(h),
-                    energy=cfg.initial_energy,
+                    genome=genome, traits=traits, brain=brain, x=float(x), y=float(y),
+                    heading=float(h), energy=cfg.initial_energy,
                 )
             )  # fmt: skip
         return founders
@@ -403,8 +417,14 @@ class Simulation:
         #    about its own body (D-042); rule-based controllers get exactly what they always
         #    did, so their runs are unchanged.
         if self._neural and living:
+            # In a world with predators, neural prey also sense the nearest predator, from
+            # the same start-of-tick snapshot (D-059). With none present it is never found.
+            threat = None
+            if hunting:
+                threat = sense_threats(positions, headings, sense_ranges, pred.positions)
             observations = replace(
                 observations,
+                threat=threat,
                 body=BodySenses(
                     wall_distance=wall_distance_ahead(
                         positions, headings, self.world.width, self.world.height
@@ -432,12 +452,38 @@ class Simulation:
             org.x, org.y, org.heading = x, y, heading
 
         # 2-4 for predators. They act on the same start-of-tick snapshot as the prey (``pred``
-        # was taken in step 2, and the prey's own snapshot arrays are never modified), so it
-        # doesn't matter that their turn is written after the prey's. Until 6.3 gives them
-        # senses, they perceive nothing and wander.
+        # was taken in step 2, and ``positions`` holds the prey where they were before
+        # moving), so it doesn't matter that their turn is written after the prey's. A
+        # predator senses the nearest prey exactly as a prey senses the nearest food, so the
+        # food seeker's rule chases prey and a brain's food inputs report prey (D-059).
         if hunting:
-            pred_actions = self.predator_controller.decide(
-                nothing_sensed(pred.energies), self.predator_rng.controller
+            pred_obs = sense_food(
+                pred.positions, pred.headings, pred.sense_ranges, pred.energies, positions
+            )
+            pred_thought = None
+            if self._neural_predators and hunters:
+                pred_obs = replace(
+                    pred_obs,
+                    body=BodySenses(
+                        wall_distance=wall_distance_ahead(
+                            pred.positions, pred.headings, self.world.width, self.world.height
+                        ),
+                        sense_range=pred.sense_ranges,
+                        max_turn=pred.max_turns,
+                        reproduction_threshold=pred.thresholds,
+                    ),
+                )
+                pred_thought = self.predator_controller.think(
+                    pred_obs, self.predator_rng.controller,
+                    BrainStack.of([o.brain for o in hunters]),
+                )  # fmt: skip
+                pred_actions = pred_thought.actions
+            else:
+                pred_actions = self.predator_controller.decide(
+                    pred_obs, self.predator_rng.controller
+                )
+            self.last_predator_decision = Decision(
+                pred_obs, pred_actions, pred.max_turns, pred_thought
             )
             pred_moved = move(
                 pred.positions, pred.headings, pred_actions, pred.speeds, pred.max_turns,

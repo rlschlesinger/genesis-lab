@@ -21,8 +21,12 @@ CONFIGS = Path(__file__).parents[2] / "configs"
 PREDATORS = CONFIGS / "predators.yaml"
 
 
-# A capture radius nothing reaches in practice: predators that never catch anything.
-HARMLESS = {"predators.capture_radius": 1e-9}
+# Predators that strike but practically never catch (one in a trillion). Not a tiny capture
+# radius: hard walls clamp positions, so a predator and a prey pushed into the same corner sit
+# at exactly the same point, distance 0, which any radius reaches (found by the test below).
+HARMLESS = {"predators.capture_probability": 1e-12}
+# A world ready for predators, with none in it (E008's control, D-059).
+NONE = {"predators.initial_count": 0}
 
 
 def predator_config(**changes) -> SimulationConfig:
@@ -113,13 +117,20 @@ def test_predator_sub_streams_are_distinct_and_reproducible():
 
 
 def test_prey_and_food_start_the_same_with_or_without_predators():
-    # E008's matched pairs: on one seed, adding predators changes nothing about the prey or
-    # the food the world starts with (predators draw only from their own stream).
+    # Predators draw only from their own stream, so adding them changes nothing about where
+    # prey and food start. Prey brains differ in size (10 inputs where predators can exist,
+    # D-059), so E008's matched control is a world with the section and 0 predators: there
+    # everything about the prey is identical, brains included.
     with_p = Simulation(predator_config())
-    without = Simulation(without_predators(predator_config()))
-    assert np.array_equal(with_p.world.food.positions, without.world.food.positions)
-    for a, b in zip(with_p.organisms, without.organisms, strict=True):
-        assert (a.id, a.x, a.y, a.heading, a.energy) == (b.id, b.x, b.y, b.heading, b.energy)
+    for other in (without_predators(predator_config()), predator_config(**NONE)):
+        sim = Simulation(other)
+        assert np.array_equal(with_p.world.food.positions, sim.world.food.positions)
+        for a, b in zip(with_p.organisms, sim.organisms, strict=True):
+            assert (a.id, a.x, a.y, a.heading, a.energy) == (b.id, b.x, b.y, b.heading, b.energy)
+    control = Simulation(predator_config(**NONE))
+    assert control.predators == []
+    for a, b in zip(with_p.organisms, control.organisms, strict=True):
+        assert a.brain.shape == (10, 6, 2)
         assert np.array_equal(a.brain.to_vector(), b.brain.to_vector())
 
 
@@ -220,11 +231,13 @@ def test_a_prey_world_runs_on_after_the_predators_die_out():
 
 
 def test_predators_that_catch_nothing_leave_the_prey_history_untouched():
-    # Predators that never reach a prey can't affect it, and they draw only from their own
-    # streams, so the prey's whole history is the predator-free world's, tick for tick (only
-    # later IDs shift, since predator founders take IDs after the prey founders). Once they
-    # catch prey this stops holding: that is the point of predators.
-    with_p = Simulation(predator_config(**HARMLESS))
-    without = Simulation(without_predators(predator_config()))
+    # Predators that never catch anything, watched by prey that don't sense them (the food
+    # seeker ignores predators), can't affect the prey; and they draw only from their own
+    # streams. So the prey's whole history is that of a world with 0 predators, tick for
+    # tick: nothing about predators leaks into the prey by accident. (Neural prey do sense
+    # predators, so for them a harmless predator in view rightly changes what they do.)
+    seeker = {"organisms.controller": "nearest_food_seeker"}
+    with_p = Simulation(predator_config(**HARMLESS, **seeker))
+    without = Simulation(predator_config(**NONE, **seeker))
     for _ in range(300):
         assert with_p.step() == without.step()

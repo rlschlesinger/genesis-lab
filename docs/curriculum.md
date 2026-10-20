@@ -471,5 +471,13 @@ What has been covered, where it appears in the code, and what comes next.
 - **Attempts versus successes:** a strike can miss, which makes escape possible, and gives two numbers to measure instead of one.
 - **Validators catch modelling slips:** the lake refused a run whose events pointed at organisms outside its tables; the fix was in the model's records, not the validator.
 
+### 6.3 · Senses
+- **Symmetry as design:** a predator senses prey exactly as prey sense food, so the chase rule is the food seeker and a predator brain's inputs need no new meanings.
+- **Adding inputs without changing old ones:** new inputs go at the end, so input 0–6 mean what they always did, and worlds without predators keep their 62-parameter brains.
+- **A fair control:** "no predators" is a world *ready* for predators with none in it, so both groups of prey grow the same kind of brain.
+- **Limits of a sense:** without an "ahead" input, a predator in front and one behind look the same to a prey; that blind spot is a property to watch, not a bug.
+- **Edge cases hide at walls:** hard walls clamp positions, so two organisms can share a corner exactly; a "harmless" test predator still caught a prey that way.
+- **Overkill:** predators that hunt well can eat their own food supply to extinction, and then starve themselves.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.

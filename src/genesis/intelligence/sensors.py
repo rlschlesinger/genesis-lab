@@ -35,6 +35,16 @@ class BodySenses:
 
 
 @dataclass(frozen=True, slots=True)
+class ThreatSenses:
+    """The nearest predator within each prey's sense range (Milestone 6, D-059), found the same
+    way as the nearest food. Filled in only in worlds with predators."""
+
+    found: NDArray[np.bool_]
+    distance: FloatArray  # inf if none in range
+    bearing: FloatArray  # turn needed to face it, radians in [-pi, pi); 0 if none
+
+
+@dataclass(frozen=True, slots=True)
 class Observations:
     """What every organism senses this tick. Each array has one entry per organism (row i is
     organism i, in the same order as the inputs to ``sense_food``).
@@ -45,6 +55,7 @@ class Observations:
     food_bearing: FloatArray  # turn needed to face it, radians in [-pi, pi); 0 if none
     energy: FloatArray  # own current energy (unused by Milestone 1 controllers; for later)
     body: BodySenses | None = None  # only for neural controllers (Milestone 4)
+    threat: ThreatSenses | None = None  # only for neural prey in predator worlds (Milestone 6)
 
     def __len__(self) -> int:
         return len(self.energy)
@@ -94,16 +105,10 @@ def sense_food(
     )
 
 
-def nothing_sensed(energies: FloatArray) -> Observations:
-    """Observations for organisms with no senses yet: nothing found, only their own energy.
-
-    What predators perceive until 6.3 gives them senses for prey (D-057). Rule-based
-    controllers then behave exactly as they do when no food is in range.
-    """
-    n = len(energies)
-    return Observations(
-        food_found=np.zeros(n, dtype=bool),
-        food_distance=np.full(n, np.inf),
-        food_bearing=np.zeros(n),
-        energy=np.asarray(energies, dtype=np.float64).copy(),
-    )
+def sense_threats(
+    positions: FloatArray, headings: FloatArray, sense_ranges: FloatArray, threats: FloatArray
+) -> ThreatSenses:
+    """Each organism's nearest threat within its own sense range: ``sense_food`` with the
+    threats' positions in place of food, so "nearest" is decided by exactly the same code."""
+    seen = sense_food(positions, headings, sense_ranges, np.zeros(len(positions)), threats)
+    return ThreatSenses(seen.food_found, seen.food_distance, seen.food_bearing)

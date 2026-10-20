@@ -92,7 +92,7 @@ class NearestFoodSeeker:
 class Thought:
     """One tick of neural decision-making, kept whole so it can be inspected (4.6)."""
 
-    inputs: FloatArray  # (n, 7) as built by brain_inputs, before the network clips them
+    inputs: FloatArray  # (n, 7) or (n, 10) as built by brain_inputs, before clipping
     activations: Activations  # every intermediate value of the forward pass
     actions: Actions
 
@@ -146,6 +146,9 @@ CONTROLLERS: dict[str, type[RandomWalk] | type[NearestFoodSeeker] | type[NeuralC
     "random_walk": RandomWalk,
     "nearest_food_seeker": NearestFoodSeeker,
     "neural": NeuralController,
+    # A predator's "food" is prey: its observations hold the nearest prey where a prey's hold
+    # the nearest food, so chasing prey is the food seeker's rule, unchanged (D-059).
+    "nearest_prey_seeker": NearestFoodSeeker,
 }
 
 

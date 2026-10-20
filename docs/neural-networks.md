@@ -71,6 +71,16 @@ The organism brain has 7 inputs, each scaled so it lies between −1 and 1 and i
 
 So "food slightly to the left, quite close, half full, no wall in sight" is roughly `[1, 0.97, 0.26, 0.7, 0.5, 0, noise]`.
 
+**Prey in a world with predators** (Milestone 6, D-059) are told three more things, appended after these seven so the first seven mean exactly what they did:
+
+| # | Input | Meaning |
+|---|---|---|
+| 7 | predator_seen | 1 if any predator is within sense range, else 0 |
+| 8 | predator_left | sin(bearing to the nearest one): 1 to the left, −1 to the right |
+| 9 | predator_closeness | 1 touching it, 0 at the edge of sight |
+
+There is deliberately no `predator_ahead`: a predator straight ahead and one straight behind both give `predator_left` = 0. Turning away from the side a predator is on works either way; whether prey evolve around the blind spot is part of what E008 can show. **Predators' own brains** use the seven inputs above unchanged, with "food" meaning prey: a predator senses the nearest prey exactly as a prey senses the nearest food.
+
 ## Counting parameters
 
 Every weight and bias is one number in the brain. For the organism brain:
@@ -82,6 +92,8 @@ Every weight and bias is one number in the brain. For the organism brain:
 | output weights | 2 outputs × 6 hidden units | 12 |
 | output biases | 2 | 2 |
 | **total** | | **62** |
+
+A prey brain with the three predator inputs has 6 × 10 = 60 hidden weights, so 60 + 6 + 12 + 2 = **80** parameters.
 
 `Brain.to_vector()` lays these 62 numbers out in exactly that order (hidden weights row by row, hidden biases, output weights row by row, output biases). That flat vector is what organisms inherit and mutate (increment 4.3).
 

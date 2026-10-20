@@ -32,10 +32,10 @@ from pathlib import Path
 
 from genesis.analytics.behaviour import BEHAVIOUR_FIELDS
 from genesis.analytics.metrics import (
-    BRAIN_FIELDS,
     MUTATION_FIELDS,
     ORGANISM_FIELDS,
     TICK_FIELDS,
+    brain_fields,
     brain_rows,
     mutation_rows,
     organism_rows,
@@ -158,7 +158,7 @@ def execute_run(
     write_csv(out_dir / ORGANISMS_FILE, ORGANISM_FIELDS, organism_rows(sim))
     write_csv(out_dir / MUTATIONS_FILE, MUTATION_FIELDS, mutation_rows(sim))
     write_csv(out_dir / BEHAVIOUR_FILE, BEHAVIOUR_FIELDS, recorder.behaviour)
-    write_csv(out_dir / BRAINS_FILE, BRAIN_FIELDS, brain_rows(sim))
+    write_csv(out_dir / BRAINS_FILE, brain_fields(sim), brain_rows(sim))
 
     stop_reason = "extinction" if not sim.organisms else "max_ticks"
     digest = sim.state_digest()

@@ -29,7 +29,7 @@ import numpy as np
 
 from genesis.core.config import SimulationConfig
 from genesis.core.simulation import Simulation, TickSummary
-from genesis.intelligence.brain_inputs import INPUT_NAMES
+from genesis.intelligence.brain_inputs import input_names
 from genesis.intelligence.neural import OUTPUT_NAMES, Brain
 
 CHECKED_COUNTS = ("population", "births", "deaths", "food_eaten")
@@ -244,7 +244,8 @@ def format_inspection(i: Inspection, weights: bool = False) -> str:
     if i.inputs is not None:
         lines += ["", "1. Inputs (each in [-1, 1])"]
         lines += [
-            f"  {name:<15} {value:+.3f}" for name, value in zip(INPUT_NAMES, i.inputs, strict=True)
+            f"  {name:<18} {value:+.3f}"
+            for name, value in zip(input_names(len(i.inputs)), i.inputs, strict=True)
         ]
         lines += ["", "2. Hidden layer: weighted sum + bias, then tanh"]
         lines.append(f"  {'unit':<6}{'sum':>9}{'tanh':>9}")
@@ -280,7 +281,7 @@ def format_inspection(i: Inspection, weights: bool = False) -> str:
 
     if weights and i.brain is not None:
         lines += ["", "Weights: hidden layer (rows: units; columns: inputs)"]
-        header = "".join(f"{name[:9]:>10}" for name in INPUT_NAMES)
+        header = "".join(f"{name[:9]:>10}" for name in input_names(i.brain.shape[0]))
         lines.append(f"  {'unit':<5}{header}{'bias':>8}")
         for h in range(i.brain.w_hidden.shape[0]):
             row = "".join(f"{w:>+10.2f}" for w in i.brain.w_hidden[h])

@@ -12,7 +12,7 @@ from dataclasses import asdict, fields
 from genesis.core.organism import Organism, Traits
 from genesis.core.simulation import MutationEvent, Simulation, TickSummary
 from genesis.evolution.genome import gene_names
-from genesis.intelligence.brain_inputs import parameter_names
+from genesis.intelligence.brain_inputs import PREY_INPUT_NAMES, parameter_names
 
 TICK_FIELDS: list[str] = [f.name for f in fields(TickSummary)]
 
@@ -49,6 +49,14 @@ ORGANISM_FIELDS: list[str] = [
 
 # brains.csv: one row per organism that had a brain, its 62 parameters by name (D-043).
 BRAIN_FIELDS: list[str] = ["id", *parameter_names()]
+# In a world with predators, prey brains have 80 parameters, the last 18 their weights on the
+# three predator inputs (D-059).
+PREY_BRAIN_FIELDS: list[str] = ["id", *parameter_names(PREY_INPUT_NAMES)]
+
+
+def brain_fields(sim: Simulation) -> list[str]:
+    """brains.csv's columns for this run's prey brains."""
+    return PREY_BRAIN_FIELDS if sim.config.predators is not None else BRAIN_FIELDS
 
 
 def tick_row(summary: TickSummary) -> dict:
@@ -91,7 +99,7 @@ def brain_rows(sim: Simulation) -> list[dict]:
     """One row per organism that ever had a brain, in ascending ID order (none without
     brains). Brains never change during a lifetime, so one row per organism is complete."""
     everyone = sorted([*sim.organisms, *sim.dead], key=lambda o: o.id)
-    names = BRAIN_FIELDS[1:]
+    names = brain_fields(sim)[1:]
     return [
         {"id": o.id, **dict(zip(names, o.brain.to_vector().tolist(), strict=True))}
         for o in everyone

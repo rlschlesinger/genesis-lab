@@ -23,6 +23,23 @@ The seven inputs (D-040), in order:
  6    noise             a fresh random number each tick (controller stream)         [-1, 1]
 ====  ================  ==========================================================  ========
 
+Prey in a world with predators (Milestone 6, D-059) get three more, about the nearest
+predator within sense range, appended so the first seven keep their meaning:
+
+====  ==================  ========================================================  ========
+ #    name                meaning                                                   range
+====  ==================  ========================================================  ========
+ 7    predator_seen       1 if any predator is within sense range, else 0           0 or 1
+ 8    predator_left       sin(bearing to it): 1 to the left, -1 to the right        [-1, 1]
+ 9    predator_closeness  1 - distance / sense range                                [0, 1]
+====  ==================  ========================================================  ========
+
+Three, not four: there is no ``predator_ahead``, so a predator straight ahead and one straight
+behind look alike (both have sin = 0). Turning away from the side a predator is on works
+either way; telling front from back is left out deliberately and is something to revisit if
+evasion never evolves (D-059). Predators' own brains use the first seven inputs unchanged,
+with "food" meaning prey.
+
 Inputs 1-3 are 0 when no food is in sight; input 0 is how the brain tells "no food" apart
 from "food exactly sideways" (where cos is also 0).
 
@@ -62,16 +79,29 @@ INPUT_NAMES: tuple[str, ...] = (
 )
 assert len(INPUT_NAMES) == N_INPUTS  # the brain and its senses must agree on the count
 
+THREAT_INPUT_NAMES: tuple[str, ...] = ("predator_seen", "predator_left", "predator_closeness")
+PREY_INPUT_NAMES: tuple[str, ...] = (*INPUT_NAMES, *THREAT_INPUT_NAMES)  # with predators
 
-def parameter_names() -> list[str]:
-    """A readable name for each of a brain's 62 parameters, in ``Brain.to_vector()`` order.
+
+def input_names(n_inputs: int) -> tuple[str, ...]:
+    """The names of a brain's inputs, from how many it has (7, or 10 for prey that sense
+    predators)."""
+    for names in (INPUT_NAMES, PREY_INPUT_NAMES):
+        if len(names) == n_inputs:
+            return names
+    raise ValueError(f"no input layout has {n_inputs} inputs")
+
+
+def parameter_names(names: tuple[str, ...] = INPUT_NAMES) -> list[str]:
+    """A readable name for each of a brain's parameters (62 for seven inputs, 80 for ten), in
+    ``Brain.to_vector()`` order.
 
     ``wh_3_food_ahead``: hidden unit 3's weight on the food_ahead input. ``bh_3``: hidden unit
     3's bias. ``wo_turn_3``: the turn output's weight on hidden unit 3. ``bo_turn``: the turn
     output's bias. Used as column names in brains.csv, so a query can say which weight it means.
     """
     return [
-        *[f"wh_{h}_{name}" for h in range(N_HIDDEN) for name in INPUT_NAMES],
+        *[f"wh_{h}_{name}" for h in range(N_HIDDEN) for name in names],
         *[f"bh_{h}" for h in range(N_HIDDEN)],
         *[f"wo_{out}_{h}" for out in OUTPUT_NAMES for h in range(N_HIDDEN)],
         *[f"bo_{out}" for out in OUTPUT_NAMES],
@@ -115,7 +145,8 @@ def brain_inputs(
     wall_distances: FloatArray,
     noise: FloatArray,
 ) -> FloatArray:
-    """The (n, 7) input matrix: row k is organism k's input vector, columns as INPUT_NAMES.
+    """The input matrix: row k is organism k's input vector. (n, 7), columns as INPUT_NAMES;
+    or (n, 10), columns as PREY_INPUT_NAMES, when ``obs.threat`` is present.
 
     ``sense_ranges`` and ``reproduction_thresholds`` are each organism's own traits (an
     organism knows how far it can see and how full it is); ``wall_distances`` comes from
@@ -140,7 +171,7 @@ def brain_inputs(
         raise ValueError("noise must lie in [-1, 1]")
 
     seen = obs.food_found
-    inputs = np.zeros((n, N_INPUTS))
+    inputs = np.zeros((n, N_INPUTS if obs.threat is None else len(PREY_INPUT_NAMES)))
     inputs[:, 0] = seen
     # Unseen food has bearing 0 and distance inf; np.where keeps those columns at exactly 0.
     inputs[:, 1] = np.where(seen, np.cos(obs.food_bearing), 0.0)
@@ -153,4 +184,12 @@ def brain_inputs(
     inputs[:, 4] = np.clip(obs.energy / thresholds, 0.0, 1.0)
     inputs[:, 5] = np.clip(1.0 - wall_distances / sense_ranges, 0.0, 1.0)
     inputs[:, 6] = noise
+    if obs.threat is not None:
+        # The same encoding as food, from the same snapshot (D-059).
+        threat = obs.threat
+        inputs[:, 7] = threat.found
+        inputs[:, 8] = np.where(threat.found, np.sin(threat.bearing), 0.0)
+        with np.errstate(invalid="ignore"):
+            near = 1.0 - threat.distance / sense_ranges
+        inputs[:, 9] = np.where(threat.found, np.clip(near, 0.0, 1.0), 0.0)
     return inputs

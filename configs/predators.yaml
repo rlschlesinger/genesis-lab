@@ -2,9 +2,9 @@
 # Identical to neural.yaml except for the `predators:` section at the end
 # (tests/core/test_predators.py::test_predator_config_differs_from_neural_only_by_predators).
 # Prey are neural.yaml's evolving brains. Predators are a second species with their own body
-# and genes that catch prey (6.2); until 6.3 they have no senses, so they catch only what
-# they bump into. This file grows with each increment and its numbers are placeholders until
-# the tuning pilots (6.6).
+# and genes that catch prey (6.2) and see them (6.3); prey brains get three inputs about the
+# nearest predator (10 inputs, 80 parameters). Its numbers are placeholders until the tuning
+# pilots (6.6). Set predators.initial_count to 0 for the same world with no predators in it.
 # Units: distance = world units, time = ticks, energy = EU (abstract), angle = radians.
 
 run:
@@ -80,7 +80,11 @@ predators:
   sense_cost_per_unit: 0.004
   offspring_energy: 80.0
   reproduction_overhead: 20.0
-  controller: random_walk    # 6.3 adds senses for prey and neural predators
+  # nearest_prey_seeker: turn toward the nearest prey in sight, else wander (the food
+  # seeker's rule, D-059). Also: random_walk, or neural (needs a `brain:` section here, e.g.
+  # `brain: {}` for the defaults; predators' brains use the prey's first 7 inputs, with
+  # "food" meaning prey).
+  controller: nearest_prey_seeker
   # Capture (6.2, D-058): strike at prey within reach after moving; closest pairs first.
   capture_radius: 3.0        # world units (prey eat food within 2.0)
   capture_probability: 0.5   # chance a strike catches; otherwise the prey escapes this tick

@@ -22,7 +22,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from genesis.core.config import BrainConfig
-from genesis.intelligence.neural import PARAMETER_COUNT, Brain
+from genesis.intelligence.neural import N_HIDDEN, N_INPUTS, N_OUTPUTS, Brain, parameter_count
 
 FloatArray = NDArray[np.float64]
 
@@ -38,15 +38,19 @@ def reflect_array(values: FloatArray, low: float, high: float) -> FloatArray:
     return low + np.where(t > width, 2 * width - t, t)
 
 
-def founder_brains(n: int, config: BrainConfig, rng: np.random.Generator) -> list[Brain]:
+def founder_brains(
+    n: int, config: BrainConfig, rng: np.random.Generator, n_inputs: int = N_INPUTS
+) -> list[Brain]:
     """One independent random brain per founder, drawn in founder (ID) order.
 
     Every weight is Normal(0, initial_sd), reflected into [-weight_limit, weight_limit]. One
-    vectorized draw of shape (n, 62) consumes the stream identically to n draws of 62.
+    vectorized draw of shape (n, 62) consumes the stream identically to n draws of 62. Prey
+    that sense predators have 10 inputs, so 80 parameters each (D-059).
     """
     limit = config.weight_limit
-    draws = rng.normal(0.0, config.initial_sd, size=(n, PARAMETER_COUNT))
-    return [Brain.from_vector(row) for row in reflect_array(draws, -limit, limit)]
+    shape = (n_inputs, N_HIDDEN, N_OUTPUTS)
+    draws = rng.normal(0.0, config.initial_sd, size=(n, parameter_count(*shape)))
+    return [Brain.from_vector(row, shape) for row in reflect_array(draws, -limit, limit)]
 
 
 def mutate_brain(brain: Brain, config: BrainConfig, rng: np.random.Generator) -> tuple[Brain, int]:
@@ -62,9 +66,10 @@ def mutate_brain(brain: Brain, config: BrainConfig, rng: np.random.Generator) ->
     parent's own Brain object is returned: sharing it is safe because nothing can modify it.
     """
     limit = config.weight_limit
-    hits = rng.random(PARAMETER_COUNT) < config.mutation_rate
-    steps = rng.normal(0.0, config.mutation_size, size=PARAMETER_COUNT)
     before = brain.to_vector()
+    size = len(before)  # 62, or 80 for prey that sense predators
+    hits = rng.random(size) < config.mutation_rate
+    steps = rng.normal(0.0, config.mutation_size, size=size)
     after = np.where(hits, reflect_array(before + steps, -limit, limit), before)
     changed = int(np.count_nonzero(after != before))
     if changed == 0:

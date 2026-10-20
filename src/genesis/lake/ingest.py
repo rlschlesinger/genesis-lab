@@ -81,6 +81,12 @@ def schema_version(run_dir: Path, meta: dict) -> int:
 
 
 def extract_transform(run_dir: Path, meta: dict) -> dict[str, pa.Table]:
+    if (meta.get("config") or {}).get("predators") is not None:
+        # Temporary, until 6.4 (D-059): the lake's tables don't yet hold predators or the prey's
+        # 80-parameter brains. Refused whole, with the reason, rather than loaded in part.
+        raise ValidationError(
+            "version", "worlds with predators are loaded into the lake from increment 6.4"
+        )
     version = schema_version(run_dir, meta)
     tables = {"runs": runs_row(run_dir, meta, version)}
     if meta["status"] != "completed":

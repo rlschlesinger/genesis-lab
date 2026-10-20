@@ -5,7 +5,7 @@ from typing import get_args
 import numpy as np
 import pytest
 
-from genesis.core.config import ControllerName
+from genesis.core.config import ControllerName, PredatorControllerName
 from genesis.intelligence.controllers import (
     CONTROLLERS,
     NearestFoodSeeker,
@@ -27,8 +27,9 @@ def observations(found, bearing) -> Observations:
 
 
 def test_registry_matches_config_choices():
-    # The config's allowed names and the registry must never drift apart.
-    assert set(CONTROLLERS) == set(get_args(ControllerName))
+    # The config's allowed names (prey and predators) and the registry must never drift apart.
+    allowed = set(get_args(ControllerName)) | set(get_args(PredatorControllerName))
+    assert set(CONTROLLERS) == allowed
 
 
 @pytest.mark.parametrize("name", sorted(CONTROLLERS))
