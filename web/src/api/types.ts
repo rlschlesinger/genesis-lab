@@ -121,6 +121,47 @@ export interface History {
   columns: HistoryColumns;
 }
 
+export interface LineageNode {
+  id: number;
+  generation: number;
+  birth_tick: number;
+  death_tick: number | null;
+  alive: boolean;
+  offspring_count: number;
+  children: LineageNode[];
+  hidden_children: number;
+}
+
+export interface Lineage {
+  organism: LineageNode;
+  ancestors: LineageNode[];
+  descendants: number;
+  founder_id: number;
+  founder_family: number;
+  founder_family_alive: number;
+}
+
+export interface LakeExperiment {
+  experiment_id: string | null;
+  title: string | null;
+  runs: number;
+}
+
+export interface LakeRun {
+  run_id: string;
+  experiment_id: string | null;
+  condition: string | null;
+  seed: number;
+  ticks_run: number;
+  final_population: number;
+  ticks_every: number;
+  controller: string | null;
+}
+
+export interface LakeRunDetail extends LakeRun {
+  config: Record<string, unknown>;
+}
+
 // --- The stream -----------------------------------------------------------------------------
 
 export interface HelloMessage {

@@ -15,14 +15,19 @@ the files only change when the API does.
 from __future__ import annotations
 
 import json
+import tempfile
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from genesis.analytics.runs import execute_run
 from genesis.api.app import create_app
 from genesis.api.runs import RunManager
+from genesis.core.config import load_config, with_overrides
+from genesis.lake.ingest import ingest_run
 
-OUT = Path(__file__).resolve().parents[1] / "web" / "src" / "api" / "__fixtures__"
+ROOT = Path(__file__).resolve().parents[1]
+OUT = ROOT / "web" / "src" / "api" / "__fixtures__"
 
 
 def capture() -> dict[str, object]:
@@ -44,6 +49,39 @@ def capture() -> dict[str, object]:
             new_id = client.post(f"/api/runs/{rid}/reset").json()["run_id"]
             fixtures["gone"] = ws.receive_json()
         client.delete(f"/api/runs/{new_id}")
+
+        # Lineage: a run old enough to have grandchildren; the deepest organism, lowest ID.
+        grown = client.post("/api/runs", json={"config": "neural", "seed": 1, "max_ticks": 2000})
+        gid = grown.json()["run_id"]
+        client.post(f"/api/runs/{gid}/step", json={"ticks": 400})
+        sim = client.app.state.manager.get(gid).sim
+        deep = min((*sim.organisms, *sim.dead), key=lambda o: (-o.generation, o.id))
+        mid = next(a for a in (*sim.organisms, *sim.dead) if a.offspring_count >= 2)
+        fixtures["lineage"] = client.get(
+            f"/api/runs/{gid}/lineage/{mid.id}", params={"depth": 2, "breadth": 2}
+        ).json()
+        fixtures["lineage_deep"] = client.get(f"/api/runs/{gid}/lineage/{deep.id}").json()
+        client.delete(f"/api/runs/{gid}")
+
+    # The lake views: from a private lake of one small run, so the fixtures don't depend on
+    # (or change with) the real data/lake.
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        config = with_overrides(
+            load_config(ROOT / "configs" / "neural.yaml"), seed=1, max_ticks=300
+        )
+        execute_run(config, root / "run", run_id="fixture-lake-run", condition="live")
+        ingest_run(root / "run", root / "lake")
+        app = create_app(RunManager())
+        app.state.lake = root / "lake"
+        with TestClient(app) as lake_client:
+            fixtures["lake_experiments"] = lake_client.get("/api/lake/experiments").json()
+            fixtures["lake_runs"] = lake_client.get("/api/lake/runs").json()
+            fixtures["lake_run_detail"] = lake_client.get("/api/lake/runs/fixture-lake-run").json()
+            fixtures["lake_series"] = lake_client.get(
+                "/api/lake/runs/fixture-lake-run/series"
+            ).json()
+
     text = json.dumps(fixtures)
     text = text.replace(rid, "fixture-run").replace(new_id, "fixture-run-reset")
     return json.loads(text)

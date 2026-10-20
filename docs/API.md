@@ -47,6 +47,11 @@ All paths start with `/api`. Request and response bodies are JSON. Unknown field
 | POST | `/runs/{id}/reset` | `{seed}` (optional) | `RunInfo` of a fresh run from tick 0, **new ID**; viewers of the old ID get `gone` with `replaced_by` |
 | GET | `/runs/{id}/organisms/{oid}` | | `OrganismDetail` |
 | GET | `/runs/{id}/history?since=0&every=1` | | `History`: the run so far as columns, for charts (below) |
+| GET | `/runs/{id}/lineage/{oid}?depth=3&breadth=12` | | `Lineage`: ancestors back to the founder, descendants below (depth 1–8, breadth 1–50) |
+| GET | `/lake/experiments` | | `[LakeExperiment]`: experiments with completed runs in the data lake, plus runs outside any |
+| GET | `/lake/runs?experiment_id=` | | `[LakeRun]`: an experiment's completed runs (omit `experiment_id` for runs outside any) |
+| GET | `/lake/runs/{id}` | | `LakeRunDetail`: a lake run with its full config |
+| GET | `/lake/runs/{id}/series` | | `History` for a finished run, at most ~600 points |
 | POST | `/runs/{id}/export?ingest=true` | | `ExportResult`; paused or finished runs only |
 | GET | `/saved-runs?experiment_id=&limit=200` | | `[SavedRun]`, newest first (limit ≤ 1000) |
 | WebSocket | `/runs/{id}/stream?fps=15` | | `hello`, `snapshot`s, `gone` (below) |
@@ -103,6 +108,22 @@ The live run is **replayed** headlessly for its `tick` ticks with the normal rec
 ```
 
 One point per `every` ticks, the same rule as recorded runs: **flows** (births, deaths, food eaten) summed over the interval, **stocks** (population, food, lineages, mean energy) at its last tick, **shares** (turning toward food, mean turn as a fraction of max turn, mean throttle) averaged over its ticks; `null` where there was nothing to measure. Only complete intervals are returned, so a point never changes once drawn; ask again with `since` = the last tick received + 1 for newer points. Values are examples.
+
+### `Lineage`
+
+```json
+{"organism": {"id": 1027, "generation": 13, "birth_tick": 3876, "death_tick": null, "alive": true,
+              "offspring_count": 2, "hidden_children": 0,
+              "children": [{"id": 1150, "generation": 14, "…": "…", "children": [], "hidden_children": 0}]},
+ "ancestors": [{"id": 14, "generation": 0, "…": "…"}, "…"],
+ "descendants": 5, "founder_id": 14, "founder_family": 412, "founder_family_alive": 38}
+```
+
+`ancestors` runs founder first, parent last. Descendants are cut to `depth` generations and `breadth` children per organism; `hidden_children` says how many each cut hides, and `descendants` counts everyone below, however deep. Values are examples.
+
+### The data lake
+
+Read-only views of completed runs ingested into the lake: every experiment's, and live runs saved from the lab (`experiment_id` null). `/lake/runs/{id}/series` uses the same rule and shape as a live run's history, with point sizes that are whole multiples of the run's own `ticks_every`; unlike a live run, a finished run's last, possibly partial, interval is included. 404 when nothing has been ingested yet.
 
 ## The stream
 

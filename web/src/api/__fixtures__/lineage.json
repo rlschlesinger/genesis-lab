@@ -1,0 +1,38 @@
+{
+  "ancestors": [],
+  "descendants": 8,
+  "founder_family": 9,
+  "founder_family_alive": 7,
+  "founder_id": 14,
+  "organism": {
+    "alive": true,
+    "birth_tick": 0,
+    "children": [
+      {
+        "alive": true,
+        "birth_tick": 268,
+        "children": [],
+        "death_tick": null,
+        "generation": 1,
+        "hidden_children": 0,
+        "id": 61,
+        "offspring_count": 0
+      },
+      {
+        "alive": true,
+        "birth_tick": 336,
+        "children": [],
+        "death_tick": null,
+        "generation": 1,
+        "hidden_children": 0,
+        "id": 83,
+        "offspring_count": 0
+      }
+    ],
+    "death_tick": null,
+    "generation": 0,
+    "hidden_children": 3,
+    "id": 14,
+    "offspring_count": 5
+  }
+}

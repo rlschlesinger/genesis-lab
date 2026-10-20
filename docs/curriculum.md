@@ -442,6 +442,13 @@ What has been covered, where it appears in the code, and what comes next.
 - **Honest charts:** units, what a point covers, the run's ID, gaps left as gaps, no invented numbers.
 - **Too many points hide the data:** 1,500 points in 860 pixels was a thicket; 600 shows it.
 
+### 5.9 · Comparing runs and tracing families
+- **Compare the settings first:** a structural diff of two configs says what the comparison is of.
+- **Fair overlays:** different point sizes make "per point" incomparable; rates per tick are.
+- **One replicate is a hint:** two runs differing is not evidence of anything (E001–E007 used 10–50 per condition).
+- **Trees from parent links:** walk up for ancestors, build a child index for descendants, cut deep trees and say what's hidden.
+- **Order is data:** IDs are birth order, so a list built from two sources must be sorted; a test now holds it.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

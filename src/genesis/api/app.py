@@ -21,6 +21,8 @@ from fastapi.responses import JSONResponse
 
 from genesis import __version__
 from genesis.api import details, saved, stepping, stream
+from genesis.api.lake import LakeReader, LakeUnavailable
+from genesis.api.lineage import lineage
 from genesis.api.runs import (
     InvalidRunRequest,
     RunConflict,
@@ -36,6 +38,10 @@ from genesis.api.schemas import (
     ExportResult,
     Health,
     History,
+    LakeExperiment,
+    LakeRun,
+    LakeRunDetail,
+    Lineage,
     OrganismDetail,
     ResetRequest,
     RunCreate,
@@ -47,6 +53,7 @@ from genesis.api.schemas import (
 
 ERRORS = {
     RunNotFound: status.HTTP_404_NOT_FOUND,
+    LakeUnavailable: status.HTTP_404_NOT_FOUND,
     RunConflict: status.HTTP_409_CONFLICT,
     InvalidRunRequest: status.HTTP_422_UNPROCESSABLE_CONTENT,
     TooManyRuns: status.HTTP_429_TOO_MANY_REQUESTS,
@@ -79,6 +86,20 @@ def create_app(manager: RunManager | None = None) -> FastAPI:
     app.state.saved_roots = saved.SAVED_ROOTS
     app.state.export_root = saved.EXPORT_ROOT
     app.state.lake = saved.PROJECT_ROOT / saved.DEFAULT_LAKE
+    app.state.lake_reader = None  # opened on first use (lake.py)
+
+    def reader() -> LakeReader:
+        if app.state.lake_reader is None or app.state.lake_reader.lake != app.state.lake:
+            app.state.lake_reader = LakeReader(app.state.lake)
+        return app.state.lake_reader
+
+    async def in_thread(function, *args):
+        """Run a lake query off the event loop; a missing run becomes a 404."""
+        try:
+            return await asyncio.to_thread(function, *args)
+        except KeyError as exc:
+            raise RunNotFound(exc.args[0]) from None
+
     _errors(app)
 
     @app.get("/api/health", response_model=Health)
@@ -140,6 +161,45 @@ def create_app(manager: RunManager | None = None) -> FastAPI:
             raise InvalidRunRequest("every must be 1-100,000 and since 0 or more")
         run = app.state.manager.get(run_id)
         return History(run_id=run.run_id, every=every, columns=run.history.query(since, every))
+
+    @app.get(
+        "/api/runs/{run_id}/lineage/{organism_id}",
+        response_model=Lineage,
+        responses=ERROR_RESPONSES,
+    )
+    async def run_lineage(
+        run_id: str, organism_id: int, depth: int = 3, breadth: int = 12
+    ) -> Lineage:
+        """An organism's ancestors and descendants (depth 1-8 generations, breadth 1-50)."""
+        if not (1 <= depth <= 8 and 1 <= breadth <= 50):
+            raise InvalidRunRequest("depth must be 1-8 and breadth 1-50")
+        sim = app.state.manager.get(run_id).sim
+        try:
+            return Lineage(**lineage(sim, organism_id, depth, breadth))
+        except KeyError as exc:
+            raise RunNotFound(exc.args[0]) from None
+
+    @app.get(
+        "/api/lake/experiments", response_model=list[LakeExperiment], responses=ERROR_RESPONSES
+    )
+    async def lake_experiments() -> list[LakeExperiment]:
+        """Experiments with completed runs in the data lake, and runs outside any experiment."""
+        return [LakeExperiment(**row) for row in await in_thread(reader().experiments)]
+
+    @app.get("/api/lake/runs", response_model=list[LakeRun], responses=ERROR_RESPONSES)
+    async def lake_runs(experiment_id: str | None = None) -> list[LakeRun]:
+        """Completed runs of one experiment (omit experiment_id: runs outside any)."""
+        return [LakeRun(**row) for row in await in_thread(reader().runs, experiment_id)]
+
+    @app.get("/api/lake/runs/{run_id}", response_model=LakeRunDetail, responses=ERROR_RESPONSES)
+    async def lake_run(run_id: str) -> LakeRunDetail:
+        return LakeRunDetail(**await in_thread(reader().run, run_id))
+
+    @app.get("/api/lake/runs/{run_id}/series", response_model=History, responses=ERROR_RESPONSES)
+    async def lake_series(run_id: str) -> History:
+        """A finished run's time series, in the same shape as a live run's history."""
+        every, columns = await in_thread(reader().series, run_id)
+        return History(run_id=run_id, every=every, columns=columns)
 
     @app.post("/api/runs/{run_id}/export", response_model=ExportResult, responses=ERROR_RESPONSES)
     async def export_live_run(run_id: str, ingest: bool = True) -> ExportResult:

@@ -1,0 +1,101 @@
+{
+  "condition": "live",
+  "config": {
+    "brain": {
+      "founder_weights": null,
+      "initial_sd": 0.5,
+      "mutation_rate": 0.1,
+      "mutation_size": 0.2,
+      "weight_limit": 4.0
+    },
+    "food": {
+      "eat_radius": 2.0,
+      "energy_value": 20.0,
+      "initial_count": 150,
+      "max_count": 300,
+      "regrowth_per_tick": 2.0
+    },
+    "genome": {
+      "max_turn": {
+        "initial": 0.5,
+        "max": 1.5,
+        "min": 0.05,
+        "mutable": false,
+        "neutral": false
+      },
+      "metabolic_rate": {
+        "initial": 0.2,
+        "max": 0.5,
+        "min": 0.02,
+        "mutable": false,
+        "neutral": false
+      },
+      "neutral_marker": {
+        "initial": 0.5,
+        "max": 1.0,
+        "min": 0.0,
+        "mutable": true,
+        "neutral": false
+      },
+      "reproduction_threshold": {
+        "initial": 80.0,
+        "max": 250.0,
+        "min": 55.0,
+        "mutable": false,
+        "neutral": false
+      },
+      "sense_range": {
+        "initial": 20.0,
+        "max": 60.0,
+        "min": 1.0,
+        "mutable": false,
+        "neutral": false
+      },
+      "speed": {
+        "initial": 1.5,
+        "max": 4.0,
+        "min": 0.25,
+        "mutable": false,
+        "neutral": false
+      }
+    },
+    "mutation": {
+      "enabled": true,
+      "rate": 0.1,
+      "size": 0.05
+    },
+    "organisms": {
+      "controller": "neural",
+      "initial_count": 30,
+      "initial_energy": 50.0,
+      "max_age": null,
+      "max_population": 500,
+      "move_cost_per_distance": 0.1,
+      "offspring_energy": 40.0,
+      "reproduction_overhead": 10.0,
+      "sense_cost_per_unit": 0.004,
+      "speed_cost_exponent": 1.0
+    },
+    "recording": {
+      "events": [],
+      "genome_snapshot_every": 50,
+      "ticks_every": 1
+    },
+    "run": {
+      "max_ticks": 300,
+      "seed": 1,
+      "stop_on_extinction": true
+    },
+    "world": {
+      "height": 200.0,
+      "width": 200.0
+    }
+  },
+  "controller": null,
+  "experiment_id": null,
+  "final_population": 40,
+  "run_id": "fixture-lake-run",
+  "seed": 1,
+  "ticks_every": 1,
+  "ticks_run": 300
+}

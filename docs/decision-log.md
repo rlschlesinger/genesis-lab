@@ -60,6 +60,16 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-055 · Compare from the lake; Lineage from the live run (2026-10-20)
+
+**Decision:**
+- **Lake routes** (`api/lake.py`): experiments with completed runs, an experiment's runs (or runs outside any), one run with its config, and a run's series in the live history's shape and rule (points whole multiples of the run's `ticks_every`; a finished run's last partial interval included). One DuckDB connection, opened on first use, reused under a lock, queried in a worker thread.
+- **Compare view:** choose an experiment and a run for A (crystal violet, solid) and B (iodine, dashed); "What differs" lists every config setting that differs, by dotted path (long lists such as brain weights summarised); four charts overlay the two runs on one tick axis, with flows as rates per tick so runs with different point sizes compare fairly; a note that one run is one replicate.
+- **Lineage route** (`api/lineage.py`) and **view:** the selected organism's line of descent from its founder, its descendants to 3 generations and 12 children each (each cut says how many it hides), counts of the whole family, every organism clickable; the specimen panel alongside.
+**Why:** Compare needs finished runs, which live in the lake, not the server's memory; reusing the history shape and rule means one chart component and one way of reading a point. Config differences come first because they are what a comparison is *of*: E007's evolved-vs-seeker pair shows exactly two (the brains and the controller). Lineage needs every organism, which only the live run holds.
+**Found in the browser and fixed:** siblings were listed living-first, not in birth order (the family dict was built from the living list then the dead; a new test checks the order and was shown to fail before the fix); legends showed "--" because uPlot draws asynchronously (now set in its draw and cursor hooks); `null` read as "none".
+**Alternatives:** comparing live runs only (they vanish with the server and aren't replicates of anything); a graphical tree layout (d3-hierarchy: prettier, but an indented list is easier to read, to navigate by keyboard and to fit thousands of descendants into).
+
 ## D-054 · Live history and the Analytics view (2026-10-20)
 
 **Decision:**

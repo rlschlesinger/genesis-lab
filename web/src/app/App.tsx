@@ -1,8 +1,8 @@
 import { AnalyticsView } from "../components/AnalyticsView";
-import { EmptyView } from "../components/EmptyView";
+import { CompareView } from "../components/CompareView";
+import { LineageView } from "../components/LineageView";
 import { Masthead } from "../components/Masthead";
 import { WorldView } from "../components/WorldView";
-import { VIEWS } from "../data/views";
 import { useLabStore } from "../store/labStore";
 import { useRunStream } from "../stream/useRunStream";
 import styles from "./App.module.css";
@@ -12,7 +12,6 @@ export function App() {
   useRunFromUrl();
   useRunStream();
   const view = useLabStore((s) => s.view);
-  const entry = VIEWS.find((v) => v.id === view);
 
   return (
     <div className={styles.lab}>
@@ -20,7 +19,8 @@ export function App() {
       <main className={styles.main} id="main">
         {view === "world" && <WorldView />}
         {view === "analytics" && <AnalyticsView />}
-        {view !== "world" && view !== "analytics" && <EmptyView message={entry?.empty ?? ""} />}
+        {view === "compare" && <CompareView />}
+        {view === "lineage" && <LineageView />}
       </main>
     </div>
   );

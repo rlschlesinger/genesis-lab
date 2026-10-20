@@ -1,0 +1,98 @@
+{
+  "ancestors": [
+    {
+      "alive": false,
+      "birth_tick": 0,
+      "children": [],
+      "death_tick": 266,
+      "generation": 0,
+      "hidden_children": 0,
+      "id": 26,
+      "offspring_count": 2
+    },
+    {
+      "alive": true,
+      "birth_tick": 173,
+      "children": [],
+      "death_tick": null,
+      "generation": 1,
+      "hidden_children": 0,
+      "id": 42,
+      "offspring_count": 3
+    },
+    {
+      "alive": true,
+      "birth_tick": 212,
+      "children": [],
+      "death_tick": null,
+      "generation": 2,
+      "hidden_children": 0,
+      "id": 49,
+      "offspring_count": 3
+    },
+    {
+      "alive": true,
+      "birth_tick": 267,
+      "children": [],
+      "death_tick": null,
+      "generation": 3,
+      "hidden_children": 0,
+      "id": 60,
+      "offspring_count": 2
+    },
+    {
+      "alive": true,
+      "birth_tick": 288,
+      "children": [],
+      "death_tick": null,
+      "generation": 4,
+      "hidden_children": 0,
+      "id": 65,
+      "offspring_count": 1
+    },
+    {
+      "alive": true,
+      "birth_tick": 310,
+      "children": [],
+      "death_tick": null,
+      "generation": 5,
+      "hidden_children": 0,
+      "id": 70,
+      "offspring_count": 1
+    },
+    {
+      "alive": true,
+      "birth_tick": 344,
+      "children": [],
+      "death_tick": null,
+      "generation": 6,
+      "hidden_children": 0,
+      "id": 86,
+      "offspring_count": 1
+    },
+    {
+      "alive": true,
+      "birth_tick": 363,
+      "children": [],
+      "death_tick": null,
+      "generation": 7,
+      "hidden_children": 0,
+      "id": 93,
+      "offspring_count": 1
+    }
+  ],
+  "descendants": 0,
+  "founder_family": 30,
+  "founder_family_alive": 27,
+  "founder_id": 26,
+  "organism": {
+    "alive": true,
+    "birth_tick": 393,
+    "children": [],
+    "death_tick": null,
+    "generation": 8,
+    "hidden_children": 0,
+    "id": 111,
+    "offspring_count": 0
+  }
+}

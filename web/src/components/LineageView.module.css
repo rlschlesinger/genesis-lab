@@ -1,0 +1,97 @@
+.lineage {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+}
+
+.tree {
+  flex: 1 1 auto;
+  display: grid;
+  gap: var(--space-6);
+  max-width: 48rem;
+}
+
+.summary {
+  font-size: var(--size-lead);
+  max-width: 60ch;
+}
+
+.heading {
+  font-size: var(--size-body);
+  margin-bottom: var(--space-2);
+}
+
+/* The line of descent reads downward, founder first, like a pedigree. */
+.line {
+  display: grid;
+  margin: 0;
+  padding: 0 0 0 var(--space-4);
+  list-style: none;
+  border-left: 2px solid var(--violet);
+}
+
+.node {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2);
+  background: none;
+  border: 1px solid transparent;
+  text-align: left;
+}
+
+.node:hover {
+  border-color: var(--graticule-strong);
+}
+
+.node[data-alive="false"] {
+  color: var(--stain-ink-soft);
+}
+
+.node[aria-current="true"] {
+  border-color: var(--safranin);
+  background: var(--field);
+}
+
+.nodeMeta {
+  font-size: var(--size-small);
+  color: var(--stain-ink-soft);
+}
+
+.root {
+  display: grid;
+}
+
+.children {
+  margin: 0;
+  padding: 0 0 0 var(--space-6);
+  list-style: none;
+  border-left: 1px solid var(--graticule-strong);
+}
+
+.hidden {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--size-small);
+  color: var(--stain-ink-soft);
+}
+
+.note {
+  font-size: var(--size-small);
+  color: var(--stain-ink-soft);
+}
+
+.error {
+  color: var(--safranin);
+}
+
+.empty {
+  padding: var(--space-12) 0;
+  color: var(--stain-ink-soft);
+  font-size: var(--size-lead);
+}
+
+@media (max-width: 56rem) {
+  .lineage {
+    flex-direction: column;
+  }
+}

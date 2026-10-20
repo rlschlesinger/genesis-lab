@@ -1,0 +1,12 @@
+[
+  {
+    "condition": "live",
+    "controller": "neural",
+    "experiment_id": null,
+    "final_population": 40,
+    "run_id": "fixture-lake-run",
+    "seed": 1,
+    "ticks_every": 1,
+    "ticks_run": 300
+  }
+]

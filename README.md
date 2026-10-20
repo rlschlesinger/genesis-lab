@@ -72,7 +72,7 @@ uv run genesis serve                     # the API
 cd web && npm ci && npm run dev          # the lab: http://127.0.0.1:5173
 ```
 
-Requires Node 22. Start a run from the lab itself, then run, pause, step, change speed, reset or save it; drag and zoom the plate; click an organism to see its genome, family and what its brain is deciding. Analytics, comparison and lineage views are being built ([docs/ui-design.md](docs/ui-design.md), [docs/API.md](docs/API.md)).
+Requires Node 22. Start a run from the lab itself, then run, pause, step, change speed, reset or save it; drag and zoom the plate; click an organism to see its genome, family and what its brain is deciding. the Analytics view charts the run as it goes, Compare sets two finished runs from the data lake side by side (starting with what differs in their settings), and Lineage traces the selected organism's family ([docs/ui-design.md](docs/ui-design.md), [docs/API.md](docs/API.md)).
 
 ## What a run writes
 

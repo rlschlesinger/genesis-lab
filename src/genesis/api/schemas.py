@@ -177,5 +177,48 @@ class History(BaseModel):
     columns: dict[str, list[float | int | None]]
 
 
+class LineageNode(BaseModel):
+    id: int
+    generation: int
+    birth_tick: int
+    death_tick: int | None
+    alive: bool
+    offspring_count: int
+    children: list[LineageNode] = []
+    hidden_children: int = 0  # children beyond the requested depth or breadth
+
+
+class Lineage(BaseModel):
+    """An organism's family in a live run (api/lineage.py)."""
+
+    organism: LineageNode  # with descendants, cut to depth and breadth
+    ancestors: list[LineageNode]  # founder first, parent last; empty for a founder
+    descendants: int  # everyone below it, however deep
+    founder_id: int
+    founder_family: int  # the founder and all its descendants, ever
+    founder_family_alive: int
+
+
+class LakeExperiment(BaseModel):
+    experiment_id: str | None  # None: runs outside any experiment (saved from the lab)
+    title: str | None
+    runs: int
+
+
+class LakeRun(BaseModel):
+    run_id: str
+    experiment_id: str | None
+    condition: str | None
+    seed: int
+    ticks_run: int
+    final_population: int
+    ticks_every: int
+    controller: str | None = None
+
+
+class LakeRunDetail(LakeRun):
+    config: dict
+
+
 class ErrorBody(BaseModel):
     detail: str

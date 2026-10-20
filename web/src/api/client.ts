@@ -6,6 +6,10 @@ import type {
   ExportResult,
   Health,
   History,
+  LakeExperiment,
+  LakeRun,
+  LakeRunDetail,
+  Lineage,
   OrganismDetail,
   RunCreate,
   RunInfo,
@@ -82,6 +86,16 @@ export function createClient(fetcher: Fetch = (...args) => fetch(...args)) {
       call<RunInfo>("POST", `${run(id)}/reset`, seed === undefined ? {} : { seed }),
     history: (id: string, since: number, every: number) =>
       call<History>("GET", `${run(id)}/history?since=${since}&every=${every}`),
+    lineage: (id: string, organismId: number, depth = 3, breadth = 12) =>
+      call<Lineage>("GET", `${run(id)}/lineage/${organismId}?depth=${depth}&breadth=${breadth}`),
+    lakeExperiments: () => call<LakeExperiment[]>("GET", "/lake/experiments"),
+    lakeRuns: (experimentId: string | null) =>
+      call<LakeRun[]>(
+        "GET",
+        `/lake/runs${experimentId === null ? "" : `?experiment_id=${encodeURIComponent(experimentId)}`}`,
+      ),
+    lakeRun: (runId: string) => call<LakeRunDetail>("GET", `/lake/runs/${encodeURIComponent(runId)}`),
+    lakeSeries: (runId: string) => call<History>("GET", `/lake/runs/${encodeURIComponent(runId)}/series`),
     organism: (id: string, organismId: number) =>
       call<OrganismDetail>("GET", `${run(id)}/organisms/${organismId}`),
     exportRun: (id: string, ingest = true) =>

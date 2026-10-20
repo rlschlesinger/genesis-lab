@@ -47,7 +47,12 @@ export function AnalyticsView() {
               </h3>
               <p className={styles.describe}>{spec.describe(series.every)}</p>
             </div>
-            <TimeChart spec={spec} columns={series.columns} showTicks={i === CHARTS.length - 1} />
+            <TimeChart
+              series={spec.series}
+              range={spec.range}
+              data={[series.columns.tick, ...spec.series.map((s) => series.columns[s.column])]}
+              showTicks={i === CHARTS.length - 1}
+            />
           </section>
         ))}
     </div>

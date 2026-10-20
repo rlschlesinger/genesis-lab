@@ -76,6 +76,11 @@ Tick 1,501 of 100,000   106 alive                       running
 - **Series colours** follow the stains: organisms and their behaviour in crystal violet, food and meals in iodine, deaths in safranin; meals dashed so three series stay distinguishable without colour alone.
 - **Legends** show the latest values unless the pointer is over a chart.
 
+## Compare and Lineage (5.9)
+
+- **Compare:** two choosers, A edged in solid crystal violet and B in dashed iodine, the same pairing the chart lines use, so colour and dash both say which run is which. "What differs" is a plain table of settings; charts follow in the Analytics layout.
+- **Lineage:** a pedigree, read top to bottom: the line of descent on a violet rule from the founder, then the organism (outlined in safranin, as on the plate) with its descendants indented beneath. The dead are drawn in softer ink. Every organism is a button.
+
 ## Checked
 
 At 1360 × 860: the plate is square (668 × 668 px) and the stage bar ends at its edge. At 390 × 844 (phone): no sideways scrolling, a 16 px margin, the panel under the plate.

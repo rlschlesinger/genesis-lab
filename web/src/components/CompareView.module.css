@@ -1,0 +1,78 @@
+.compare {
+  display: grid;
+  gap: var(--space-6);
+  max-width: 76rem;
+}
+
+.choosers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 22rem));
+  gap: var(--space-6);
+}
+
+.differences {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 52rem;
+}
+
+.heading {
+  font-size: var(--size-lead);
+}
+
+.table {
+  border-collapse: collapse;
+  font-size: var(--size-small);
+}
+
+.table th,
+.table td {
+  padding: var(--space-1) var(--space-4) var(--space-1) 0;
+  border-bottom: var(--edge);
+  text-align: left;
+  font-weight: 400;
+}
+
+.table thead th {
+  color: var(--stain-ink-soft);
+}
+
+.note {
+  color: var(--stain-ink-soft);
+  font-size: var(--size-small);
+}
+
+.error {
+  color: var(--safranin);
+}
+
+.empty {
+  padding: var(--space-12) 0;
+  color: var(--stain-ink-soft);
+  font-size: var(--size-lead);
+}
+
+.chart {
+  display: grid;
+  grid-template-columns: 16rem minmax(0, 1fr);
+  gap: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: var(--edge);
+}
+
+.caption {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+
+.chartTitle {
+  font-size: var(--size-body);
+}
+
+@media (max-width: 56rem) {
+  .choosers,
+  .chart {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
