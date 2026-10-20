@@ -12,6 +12,7 @@ An artificial life research platform built incrementally as a teaching project. 
 - **Exercises for the user:** always say where to look, give the method, and put the answer at the bottom. Flag judgment calls.
 - **Teaching loop for every substantial change:** problem → concept → proposed implementation → smallest useful increment → demonstrate → how to inspect/test → one small exercise → ask to proceed.
 - **New dependencies:** explain why, name alternatives, add it in the increment that first needs it. Record significant ones in docs/decision-log.md.
+- **Gate commits on real exit codes:** run each check on its own and test its exit status before committing. Never chain `pytest | tail && git commit`: the pipe reports tail's success, not pytest's (5.9 was committed with a failing test that way).
 - **Commits:** commit at the end of each increment and push to `origin` (github.com/rlschlesinger/genesis-lab, public). This repo's git email is the GitHub noreply address; never commit a personal email.
 - **Never fabricate results.** Report what runs actually produced; separate observation from interpretation.
 - After each milestone, update README.md, this file, and all of docs/.
