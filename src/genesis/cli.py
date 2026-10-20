@@ -147,6 +147,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="allow a non-local --host (the API has no login: anyone who can reach it controls it)",
     )
 
+    lab = commands.add_parser(
+        "lab", help="start the browser lab and its API together (http://127.0.0.1:8765)"
+    )
+    lab.add_argument("--port", type=int, default=8765, help="port (default: %(default)s)")
+    lab.add_argument("--open", action="store_true", help="open the lab in your web browser")
+
     sql = commands.add_parser("sql", help="run a SQL query against the lake (docs/sql-examples.md)")
     sql.add_argument("query", help="the SQL query, in quotes")
     sql.add_argument("--lake", type=Path, default=DEFAULT_LAKE)
@@ -166,6 +172,7 @@ def main(argv: list[str] | None = None) -> int:
         "dashboard": _dashboard,
         "inspect": _inspect,
         "serve": _serve,
+        "lab": _lab,
     }
     return handlers[args.command](args)
 
@@ -187,6 +194,33 @@ def _serve(args: argparse.Namespace) -> int:
 
     print(f"Genesis Lab API on http://{args.host}:{args.port}  (docs: /docs; Ctrl+C to stop)")
     uvicorn.run(create_app(), host=args.host, port=args.port, log_level="warning")
+    return 0
+
+
+LAB_DIR = Path(__file__).resolve().parents[2] / "web" / "dist"
+
+
+def _lab(args: argparse.Namespace) -> int:
+    """The browser lab and the API in one process, on this machine only."""
+    if not (LAB_DIR / "index.html").exists():
+        print(
+            "error: the browser lab hasn't been built yet. Build it once (needs Node 22):\n"
+            "  cd web && npm ci && npm run build",
+            file=sys.stderr,
+        )
+        return 2
+    import uvicorn
+
+    from genesis.api.app import create_app
+
+    url = f"http://127.0.0.1:{args.port}"
+    print(f"Genesis Lab on {url}  (API docs: {url}/docs; Ctrl+C to stop)")
+    if args.open:
+        import threading
+        import webbrowser
+
+        threading.Timer(1.0, webbrowser.open, args=(url,)).start()  # once the server is up
+    uvicorn.run(create_app(lab_dir=LAB_DIR), host="127.0.0.1", port=args.port, log_level="warning")
     return 0
 
 

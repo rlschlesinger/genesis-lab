@@ -3,7 +3,8 @@
 A local HTTP and WebSocket API for running seeded simulations live: create a run, step it, change its speed, watch it, inspect any organism's brain, and save it as a normal run folder. The Python server is the **only authority** over a run; clients view and request, they never hold simulation state. Version 1 (`API_VERSION`, reported by `/api/health`).
 
 ```bash
-uv run genesis serve                       # http://127.0.0.1:8765
+uv run genesis lab                         # the browser lab and this API, http://127.0.0.1:8765
+uv run genesis serve                       # the API alone, http://127.0.0.1:8765
 open http://127.0.0.1:8765/docs            # interactive documentation (try every route)
 uv run python scripts/api_example.py       # a complete Python client, start to finish
 ```

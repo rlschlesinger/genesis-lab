@@ -6,7 +6,7 @@ An artificial life research platform built incrementally as a teaching project. 
 
 ## Working rules
 
-- **Milestone gating:** never start a new milestone without explicit user approval. **Milestones 1–4 complete (2026-10-19). Milestone 5 (API and browser lab, roadmap chunks 05A–05B) approved 2026-10-19 and in progress** (plan in docs/architecture.md; Milestone 6 needs separate approval). Stop after each numbered increment. Scope for Milestones 4–6 is in `docs/roadmap/` (the user's chunk files, word for word); `docs/roadmap/README.md` says how each maps onto this project and which details are adapted (no Mesa, hard walls, `genesis` not `alife`).
+- **Milestone gating:** never start a new milestone without explicit user approval. **Milestones 1–5 complete (2026-10-20). Milestone 6 (roadmap chunks 06A predator–prey and 06B one extension) has not been approved:** propose a plan and wait. Stop after each numbered increment. Scope for Milestones 4–6 is in `docs/roadmap/` (the user's chunk files, word for word); `docs/roadmap/README.md` says how each maps onto this project and which details are adapted (no Mesa, hard walls, `genesis` not `alife`).
 - **Experiments:** define each one in `docs/experiments/E00N-*.md` (question, hypotheses, metrics, analysis) and `experiments/specs/E00N.yaml` (conditions, seeds), and commit both *before* running with `genesis experiment run`. Append results; never edit the definition afterwards. Label post-hoc findings as exploratory.
 - **Notebooks:** commit them without outputs (tests/test_notebook.py checks); the test suite executes `notebooks/analysis-workflow.ipynb`.
 - **Exercises for the user:** always say where to look, give the method, and put the answer at the bottom. Flag judgment calls.
@@ -30,6 +30,7 @@ uv run genesis report data/runs/<name>               # HTML report (Plotly, offl
 uv run genesis inspect data/runs/<name> --tick T --organism ID [--weights]   # replay one decision
 uv run genesis lake ingest data/runs data/experiments  # validate + convert runs to data/lake/ (Parquet)
 uv run genesis sql "SELECT ..."                      # query the lake (views: docs/schema.md)
+uv run genesis lab --open                            # the browser lab + API on http://127.0.0.1:8765 (build web/ first; docs/lab.md)
 uv run genesis serve                                 # API on http://127.0.0.1:8765 (docs/API.md; OpenAPI at /docs)
 uv run python scripts/api_example.py                 # drive the API from Python (server must be running)
 cd web && npm ci && npm run dev                      # browser lab on http://127.0.0.1:5173 (with genesis serve)

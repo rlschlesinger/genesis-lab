@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Milestones 1–4 complete** (2026-10-19). **Milestone 5 (API and browser lab) approved 2026-10-19, in progress** (plan below; scope in [roadmap/](roadmap/README.md)). Schema in [schema.md](schema.md), columns in [data-dictionary.md](data-dictionary.md).
+Status: **Milestones 1–5 complete** (2026-10-20). Milestone 6 (predator and prey, then one research extension) has not been approved; scope in [roadmap/](roadmap/README.md). Schema in [schema.md](schema.md), columns in [data-dictionary.md](data-dictionary.md).
 
 ## Component map
 
@@ -447,7 +447,7 @@ Scope: [roadmap/05A](roadmap/05A_API_STREAMING.md) and [roadmap/05B](roadmap/05B
 | 5.7 | Controls and the organism inspector with a brain view | Out-of-range input rejected in place | done |
 | 5.8 | Run Analytics: live charts with units, sample sizes, run IDs | Chart values = backend values | done |
 | 5.9 | Experiment Comparison and Lineage Explorer from the lake | Two runs compared; tree correct | done |
-| 5.10 | Hardening and wrap-up: reconnect, extinction, refresh, keyboard and accessibility, phone width; `genesis lab`; quickstart, manual E2E checklist, docs | Checklist passes | |
+| 5.10 | Hardening and wrap-up: reconnect, extinction, refresh, keyboard and accessibility, phone width; `genesis lab`; quickstart, manual E2E checklist, docs | Checklist passes | done |
 
 ### Chunk 05A scope check (2026-10-19)
 
@@ -460,4 +460,19 @@ Scope: [roadmap/05A](roadmap/05A_API_STREAMING.md) and [roadmap/05B](roadmap/05B
 | `docs/API.md` and a usage script | [API.md](API.md) (coverage tested); `scripts/api_example.py` |
 | Tests: create/step/pause/resume/reset; invalid config; snapshot shape; two clients same state; disconnects; no unbounded queue growth; digest equal to headless after N ticks | `tests/api/test_app.py`, `test_runs.py`, `test_controls.py`, `test_stream.py` (including a real-uvicorn WebSocket test), `test_details.py` |
 | Learning: client/server, JSON schemas, async I/O, WebSocket vs HTTP, concurrency hazards, one authority | [curriculum.md](curriculum.md) 5.1–5.4 |
+
+### Chunk 05B scope check (2026-10-20)
+
+| 05B requirement | Evidence |
+|---|---|
+| React + TypeScript + Vite, stable PixiJS; canvas world with food, organisms with heading, pan/zoom, optional trails, selection, responsive layout | `web/` (D-051, D-052); 120 fps at 2,100 organisms; phone width checked |
+| Sections: Live World, Run Analytics, Experiment Comparison, Lineage Explorer | The four views (D-053–D-055) |
+| Controls: run, pause, one step, seed/config, reset, playback speed, export | Run picker and stage controls (D-053); export = "Save run" |
+| Organism inspector: phenotype, genome, parent, children, neural sensors and actions | Specimen panel with the brain diagram (D-053) |
+| Charts from real data, with units, sample sizes, conditions, run IDs; no invented metrics | Analytics and Compare captions, run IDs, "each point covers" (D-054, D-055); every value from the server |
+| API disconnected/reconnecting, invalid input, extinction, >1000 agents with frame coalescing, refresh without changing the run | Reconnection with backoff; refusals in place; extinction and missing-run messages (D-056); newest-only stream (D-049); `?run=` |
+| Quickstart, screenshot/demo instructions, manual E2E checklist; simple UI tests if feasible | [lab.md](lab.md), [e2e-checklist.md](e2e-checklist.md); Vitest for the lab's logic and contract |
+| Tests/review: pause and single-step; reconnect reads true state; selecting doesn't modify the simulation; controls validate ranges; compare two runs; outputs match backend; responsive and keyboard usable | API tests (steering = headless by digest; viewing leaves a run bit-identical); fixture contract tests; checklist |
+| Learning: frontend vs backend, API contracts, state synchronisation, Canvas/WebGL, evidence vs decoration | [curriculum.md](curriculum.md) 5.1–5.10 |
+| Local UI doesn't affect seeded numerical results | Golden values unchanged throughout; viewing test |
 

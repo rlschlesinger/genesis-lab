@@ -15,9 +15,11 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request, WebSocket, status
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from genesis import __version__
 from genesis.api import details, saved, stepping, stream
@@ -61,8 +63,12 @@ ERRORS = {
 ERROR_RESPONSES = {code: {"model": ErrorBody} for code in ERRORS.values()}
 
 
-def create_app(manager: RunManager | None = None) -> FastAPI:
+def create_app(manager: RunManager | None = None, lab_dir: Path | None = None) -> FastAPI:
     """A new app with its own RunManager (tests pass their own to stay independent).
+
+    With ``lab_dir`` (the built browser lab, web/dist), the app also serves the lab at ``/``,
+    so one process and one address carry both (``genesis lab``, D-056). API routes are
+    registered first and always win over a file of the same name.
 
     Every route is ``async def``: FastAPI runs plain ``def`` routes on a pool of threads, and
     a thread touching a simulation while the stepping loop does would corrupt it. Async
@@ -261,6 +267,9 @@ def create_app(manager: RunManager | None = None) -> FastAPI:
         """Replace the run with a fresh one from tick 0 (a new run ID)."""
         return app.state.manager.reset(run_id, (request or ResetRequest()).seed).info()
 
+    if lab_dir is not None:
+        # html=True serves index.html for "/" (and for any folder); assets come from /assets.
+        app.mount("/", StaticFiles(directory=lab_dir, html=True), name="lab")
     return app
 
 

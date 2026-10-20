@@ -449,6 +449,13 @@ What has been covered, where it appears in the code, and what comes next.
 - **Trees from parent links:** walk up for ancestors, build a child index for descendants, cut deep trees and say what's hidden.
 - **Order is data:** IDs are birth order, so a list built from two sources must be sorted; a test now holds it.
 
+### 5.10 · Hardening and one command
+- **Serving a built frontend:** the API process also serves the compiled lab; API routes take precedence.
+- **Edge cases are where beginners get stuck:** a dead link, an extinct world, a restarted server each now say what happened and what to do.
+- **Accessibility as a measurement:** Lighthouse audits on real states, plus keyboard paths for everything.
+- **Honest checklists:** mark what was checked by script, what by hand, and what not yet.
+
+## Milestone 5 complete
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.
-- **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

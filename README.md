@@ -4,7 +4,7 @@ A local-first artificial life laboratory. Digital organisms live in a 2D world: 
 
 Built as a learning project: the [curriculum](docs/curriculum.md) tracks the concepts covered so far.
 
-**Status:** Milestones 1 (The Petri Dish), 2 (Genetics and Evolution), 3 (The Science Lab) and 4 (Evolving Neural Brains) complete. Milestone 5 (an API and a browser lab) in progress.
+**Status:** Milestones 1 (The Petri Dish), 2 (Genetics and Evolution), 3 (The Science Lab), 4 (Evolving Neural Brains) and 5 (an API and a browser lab) complete. Next: Milestone 6 (predators and prey, then one research extension), not yet started.
 
 ## What it does
 
@@ -63,16 +63,16 @@ uv run genesis lake verify data/exports/E003
 uv run python experiments/independent_reanalysis.py data/exports/E003    # pandas + SciPy only
 ```
 
-## Browser lab (in progress, Milestone 5)
+## Browser lab
 
-Watch a run live in your browser. Two terminals, from the project folder:
+Watch a run live, control it, open any organism's brain, chart it as it goes, compare finished runs and trace families. Build it once (needs Node 22), then start it with one command:
 
 ```bash
-uv run genesis serve                     # the API
-cd web && npm ci && npm run dev          # the lab: http://127.0.0.1:5173
+cd web && npm ci && npm run build && cd ..   # once
+uv run genesis lab --open                     # http://127.0.0.1:8765
 ```
 
-Requires Node 22. Start a run from the lab itself, then run, pause, step, change speed, reset or save it; drag and zoom the plate; click an organism to see its genome, family and what its brain is deciding. the Analytics view charts the run as it goes, Compare sets two finished runs from the data lake side by side (starting with what differs in their settings), and Lineage traces the selected organism's family ([docs/ui-design.md](docs/ui-design.md), [docs/API.md](docs/API.md)).
+Guide, keyboard shortcuts and troubleshooting: [docs/lab.md](docs/lab.md).
 
 ## What a run writes
 
@@ -159,6 +159,7 @@ data/                      generated run output (ignored by Git)
 - [SQL examples](docs/sql-examples.md) and [SQL exercises](docs/sql-exercises.md)
 - [Benchmarks](docs/benchmarks.md): recorded performance
 - [Neural networks, by hand](docs/neural-networks.md): what an organism's brain computes, with a worked example
+- [Browser lab guide](docs/lab.md) and [checklist](docs/e2e-checklist.md)
 - [Browser lab design](docs/ui-design.md): the lab's visual system
 - [API](docs/API.md): the HTTP and WebSocket API (`genesis serve`), with a Python example in `scripts/api_example.py`
 - [Roadmap](docs/roadmap/README.md): scope for Milestones 4–6 and how it maps onto this project

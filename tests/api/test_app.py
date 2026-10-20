@@ -91,3 +91,23 @@ def test_every_route_is_documented_in_api_md():
     missing = sorted(p for p in paths if p.removeprefix("/api").replace("{run_id}", "{id}")
                      .replace("{organism_id}", "{oid}") not in doc)  # fmt: skip
     assert not missing, f"routes missing from docs/API.md: {missing}"
+
+
+def test_the_lab_is_served_beside_the_api(tmp_path):
+    (tmp_path / "index.html").write_text("<!doctype html><title>Genesis Lab</title>")
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets" / "app.js").write_text("console.log('lab')")
+    with TestClient(create_app(RunManager(), lab_dir=tmp_path)) as client:
+        assert "<title>Genesis Lab</title>" in client.get("/").text
+        assert client.get("/?run=abc").status_code == 200  # a watched run in the address
+        assert client.get("/assets/app.js").text == "console.log('lab')"
+        assert client.get("/api/health").json()["status"] == "ok"  # the API still wins
+        assert client.get("/api/runs/nope").status_code == 404
+
+
+def test_lab_command_explains_how_to_build_when_not_built(monkeypatch, tmp_path, capsys):
+    import genesis.cli
+
+    monkeypatch.setattr(genesis.cli, "LAB_DIR", tmp_path / "dist")
+    assert main(["lab"]) == 2
+    assert "npm run build" in capsys.readouterr().err

@@ -29,3 +29,24 @@
 .plate[data-live="true"] {
   background-image: none;
 }
+
+.empty {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: center;
+}
+
+.action {
+  padding: var(--space-1) var(--space-4);
+  background: var(--violet);
+  border: 1px solid var(--violet-deep);
+  color: var(--field);
+  font-weight: 600;
+}
+
+/* A label slip over the live canvas (e.g. extinction); the canvas stays visible around it. */
+.overlay {
+  position: absolute;
+  max-width: 70%;
+  pointer-events: none;
+}

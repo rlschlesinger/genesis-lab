@@ -60,6 +60,12 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-056 · `genesis lab`, and hardening the lab (2026-10-20)
+
+**Decision:** `genesis lab [--port] [--open]` serves the built lab (`web/dist`) and the API from one process on 127.0.0.1 (FastAPI `StaticFiles` mounted at `/` after every API route, so the API always wins); if the lab isn't built it says how to build it. Edge cases checked in Chrome on the production build and fixed where needed: a link to a run that doesn't exist now explains itself on the plate with "Choose a run" (it used to say "Waiting for the first picture" forever); an extinct world says "Extinct: the last organisms died on tick …" over the empty plate; reconnection (0.5, 1, 2, 4 s, then "no longer exists" with "start again") and refresh behaved as designed; no view scrolls sideways at 390 px; Lighthouse accessibility 100 on the picker and on a live run with a selection. A user guide (`docs/lab.md`) and a manual checklist (`docs/e2e-checklist.md`) record how to use and check it; the checklist marks the six items not yet checked by hand (real mouse, the reduce-motion setting).
+**Why:** one command and one address is the difference between a tool and a setup; edge cases are where a beginner gets stuck, so each now says what happened and what to do next.
+**Alternatives:** serving the lab from Vite in production (a second process and port for no gain); a separate static server such as nginx (a dependency to install for a local tool).
+
 ## D-055 · Compare from the lake; Lineage from the live run (2026-10-20)
 
 **Decision:**

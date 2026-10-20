@@ -83,4 +83,4 @@ Tick 1,501 of 100,000   106 alive                       running
 
 ## Checked
 
-At 1360 × 860: the plate is square (668 × 668 px) and the stage bar ends at its edge. At 390 × 844 (phone): no sideways scrolling, a 16 px margin, the panel under the plate.
+At 1360 × 860: the plate is square and the World view fits without scrolling. At 390 × 844 (phone): no sideways scrolling on any of the four views, panels stacked under the plate. Lighthouse accessibility 100 on the picker and on a live run with a selection (5.10).
