@@ -142,7 +142,7 @@ class RunManager:
         if len(self.runs) >= self.max_runs:
             raise TooManyRuns(
                 f"{len(self.runs)} live runs already (the limit is {self.max_runs}); "
-                "delete one first"
+                "remove one first"
             )
         config = self.load_config(request.config)
         try:

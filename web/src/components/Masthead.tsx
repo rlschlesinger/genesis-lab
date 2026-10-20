@@ -1,3 +1,4 @@
+import { ChangeRun } from "./ChangeRun";
 import { RunLabel } from "./RunLabel";
 import { StatusLine } from "./StatusLine";
 import styles from "./Masthead.module.css";
@@ -14,6 +15,7 @@ export function Masthead() {
       <div className={styles.run}>
         <RunLabel />
         <StatusLine />
+        <ChangeRun />
       </div>
     </header>
   );

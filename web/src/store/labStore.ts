@@ -28,6 +28,8 @@ export interface LabState {
   statusDetail: string | null;
   selectedOrganism: number | null;
   showTrails: boolean;
+  /** The run picker is open (in place of the plate). */
+  picking: boolean;
 
   setView(view: ViewId): void;
   watchRun(runId: string | null): void;
@@ -37,6 +39,9 @@ export interface LabState {
   runReplaced(newRunId: string): void;
   selectOrganism(id: number | null): void;
   setShowTrails(on: boolean): void;
+  setPicking(on: boolean): void;
+  /** A control's answer (RunInfo): keep the run's details current between hellos. */
+  updateRun(info: RunInfo): void;
 }
 
 export const initialLabState = {
@@ -50,6 +55,7 @@ export const initialLabState = {
   statusDetail: null,
   selectedOrganism: null,
   showTrails: false,
+  picking: false,
 };
 
 export const useLabStore = create<LabState>()((set, get) => ({
@@ -59,6 +65,7 @@ export const useLabStore = create<LabState>()((set, get) => ({
 
   watchRun: (runId) =>
     set((s) => ({
+      picking: false,
       subscription: s.subscription + 1,
       runId,
       run: null,
@@ -89,4 +96,10 @@ export const useLabStore = create<LabState>()((set, get) => ({
   selectOrganism: (id) => set({ selectedOrganism: id }),
 
   setShowTrails: (on) => set({ showTrails: on }),
+
+  setPicking: (on) => set({ picking: on }),
+
+  updateRun: (info) => {
+    if (info.run_id === get().runId) set({ run: info });
+  },
 }));

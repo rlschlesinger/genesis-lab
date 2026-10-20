@@ -1,0 +1,128 @@
+.picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: var(--space-8);
+  padding: var(--space-6);
+  background: var(--field);
+  border: 1px solid var(--graticule-strong);
+  border-radius: var(--plate-radius);
+}
+
+.title {
+  font-size: var(--size-lead);
+  margin-bottom: var(--space-4);
+}
+
+.start {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.field > span {
+  font-size: var(--size-small);
+  color: var(--stain-ink-soft);
+}
+
+.field select,
+.field input {
+  padding: var(--space-2) var(--space-3);
+  background: var(--slide);
+  border: 1px solid var(--graticule-strong);
+}
+
+.note {
+  font-size: var(--size-small);
+  color: var(--stain-ink-soft);
+}
+
+.primary {
+  justify-self: start;
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-6);
+  background: var(--violet);
+  color: var(--field);
+  border: 1px solid var(--violet-deep);
+  font-weight: 600;
+  transition: background var(--quick) var(--ease);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--violet-deep);
+}
+
+.primary:disabled {
+  opacity: 0.6;
+}
+
+.error {
+  margin-top: var(--space-2);
+  color: var(--safranin);
+  font-size: var(--size-small);
+}
+
+.list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--edge);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: var(--edge);
+}
+
+.row[data-current="true"] {
+  box-shadow: inset 3px 0 0 var(--violet);
+  padding-left: var(--space-3);
+}
+
+.meta {
+  grid-column: 1;
+  font-size: var(--size-small);
+  color: var(--stain-ink-soft);
+}
+
+.actions {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.actions button,
+.back {
+  padding: var(--space-1) var(--space-3);
+  background: none;
+  border: 1px solid var(--graticule-strong);
+  color: var(--stain-ink);
+}
+
+.actions button:hover,
+.back:hover {
+  border-color: var(--violet);
+  color: var(--violet-deep);
+}
+
+.back {
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 40rem) {
+  .picker {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--space-4);
+  }
+}

@@ -1,7 +1,9 @@
 import { useLabStore } from "../store/labStore";
+import { GoneNotice } from "./GoneNotice";
+import { StageControls } from "./StageControls";
 import styles from "./StageBar.module.css";
 
-/** Under the plate: where the run is, and how it's drawn. Run controls join it in 5.7. */
+/** Under the plate: where the run is, the controls, and how it's drawn. */
 export function StageBar() {
   const snapshot = useLabStore((s) => s.snapshot);
   const run = useLabStore((s) => s.run);
@@ -25,6 +27,8 @@ export function StageBar() {
         </span>
         <span className={styles.state}>{snapshot.state}</span>
       </div>
+      <GoneNotice />
+      <StageControls />
       <div className={styles.view}>
         <label className={styles.toggle}>
           <input

@@ -62,6 +62,14 @@ Tick 1,501 of 100,000   106 alive                       running
 - **The grid** zooms and pans with the world, a hairline at every zoom.
 - **Hint line** under the plate: how to move, zoom, fit and select, in one sentence.
 
+## Controls and the specimen panel (5.7)
+
+- **Stage controls** under the plate: the primary action (Run or Pause) filled in crystal violet; everything else outlined. Disabled controls fade; nothing the server would refuse is offered.
+- **Feedback:** the pressed button names what it's doing ("Pausing", "Saving"); a refusal or a result appears as one line under the controls.
+- **The run picker** takes the plate's place, in the same rounded frame: starting a run is putting a culture on the plate.
+- **The specimen panel** reads top to bottom as a specimen card: status, body, family, brain, genome.
+- **The brain diagram:** nodes shaded by value, connections by the signal they carried, violet for positive and safranin for negative, always with the decision in words and the inputs as numbers beside it.
+
 ## Checked
 
 At 1360 × 860: the plate is square (668 × 668 px) and the stage bar ends at its edge. At 390 × 844 (phone): no sideways scrolling, a 16 px margin, the panel under the plate.

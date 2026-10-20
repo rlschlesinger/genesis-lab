@@ -3,7 +3,9 @@ import { useEffect, useRef } from "react";
 import type { World } from "../store/labStore";
 import { useLabStore } from "../store/labStore";
 import { attachWheelZoom, usePlateInput } from "../world/usePlateInput";
-import { PlateRenderer, paletteFromCss } from "../world/renderer";
+// Type only: the renderer (and PixiJS with it) is loaded when a plate is first shown, so the
+// picker and the rest of the lab don't wait for the graphics library.
+import type { PlateRenderer } from "../world/renderer";
 import styles from "./PlateCanvas.module.css";
 
 /** The live plate: a PixiJS canvas fed by the store. Selecting an organism only changes
@@ -18,7 +20,9 @@ export function PlateCanvas({ world }: { world: World }) {
     let cancelled = false;
     let unsubscribe = () => {};
     // Pixi starts asynchronously; React (StrictMode in development) may unmount first.
-    PlateRenderer.create(element, world, paletteFromCss()).then((created) => {
+    import("../world/renderer")
+      .then(({ PlateRenderer, paletteFromCss }) => PlateRenderer.create(element, world, paletteFromCss()))
+      .then((created) => {
       if (cancelled) {
         created.destroy();
         return;

@@ -1,0 +1,12 @@
+.change {
+  padding: var(--space-1) var(--space-3);
+  background: none;
+  border: 1px solid var(--graticule-strong);
+  color: var(--stain-ink);
+  font-size: var(--size-small);
+}
+
+.change:hover {
+  border-color: var(--violet);
+  color: var(--violet-deep);
+}

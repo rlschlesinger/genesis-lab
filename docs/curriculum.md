@@ -426,6 +426,15 @@ What has been covered, where it appears in the code, and what comes next.
 - **Accessibility for a canvas:** hidden from screen readers, described in words instead.
 - **What trails revealed:** many evolved brains search in loops and spirals.
 
+### 5.7 · Controls and the specimen panel
+- **State-driven interfaces:** the same rule (`availableControls`) decides what the server accepts and what the lab offers.
+- **Feedback in place:** progress on the button pressed, refusals as a sentence beside the controls.
+- **Logarithmic sliders:** equal slider steps multiply speed, so 1–10 ticks/s gets as much room as 100–1,000.
+- **Visualising a network's decision:** nodes by value, connections by signal (weight × input), with the numbers written out.
+- **Request hygiene:** throttle refetches; discard replies that arrive after the question changed.
+- **The address as state:** `?run=` survives a refresh.
+- **Walking the real flow found five problems** the unit tests couldn't see.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.
