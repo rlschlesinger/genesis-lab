@@ -35,6 +35,13 @@ def test_apply_changes_rejects_typos(base):
         apply_changes(base, {"food.regrowth_per_tik": 1.0})
 
 
+@pytest.mark.parametrize("path", ["run.seed.x", "recording.events.0", "food.regrowth_per_tick.y"])
+def test_apply_changes_rejects_a_path_through_a_value(base, path):
+    # Indexing into an int or a list used to raise TypeError (a 500 from the API).
+    with pytest.raises(KeyError, match="unknown config path"):
+        apply_changes(base, {path: 1})
+
+
 def test_run_condition_and_settled_means(base, tmp_path):
     dirs = run_condition(base, Condition("sel"), [5, 6], tmp_path, "TEST")
     assert [d.name for d in dirs] == ["sel-s5", "sel-s6"]

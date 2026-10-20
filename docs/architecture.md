@@ -69,7 +69,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `api/history.py` | `RunHistory`: one row per tick, `query(since, every)` with flows summed, stocks at the end, shares averaged (D-054) | Change the simulation |
 | `api/lake.py` | `LakeReader`: experiments, runs, a run's config and series from the lake (one locked connection) (D-055) | Write to the lake |
 | `api/lineage.py` | `lineage()`: ancestors, descendants cut to depth and breadth, family counts (D-055) | Change the simulation |
-| `api/stepping.py` | `step`, `resume`, `pause`, `stop`, the background `run_loop` (slices, tick budget) (D-048) | Choose which tick comes next (only how many) |
+| `api/stepping.py` | `step` (also in slices, yielding between them), `resume` (cancels a superseded loop), `pause`, `stop`, the background `run_loop` (slices, tick budget) (D-048 and its amendment) | Choose which tick comes next (only how many) |
 | `api/stream.py` | WebSocket snapshots: `hello`/`snapshot`/`gone`, `build_snapshot` (columnar, rounded), per-viewer sender and listener (D-049) | Queue messages; send exact state |
 | `api/details.py` | `organism_detail`, `thought` from the latest decision record, `deciders` (D-050) | Recompute a decision |
 | `api/saved.py` | `saved_runs` (folders on disk), `export_run` (replay to a run folder, digest check, ingest) (D-050) | Accept paths from clients |
@@ -458,7 +458,7 @@ Scope: [roadmap/05A](roadmap/05A_API_STREAMING.md) and [roadmap/05B](roadmap/05B
 | Explicit run state; safe control coordination; bounded inputs, paths and memory | `RunState` and `ALLOWED` (D-047); one-thread model (D-048); names not paths; ≤ 4 live runs; no queues |
 | Deterministic stepping through the API; sequence independent of the number of clients | Digest test: API-steered runs (steps, pauses, speeds, flat out) = headless runs, rule-based and neural |
 | `docs/API.md` and a usage script | [API.md](API.md) (coverage tested); `scripts/api_example.py` |
-| Tests: create/step/pause/resume/reset; invalid config; snapshot shape; two clients same state; disconnects; no unbounded queue growth; digest equal to headless after N ticks | `tests/api/test_app.py`, `test_runs.py`, `test_controls.py`, `test_stream.py` (including a real-uvicorn WebSocket test), `test_details.py` |
+| Tests: create/step/pause/resume/reset; invalid config; snapshot shape; two clients same state; disconnects; no unbounded queue growth; digest equal to headless after N ticks | `tests/api/test_app.py`, `test_runs.py`, `test_controls.py`, `test_stream.py` (including a real-uvicorn WebSocket test), `test_details.py`; under load against a real server (controls raced from eight clients, fifty viewers, four runs flat out, a 120,000-tick run, lake queries during exports): `tests/test_stress.py` |
 | Learning: client/server, JSON schemas, async I/O, WebSocket vs HTTP, concurrency hazards, one authority | [curriculum.md](curriculum.md) 5.1–5.4 |
 
 ### Chunk 05B scope check (2026-10-20)

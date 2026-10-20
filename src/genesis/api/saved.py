@@ -42,6 +42,8 @@ def saved_runs(
                 meta = json.loads(run_json.read_text())
             except (OSError, ValueError):
                 continue
+            if not isinstance(meta, dict) or not {"run_id", "seed"} <= meta.keys():
+                continue  # not a run record (a stray or half-written run.json): skip, not 500
             if experiment_id is not None and meta.get("experiment_id") != experiment_id:
                 continue
             found.append((meta, run_json))
@@ -83,18 +85,25 @@ async def export_run(
         raise RunConflict("the run hasn't taken a tick yet: nothing to export")
     if run.state is RunState.FAILED:
         raise RunConflict("a failed run can't be exported: its replay would fail the same way")
-    if run.state is RunState.RUNNING:
+    if run.state is RunState.RUNNING or run.stepping:
         raise RunConflict("pause the run first, so the export matches a fixed moment")
+    if run.exporting:
+        # Two replays at once would write the same folder's files over each other.
+        raise RunConflict("an export of this run is already in progress; wait for it")
     live_digest = run.sim.state_digest()
     config = with_overrides(run.config, max_ticks=ticks)
     recorded_id = f"{run.run_id}-t{ticks}"
     out_dir = out_root / recorded_id
-    result = await asyncio.to_thread(
-        execute_run, config, out_dir, run_id=recorded_id, condition="live", overwrite=True
-    )
-    ingested = False
-    if lake is not None:
-        ingested = (await asyncio.to_thread(ingest_run, out_dir, lake)).ingested
+    run.exporting = True
+    try:
+        result = await asyncio.to_thread(
+            execute_run, config, out_dir, run_id=recorded_id, condition="live", overwrite=True
+        )
+        ingested = False
+        if lake is not None:
+            ingested = (await asyncio.to_thread(ingest_run, out_dir, lake)).ingested
+    finally:
+        run.exporting = False
     try:
         path = out_dir.resolve().relative_to(PROJECT_ROOT).as_posix()
     except ValueError:

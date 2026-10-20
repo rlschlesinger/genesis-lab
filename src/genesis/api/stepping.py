@@ -48,23 +48,48 @@ def step_once(run: LiveRun) -> None:
         run.move_to(RunState.COMPLETED)
 
 
-def step(run: LiveRun, ticks: int) -> int:
+async def step(run: LiveRun, ticks: int) -> int:
     """Take up to ``ticks`` ticks now (idle or paused only). Returns how many were taken;
-    fewer if the run completed or failed on the way."""
+    fewer if the run completed or failed on the way, or was deleted or reset meanwhile.
+
+    Like the background loop, it works in slices of ``SLICE_SECONDS`` and yields between
+    them: 1,000 ticks of a 2,000-organism neural run take ~18 s, and taken in one go they
+    stalled every other run, request and viewer for that long (measured in the Milestone 5
+    review). While a step is in progress the run stays ``paused`` and ``run.stepping`` is set,
+    so resume, another step and export are refused (409) rather than interleaved.
+    """
     if run.state not in (RunState.IDLE, RunState.PAUSED):
         raise RunConflict(f"run {run.run_id} is {run.state}; pause it before stepping")
+    if run.stepping:
+        raise RunConflict(f"run {run.run_id} is already taking a step; wait for it to finish")
     if run.state is RunState.IDLE:
         run.move_to(RunState.PAUSED)
+    run.stepping = True
     taken = 0
-    while taken < ticks and run.state is RunState.PAUSED:
-        step_once(run)
-        taken += 1
+    try:
+        while taken < ticks and run.state is RunState.PAUSED and not run.dropped:
+            slice_end = time.perf_counter() + SLICE_SECONDS
+            while (
+                taken < ticks and run.state is RunState.PAUSED and time.perf_counter() < slice_end
+            ):
+                step_once(run)
+                taken += 1
+            if taken < ticks and run.state is RunState.PAUSED:
+                await asyncio.sleep(0)  # let requests and viewers through, then carry on
+    finally:
+        run.stepping = False
     return taken
 
 
 def resume(run: LiveRun) -> None:
     """Start the background loop (idle or paused only)."""
+    if run.stepping:
+        raise RunConflict(f"run {run.run_id} is taking a step; wait for it to finish")
     run.move_to(RunState.RUNNING)  # raises RunConflict from any other state
+    # A loop from before a pause may still be asleep (it only notices the pause when it next
+    # wakes). Left alone it would wake to find the run running again and step it beside the
+    # new loop. Cancel it: cancellation is delivered at its sleep, never inside a tick.
+    stop(run)
     run.task = asyncio.get_running_loop().create_task(run_loop(run), name=run.run_id)
 
 
@@ -90,19 +115,21 @@ def stop(run: LiveRun) -> None:
 async def run_loop(run: LiveRun) -> None:
     budget = 0.0
     last = time.perf_counter()
-    while run.state is RunState.RUNNING:
+    me = asyncio.current_task()
+    # Only the run's current loop may step it; a superseded one stops (see resume()).
+    while run.state is RunState.RUNNING and run.task is me:
         now = time.perf_counter()
         if run.speed is not None:
             budget = min(budget + (now - last) * run.speed, run.speed * MAX_BACKLOG_SECONDS)
         last = now
         slice_end = now + SLICE_SECONDS
-        while run.state is RunState.RUNNING and time.perf_counter() < slice_end:
+        while run.state is RunState.RUNNING and run.task is me and time.perf_counter() < slice_end:
             if run.speed is not None:
                 if budget < 1.0:
                     break
                 budget -= 1.0
             step_once(run)
-        if run.state is not RunState.RUNNING:
+        if run.state is not RunState.RUNNING or run.task is not me:
             break
         if run.speed is None or budget >= 1.0:
             await asyncio.sleep(0)  # let requests through, then carry on
