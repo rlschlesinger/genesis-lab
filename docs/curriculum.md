@@ -457,5 +457,13 @@ What has been covered, where it appears in the code, and what comes next.
 
 ## Milestone 5 complete
 
+## Milestone 6: Predator and prey
+
+### 6.1 · A second species
+- **Reuse before you add:** predators run through the same movement, cost, death and reproduction code as prey, with their own settings; only what is new to predators is new code.
+- **Keep meanings stable:** `sim.organisms` still means "the prey", so nothing that reads it had to learn about species.
+- **Independent random streams pay off:** predators draw from their own stream, so a world with predators and one without start identically on the same seed, a matched pair for experiments.
+- **A null result as a check:** predators that can't eat yet must leave the prey's history untouched, tick for tick. Testing that proves the machinery adds nothing by accident before 6.2 adds something on purpose.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.

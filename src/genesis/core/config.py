@@ -31,6 +31,8 @@ NonNegativeInt = Annotated[int, Field(ge=0)]
 BRAIN_PARAMETERS = 62
 
 ControllerName = Literal["random_walk", "nearest_food_seeker", "neural"]
+# Predators can't use the food seeker (they don't eat food). 6.3 adds prey-seeking and neural.
+PredatorControllerName = Literal["random_walk"]
 EventKind = Literal["birth", "death", "meal"]
 
 
@@ -156,6 +158,33 @@ class OrganismConfig(_Strict):
         return self
 
 
+class PredatorConfig(OrganismConfig):
+    """A second species that hunts prey (Milestone 6, roadmap 06A; D-057). Optional: a config
+    without this section has no predators and runs exactly as before.
+
+    Predators have the same kind of body as prey (the inherited fields: population, energy,
+    costs, reproduction) with their own values, and their own genome ranges, so they can be
+    faster, see further or burn more. They never eat food; from 6.2 they eat prey. Mutation
+    uses the shared ``mutation`` section, applied to these ranges.
+    """
+
+    controller: PredatorControllerName = "random_walk"  # type: ignore[assignment]
+    genome: GenomeConfig
+
+    @model_validator(mode="after")
+    def _reproduction_affordable(self) -> Self:
+        # The same rule as for prey (SimulationConfig._reproduction_affordable), here because
+        # a predator's body and genome live in one section.
+        cost = self.offspring_energy + self.reproduction_overhead
+        lowest = self.genome.reproduction_threshold.min
+        if lowest <= cost:
+            raise ValueError(
+                f"predators: genome.reproduction_threshold.min ({lowest}) must exceed "
+                f"offspring_energy + reproduction_overhead ({cost})"
+            )
+        return self
+
+
 class MutationConfig(_Strict):
     """How offspring genomes differ from their parent's (genesis.evolution.mutation)."""
 
@@ -251,19 +280,23 @@ class SimulationConfig(_Strict):
     recording: RecordingConfig = RecordingConfig()
     # None: no brains (rule-based controllers). Present: every organism carries a brain.
     brain: BrainConfig | None = None
+    # None: no predators (every config before Milestone 6). Present: a second species (D-057).
+    predators: PredatorConfig | None = None
 
     @model_serializer(mode="wrap")
-    def _omit_absent_brain(self, handler):  # noqa: ANN001, ANN202 (pydantic's own signature)
-        """Leave ``brain`` out of the dumped config when it is None.
+    def _omit_absent_sections(self, handler):  # noqa: ANN001, ANN202 (pydantic's own signature)
+        """Leave optional sections (``brain``, ``predators``) out of the dump when they are None.
 
         A config's dump is hashed (``config_hash``) and saved in run.json. Without this, every
-        rule-based config would gain ``"brain": null``, change its hash, and make every
-        completed run of E001-E006 look stale to the batch runner, though nothing about those
-        runs changed. Omitting the empty section keeps old configs byte-identical.
+        older config would gain ``"brain": null`` or ``"predators": null``, change its hash,
+        and make every completed run of E001-E007 look stale to the batch runner, though
+        nothing about those runs changed. Omitting empty sections keeps old configs
+        byte-identical.
         """
         data = handler(self)
-        if self.brain is None:
-            data.pop("brain", None)
+        for name in ("brain", "predators"):
+            if getattr(self, name) is None:
+                data.pop(name, None)
         return data
 
     @model_validator(mode="after")

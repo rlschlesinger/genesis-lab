@@ -28,6 +28,16 @@ def test_configs_are_listed_and_readable(client):
     assert full["run"]["max_ticks"] == 20000 and full["genome"]["speed"]["initial"] == 1.5
 
 
+def test_predator_worlds_are_not_offered_until_the_lab_can_draw_them(client):
+    # Until 6.5 (D-057), predators would be invisible in the lab: the config isn't listed, and
+    # asking for it explains why and how to run it instead.
+    assert "predators" not in {c["name"] for c in client.get("/api/configs").json()}
+    response = client.post("/api/runs", json={"config": "predators"})
+    assert response.status_code == 422
+    assert "can't show yet" in response.json()["detail"]
+    assert "genesis run --config configs/predators.yaml" in response.json()["detail"]
+
+
 def test_create_list_get_and_delete_a_run(client):
     response = client.post("/api/runs", json={"config": "neural", "seed": 4, "max_ticks": 100})
     assert response.status_code == 201

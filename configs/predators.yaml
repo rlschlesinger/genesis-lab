@@ -1,0 +1,91 @@
+# Genesis Lab predator-prey configuration (Milestone 6, roadmap 06A; D-057).
+# Identical to neural.yaml except for the `predators:` section at the end
+# (tests/core/test_predators.py::test_predator_config_differs_from_neural_only_by_predators).
+# Prey are neural.yaml's evolving brains. Predators are a second species with their own body
+# and genes. Until 6.2 they cannot catch anything, so they wander and starve: this file grows
+# with each increment and its numbers are placeholders until the tuning pilots (6.6).
+# Units: distance = world units, time = ticks, energy = EU (abstract), angle = radians.
+
+run:
+  seed: 42
+  max_ticks: 20000          # EVOLUTION: 4x the default run, for more generations
+  stop_on_extinction: true
+
+world:
+  width: 200.0
+  height: 200.0
+
+food:
+  initial_count: 150
+  max_count: 300
+  regrowth_per_tick: 2.0     # expected new items per tick while below max_count
+  energy_value: 20.0         # EU per item eaten
+  eat_radius: 2.0
+
+organisms:
+  initial_count: 30
+  max_population: 500
+  initial_energy: 50.0
+  max_age: null              # null = no age limit
+  move_cost_per_distance: 0.1
+  speed_cost_exponent: 1.0    # EVOLUTION: drag on; cost/tick at full speed ~ speed squared
+  sense_cost_per_unit: 0.004  # EVOLUTION: sensory upkeep; founders pay 20 x 0.004 = 0.08/tick
+  offspring_energy: 40.0     # transferred parent -> child
+  reproduction_overhead: 10.0  # lost by parent on top of the transfer
+  controller: neural   # NEURAL: each organism's own brain decides (or: random_walk, nearest_food_seeker)
+
+# Heritable genes. `initial` is every founder's value. Mutation (when enabled) can move a
+# gene anywhere in [min, max], so each whole range must be physically sensible.
+# Units: speed = world units/tick; sense_range = world units; max_turn = radians/tick;
+# metabolic_rate = EU/tick; reproduction_threshold = EU; neutral_marker = none (no effect).
+genome:
+  speed:                  {initial: 1.5,  min: 0.25, max: 4.0, mutable: false}   # NEURAL: frozen
+  sense_range:            {initial: 20.0, min: 1.0,  max: 60.0, mutable: false}  # NEURAL: frozen
+  # EVOLUTION: frozen. Turning has no cost, so it would be a second free lunch (D-021).
+  max_turn:               {initial: 0.5,  min: 0.05, max: 1.5, mutable: false}
+  metabolic_rate:         {initial: 0.2,  min: 0.02, max: 0.5, mutable: false}   # NEURAL: frozen
+  # min must exceed offspring_energy + reproduction_overhead (50)
+  reproduction_threshold: {initial: 80.0, min: 55.0, max: 250.0, mutable: false}  # NEURAL: frozen
+  neutral_marker:         {initial: 0.5,  min: 0.0,  max: 1.0}
+
+# How offspring genomes differ from their parent's.
+mutation:
+  enabled: true   # EVOLUTION
+  rate: 0.1     # probability that each gene mutates at a birth
+  size: 0.05    # standard deviation of a change, as a fraction of the gene's (max - min)
+
+# NEURAL: brains (D-039 to D-042). 7 inputs, 6 hidden units, 2 outputs: 62 weights per brain.
+brain:
+  weight_limit: 4.0     # every weight and bias stays within [-4, 4] (reflected)
+  initial_sd: 0.5       # founders' weights ~ Normal(0, 0.5), a different brain for each founder
+  mutation_rate: 0.1    # probability that each weight mutates at a birth (~6 of 62)
+  mutation_size: 0.2    # standard deviation of one weight's mutation step
+
+# What a recorded run saves (never changes results, only what is kept).
+recording:
+  genome_snapshot_every: 50   # ticks between full-genome snapshots (genomes.csv)
+  ticks_every: 1              # ticks between rows of ticks.csv and gene_stats.csv
+  events: []                  # log any of: birth, death, meal (events.csv)
+
+# PREDATORS (6.1): a second species. Same kinds of settings as `organisms:` and `genome:`,
+# with their own values. They never eat food; from 6.2 they eat prey.
+predators:
+  initial_count: 10
+  max_population: 150
+  initial_energy: 120.0      # a bigger store than prey (50): they must last between catches
+  max_age: null
+  move_cost_per_distance: 0.1
+  speed_cost_exponent: 1.0
+  sense_cost_per_unit: 0.004
+  offspring_energy: 80.0
+  reproduction_overhead: 20.0
+  controller: random_walk    # 6.3 adds senses for prey and neural predators
+  # Frozen like the prey's expressed genes, so behaviour can change only through brains (6.3).
+  genome:
+    speed:                  {initial: 1.8,  min: 0.25, max: 4.0, mutable: false}   # prey: 1.5
+    sense_range:            {initial: 25.0, min: 1.0,  max: 60.0, mutable: false}  # prey: 20
+    max_turn:               {initial: 0.4,  min: 0.05, max: 1.5, mutable: false}   # prey: 0.5
+    metabolic_rate:         {initial: 0.3,  min: 0.02, max: 0.5, mutable: false}   # prey: 0.2
+    # min must exceed offspring_energy + reproduction_overhead (100)
+    reproduction_threshold: {initial: 160.0, min: 110.0, max: 400.0, mutable: false}
+    neutral_marker:         {initial: 0.5,  min: 0.0,  max: 1.0}

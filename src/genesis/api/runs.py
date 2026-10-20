@@ -114,11 +114,29 @@ class RunManager:
     # --- Configs --------------------------------------------------------------------------
 
     def config_names(self) -> list[str]:
+        """Configs the lab can run: every file in the folder except predator worlds."""
+        return [name for name in self._all_config_names() if not self._has_predators(name)]
+
+    def _all_config_names(self) -> list[str]:
         return sorted(p.stem for p in self.configs_dir.glob("*.yaml"))
+
+    def _has_predators(self, name: str) -> bool:
+        # Temporary, until 6.5 (D-057): the stream, the specimen panel, history and export all
+        # show prey only, so a predator world would look like a plain neural one with its
+        # predators invisible. Better not to offer it than to show a wrong picture.
+        try:
+            return load_config(self.configs_dir / f"{name}.yaml").predators is not None
+        except (ConfigError, ValueError):
+            return False  # an invalid file is listed, and refused with its reason on use
 
     def load_config(self, name: str) -> SimulationConfig:
         # Only names listed from the folder are accepted: a name can't point anywhere else.
         if name not in self.config_names():
+            if name in self._all_config_names():
+                raise InvalidRunRequest(
+                    f"config {name!r} has predators, which the lab can't show yet; "
+                    f"run it with `genesis run --config configs/{name}.yaml`"
+                )
             raise InvalidRunRequest(f"unknown config {name!r}; choose from {self.config_names()}")
         try:
             return load_config(self.configs_dir / f"{name}.yaml")

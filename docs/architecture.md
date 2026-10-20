@@ -46,7 +46,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `evolution/mutation.py` | `mutate()` → child genome + `GeneChange` list; `reflect()` at bounds | Modify the parent genome |
 | `evolution/brain.py` | `founder_brains` (one random brain per founder), `mutate_brain`, `reflect_array` (D-041) | Modify a parent's brain; use any stream but `brain` |
 | `evolution/reproduction.py` | Who reproduces (random at the cap) and where offspring appear | Touch organisms |
-| `core/simulation.py` | Tick order, RNG streams, founders, deaths, `TickSummary`, `state_digest` | Do I/O |
+| `core/simulation.py` | Tick order, RNG streams, founders, deaths, `TickSummary`, `state_digest`; predators beside the prey (`sim.predators`, `PredatorStreams`, `PredatorSummary`, D-057) | Do I/O |
 | `analytics/metrics.py` | Flat rows: `tick_row`, `organism_rows`; column lists | Mutate state |
 | `analytics/storage.py` | Byte-stable CSV/JSON writers, atomic replace | Know about simulations |
 | `analytics/provenance.py` | Git commit/dirty flag, versions, platform | |
@@ -152,7 +152,8 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 
 - `Simulation(config)` builds streams, world, controller and founders (ids `0..n-1`, generation 0).
 - `step()` runs one tick and returns a `TickSummary` (tick, population, births, deaths, food_count, food_spawned, food_eaten, mean_energy, lineages, mutations). Population and energy are end-of-tick values; `mean_energy` is NaN for an empty population.
-- `run()` steps until `max_ticks`, or extinction if `stop_on_extinction`.
+- `run()` steps until `max_ticks`, or extinction if `stop_on_extinction` (with predators: only when both species are gone).
+- Predators (6.1, D-057): a second list, `sim.predators` (dead ones in `sim.dead_predators`), founders numbered after the prey founders. Each tick they take their snapshot with the prey's, then decide, move, pay their own costs, die and reproduce beside the prey (their newborns after the prey's, so IDs stay ascending). Their numbers are in `sim.predator_summary`, not `TickSummary`. They never eat food; capture comes in 6.2.
 - Living organisms stay in ascending id order; dead organisms move to `sim.dead` and keep their records.
 - Snapshot: all per-organism arrays are built once at the start of the tick, before anyone moves. From then on the tick works on arrays (costs via `costs.living_costs`, payments via `organism.spend_all`, deaths and reproduction eligibility as array comparisons) and writes results back to the organisms; the `Organism` objects remain the only lasting state, so code and tests may still set `org.x` or `org.energy` directly (D-038).
 - Survivors' `age` increments at step 9, so a death check in step 6 sees the age *before* this tick's increment.
@@ -278,7 +279,7 @@ Founders pay exactly the Milestone 1 movement price at any exponent. Defaults re
 
 ## Randomness
 
-One integer seed per run → `numpy.random.SeedSequence` → `.spawn(7)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`, `mutation` (added in 2.2), `brain` (added in 4.3: founders' weights and brain mutation; unused when there are no brains). Tests check that each addition left the earlier streams unchanged. New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
+One integer seed per run → `numpy.random.SeedSequence` → `.spawn(8)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`, `mutation` (added in 2.2), `brain` (added in 4.3: founders' weights and brain mutation; unused when there are no brains), `predators` (added in 6.1, D-057: unused without predators; split with `Generator.spawn` into the predators' own setup, controller, reproduction and mutation streams, so predator draws never shift the prey's, and a world with predators starts with the same prey and food as one without). Tests check that each addition left the earlier streams unchanged. New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
 
 ## Milestone 1 plan
 
@@ -490,7 +491,7 @@ Scope: [roadmap/06A](roadmap/06A_PREDATOR_PREY.md). After trying the lab, the us
 | # | Increment | Key test | Status |
 |---|---|---|---|
 | 6.0 | Chart sizes from the design tokens (Milestone 5 review recommendation) | Lengths in rem/px converted exactly; charts unchanged in the lab | done |
-| 6.1 | Species and predator bodies: optional `predators:` config section (own costs, speed, brains), no capture yet | Old configs: hashes, golden values and CSVs unchanged | |
+| 6.1 | Species and predator bodies: optional `predators:` config section (own body, costs and genes; brains come with senses in 6.3), no capture yet | Old configs: hashes, golden values and CSVs unchanged; matched seeds give the same prey and food | done |
 | 6.2 | Capture phase after eating: one capture per predator per tick, contested prey closest-first with seeded tie-breaks, energy transfer through the ledger, captured prey never act again | One prey can't be eaten twice; energy as specified; no crash when either species dies out; replay reproducible | |
 | 6.3 | Senses: predators sense the nearest prey; prey sense the nearest predator (3 inputs) | Sensor values against hand-worked cases; old brains unchanged | |
 | 6.4 | Recording: counts per species, capture attempts and successes, extinctions, traits per species; schema version; lake tables; report sections | Saved-run schema compatibility; lake validation | |

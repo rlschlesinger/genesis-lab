@@ -92,3 +92,18 @@ def sense_food(
         food_bearing=bearing,
         energy=np.asarray(energies, dtype=np.float64).copy(),
     )
+
+
+def nothing_sensed(energies: FloatArray) -> Observations:
+    """Observations for organisms with no senses yet: nothing found, only their own energy.
+
+    What predators perceive until 6.3 gives them senses for prey (D-057). Rule-based
+    controllers then behave exactly as they do when no food is in range.
+    """
+    n = len(energies)
+    return Observations(
+        food_found=np.zeros(n, dtype=bool),
+        food_distance=np.full(n, np.inf),
+        food_bearing=np.zeros(n),
+        energy=np.asarray(energies, dtype=np.float64).copy(),
+    )
