@@ -24,3 +24,8 @@
   color: var(--stain-ink-soft);
   text-align: center;
 }
+
+/* Live: the canvas draws the grid itself (it zooms and pans with the world). */
+.plate[data-live="true"] {
+  background-image: none;
+}

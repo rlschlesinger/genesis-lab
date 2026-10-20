@@ -72,7 +72,7 @@ uv run genesis serve                     # the API
 cd web && npm ci && npm run dev          # the lab: http://127.0.0.1:5173
 ```
 
-Requires Node 22. For now, create a run on http://127.0.0.1:8765/docs and open `http://127.0.0.1:5173/?run=<run_id>`; a run picker, the drawn world and the organism inspector are being built ([docs/ui-design.md](docs/ui-design.md), [docs/API.md](docs/API.md)).
+Requires Node 22. For now, create a run on http://127.0.0.1:8765/docs and open `http://127.0.0.1:5173/?run=<run_id>` to watch it live: drag, zoom, click organisms, show trails. The run picker, controls and organism inspector are being built ([docs/ui-design.md](docs/ui-design.md), [docs/API.md](docs/API.md)).
 
 ## What a run writes
 

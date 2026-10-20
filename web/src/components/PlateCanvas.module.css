@@ -1,0 +1,19 @@
+.canvas {
+  position: absolute;
+  inset: 0;
+  touch-action: none; /* drags pan the world, not the page */
+  cursor: grab;
+}
+
+.canvas:active {
+  cursor: grabbing;
+}
+
+.canvas:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.canvas canvas {
+  display: block;
+}

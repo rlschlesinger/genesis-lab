@@ -53,6 +53,15 @@ Tick 1,501 of 100,000   106 alive                       running
 - **Feedback in place:** connection state in the masthead's status line; errors where they happen; no toasts.
 - **Empty states say what to do next.** Errors say what happened and how to fix it, without apologising.
 
+## The live plate (5.6)
+
+- **Organisms:** crystal-violet discs with a pale notch pointing where they're heading; never smaller than 3.5 px on screen.
+- **Food:** small iodine dots.
+- **The selected organism:** a safranin ring (the counter-stain: the one thing to look at).
+- **Trails (off by default):** faint violet lines of the last ~1.6 s, drawn under everything.
+- **The grid** zooms and pans with the world, a hairline at every zoom.
+- **Hint line** under the plate: how to move, zoom, fit and select, in one sentence.
+
 ## Checked
 
 At 1360 × 860: the plate is square (668 × 668 px) and the stage bar ends at its edge. At 390 × 844 (phone): no sideways scrolling, a 16 px margin, the panel under the plate.

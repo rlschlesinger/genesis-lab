@@ -417,6 +417,15 @@ What has been covered, where it appears in the code, and what comes next.
 - **A design system from the subject:** brightfield microscopy instead of a dashboard kit; tokens as the only source of colour and size.
 - **Checking the real thing:** a screenshot exposed a stretched plate that every test passed.
 
+### 5.6 · Drawing the live world (`web/src/world/`)
+- **GPU rendering:** sprites stamped from shared textures, reused every frame; thousands cost little.
+- **Coordinate systems:** world (y up) vs screen (y down); one flipped container instead of conversions everywhere.
+- **Interpolation:** glide from what's drawn toward the newest snapshot; shortest-turn angles; snap on big jumps.
+- **Camera maths:** zoom about the cursor keeps the point under it fixed; clamping keeps the view in the world.
+- **Input design:** a click is a press that barely moves; passive vs non-passive wheel listeners; keyboard equivalents for everything.
+- **Accessibility for a canvas:** hidden from screen readers, described in words instead.
+- **What trails revealed:** many evolved brains search in loops and spirals.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

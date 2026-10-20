@@ -2,14 +2,15 @@ import type { CSSProperties } from "react";
 
 import { useLabStore } from "../store/labStore";
 import styles from "./Plate.module.css";
+import { PlateCanvas } from "./PlateCanvas";
+import { PlateSummary } from "./PlateSummary";
 
 /** Grid spacing on the plate, in world units: the organisms' default sight range, so a cell
- *  is roughly what one founder can see across. */
+ *  is roughly what one founder can see across. The live canvas draws the same grid. */
 const GRATICULE_UNITS = 20;
 
 export function Plate() {
   const world = useLabStore((s) => s.world);
-  const snapshot = useLabStore((s) => s.snapshot);
   const runId = useLabStore((s) => s.runId);
   const width = world?.width ?? 200;
   const height = world?.height ?? 200;
@@ -20,20 +21,18 @@ export function Plate() {
   } as CSSProperties;
 
   return (
-    <section className={styles.plate} style={style} aria-label="The world">
-      {snapshot === null && (
+    <section className={styles.plate} style={style} data-live={world !== null} aria-label="The world">
+      {world === null ? (
         <p className={styles.empty}>
           {runId === null
             ? "Start a run to put a culture on the plate."
             : "Waiting for the first picture of this run."}
         </p>
-      )}
-      {snapshot !== null && (
-        <p className={styles.placeholder}>
-          <span className="num">{snapshot.population}</span> organisms and{" "}
-          <span className="num">{snapshot.food.x.length}</span> food items on the plate. Drawing
-          them arrives in the next step.
-        </p>
+      ) : (
+        <>
+          <PlateCanvas world={world} />
+          <PlateSummary />
+        </>
       )}
     </section>
   );

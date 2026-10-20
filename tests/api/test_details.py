@@ -163,3 +163,22 @@ def test_saved_runs_lists_folders_newest_first_and_filters(client, tmp_path):
     client.post(f"/api/runs/{rid}/step", json={"ticks": 10})
     client.post(f"/api/runs/{rid}/export?ingest=false")
     assert client.get("/api/saved-runs").json()[0]["condition"] == "live"
+
+
+def test_viewing_and_selecting_never_change_the_simulation(client):
+    """Everything the browser lab does while you look (stream, select, inspect) is a read.
+    A run that was looked at hard must stay bit-identical to an identical run nobody saw."""
+    watched = create(client, config="neural", seed=12, max_ticks=2000)
+    untouched = create(client, config="neural", seed=12, max_ticks=2000)
+    for rid in (watched, untouched):
+        client.post(f"/api/runs/{rid}/step", json={"ticks": 120})
+    sim = client.app.state.manager.get(watched).sim
+    with client.websocket_connect(f"/api/runs/{watched}/stream") as ws:
+        ws.receive_json(), ws.receive_json()
+        for org in [*sim.organisms, *sim.dead][:60]:  # "select" sixty organisms
+            assert client.get(f"/api/runs/{watched}/organisms/{org.id}").status_code == 200
+        client.get(f"/api/runs/{watched}/digest")
+    for rid in (watched, untouched):
+        client.post(f"/api/runs/{rid}/step", json={"ticks": 80})
+    digests = {client.get(f"/api/runs/{r}/digest").json()["digest"] for r in (watched, untouched)}
+    assert len(digests) == 1

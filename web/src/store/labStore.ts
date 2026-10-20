@@ -27,6 +27,7 @@ export interface LabState {
   status: StreamStatus | "idle";
   statusDetail: string | null;
   selectedOrganism: number | null;
+  showTrails: boolean;
 
   setView(view: ViewId): void;
   watchRun(runId: string | null): void;
@@ -35,6 +36,7 @@ export interface LabState {
   setStatus(status: StreamStatus, detail?: string): void;
   runReplaced(newRunId: string): void;
   selectOrganism(id: number | null): void;
+  setShowTrails(on: boolean): void;
 }
 
 export const initialLabState = {
@@ -47,6 +49,7 @@ export const initialLabState = {
   status: "idle" as const,
   statusDetail: null,
   selectedOrganism: null,
+  showTrails: false,
 };
 
 export const useLabStore = create<LabState>()((set, get) => ({
@@ -84,4 +87,6 @@ export const useLabStore = create<LabState>()((set, get) => ({
     set({ runId: newRunId, run: null, snapshot: null, selectedOrganism: null }),
 
   selectOrganism: (id) => set({ selectedOrganism: id }),
+
+  setShowTrails: (on) => set({ showTrails: on }),
 }));

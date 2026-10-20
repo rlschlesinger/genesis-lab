@@ -83,6 +83,7 @@ A separate TypeScript project that only views and requests; the Python API is th
 |---|---|---|
 | `src/api/` | `types.ts` (docs/API.md as types), `client.ts` (one function per route, `ApiError`), `parse.ts` (runtime checks on stream messages), `__fixtures__/` (real server output, generated) | Hold state |
 | `src/stream/` | `connection.ts` (`StreamConnection`: one subscription, reconnection rules; no React), `useRunStream.ts` (starts/stops it) | Touch the DOM |
+| `src/world/` | `camera.ts` (world↔screen, zoom about a point, clamping), `interpolate.ts` (gliding), `hitTest.ts` (click and keyboard selection), `trails.ts`, `renderer.ts` (PixiJS: the only GPU code), `usePlateInput.ts` (pointer, wheel, keys) (D-052) | Reach the server |
 | `src/store/` | `labStore.ts`: the one Zustand store (view, watched run, latest snapshot, status, selection) | Send anything to the server |
 | `src/data/` | Labels and copy (`views.ts`, `status.ts`) | Contain logic |
 | `src/components/` | Small components, one CSS module each | Fetch or open sockets directly |
@@ -436,7 +437,7 @@ Scope: [roadmap/05A](roadmap/05A_API_STREAMING.md) and [roadmap/05B](roadmap/05B
 | 5.3 | WebSocket snapshot stream: versioned payload, newest-only, bounded queues, many clients | Two clients see the same state; no unbounded growth | done |
 | 5.4 | Organism details (genome, family, brain thought); saved runs; export to a run folder; `docs/API.md` and an example script | Export = a `genesis run` folder | done |
 | 5.5 | Vite + React + TypeScript; design tokens, fonts, layout shell; API client, reconnecting WebSocket hook; Zustand store | Store and payload unit tests | done |
-| 5.6 | Live World: PixiJS canvas, food, organisms, pan/zoom, selection, trails; 1,000+ organisms | Selection never changes the simulation | |
+| 5.6 | Live World: PixiJS canvas, food, organisms, pan/zoom, selection, trails; 1,000+ organisms | Selection never changes the simulation | done |
 | 5.7 | Controls and the organism inspector with a brain view | Out-of-range input rejected in place | |
 | 5.8 | Run Analytics: live charts with units, sample sizes, run IDs | Chart values = backend values | |
 | 5.9 | Experiment Comparison and Lineage Explorer from the lake | Two runs compared; tree correct | |

@@ -1,10 +1,15 @@
 .stage {
+  display: grid;
+  gap: var(--space-2);
+  min-height: 2rem;
+  color: var(--stain-ink-soft);
+}
+
+.readout {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-8);
   align-items: baseline;
-  min-height: 2rem;
-  color: var(--stain-ink-soft);
 }
 
 .figure {
@@ -18,4 +23,28 @@
 
 .state {
   margin-left: auto;
+}
+
+.view {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  align-items: baseline;
+  font-size: var(--size-small);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--stain-ink);
+}
+
+.toggle input {
+  accent-color: var(--violet);
+  margin: 0;
+}
+
+.hint {
+  color: var(--stain-ink-soft);
 }

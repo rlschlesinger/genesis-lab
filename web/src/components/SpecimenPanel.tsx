@@ -8,8 +8,9 @@ export function SpecimenPanel() {
     <aside className={styles.specimen} aria-label="Selected organism">
       <h2 className={styles.title}>{selected === null ? "No specimen" : `Organism ${selected}`}</h2>
       <p className={styles.hint}>
-        Select an organism on the plate to see its genome, its family and what its brain is
-        deciding.
+        {selected === null
+          ? "Select an organism on the plate to see its genome, its family and what its brain is deciding."
+          : "Ringed on the plate. Its genome, family and brain will appear here."}
       </p>
     </aside>
   );
