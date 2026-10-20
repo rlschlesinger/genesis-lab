@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import hello from "../api/__fixtures__/hello.json";
 import snapshot from "../api/__fixtures__/snapshot.json";
-import type { Snapshot } from "../api/types";
+import type { HelloMessage, Snapshot } from "../api/types";
 import { initialLabState, useLabStore } from "./labStore";
 
 const snap = (changes: Partial<Snapshot>) => ({ ...(snapshot as Snapshot), ...changes });
@@ -33,6 +34,19 @@ describe("the lab store", () => {
     expect(useLabStore.getState().subscription).toBe(picked);
     watchRun("c");
     expect(useLabStore.getState().subscription).toBe(picked + 1);
+  });
+
+  it("keeps the same world object across reconnections to a world of the same size", () => {
+    // PlateCanvas re-creates the renderer when the world object changes; a second hello
+    // (a reconnection) with the same size must not throw away the plate's zoom and trails.
+    const greeting = hello as HelloMessage;
+    useLabStore.getState().watchRun(greeting.run.run_id);
+    useLabStore.getState().receiveHello(greeting);
+    const world = useLabStore.getState().world;
+    useLabStore.getState().receiveHello({ ...greeting, world: { ...greeting.world } });
+    expect(useLabStore.getState().world).toBe(world);
+    useLabStore.getState().receiveHello({ ...greeting, world: { width: 1, height: 1 } });
+    expect(useLabStore.getState().world).toEqual({ width: 1, height: 1 });
   });
 
   it("forgets the old run's picture and selection when the run changes", () => {
