@@ -58,6 +58,10 @@ export const initialLabState = {
   picking: false,
 };
 
+function sameWorld(a: World | null, b: World): a is World {
+  return a !== null && a.width === b.width && a.height === b.height;
+}
+
 export const useLabStore = create<LabState>()((set, get) => ({
   ...initialLabState,
 
@@ -76,7 +80,11 @@ export const useLabStore = create<LabState>()((set, get) => ({
       statusDetail: null,
     })),
 
-  receiveHello: (message) => set({ run: message.run, world: message.world }),
+  // The world object is kept when its size hasn't changed: the plate re-creates its renderer
+  // (and forgets the zoom and the trails) whenever it gets a new one, and a reconnection to
+  // the same run sends a new hello with the same world.
+  receiveHello: (message) =>
+    set((s) => ({ run: message.run, world: sameWorld(s.world, message.world) ? s.world : message.world })),
 
   receiveSnapshot: (snapshot) => {
     // Ignore a late message from a run we've stopped watching, and never go back in time

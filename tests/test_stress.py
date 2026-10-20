@@ -1,25 +1,45 @@
-"""Stress tests: the edges of the state space and the edges of scale (increment 3.12).
+"""Stress tests: the edges of the state space and the edges of scale (increment 3.12), and
+the API server under load (the Milestone 5 review).
 
 Each test here is a situation that *could* break something without any single module being
 wrong: nobody alive after the first tick, a population cap of one, every gene parked on its
 bound, 5,000 organisms, a 2000 x 2000 world with 20,000 food items, 50,000 ticks of ledger
-rounding, 120 runs through the batch runner and into the lake. The fast ones run with the
-normal suite; the ones marked ``slow`` take a minute or more and run with ``pytest -m slow``.
+rounding, 120 runs through the batch runner and into the lake; and, against a real uvicorn
+server (not the in-process test client): controls raced from eight clients, fifty viewers
+with some that never read and some that churn, four runs flat out with 2,000 neural
+organisms, a 120,000-tick run's history and export, lake queries while exports ingest. The
+fast ones run with the normal suite; the ones marked ``slow`` take a minute or more and run
+with ``pytest -m slow``. The API tests print their measurements (``pytest -s``).
 """
 
+import asyncio
+import json
+import logging
 import math
+import random
+import socket
+import statistics
+import threading
+import time
 import tracemalloc
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import httpx2
 import pytest
+import uvicorn
+import websockets
 import yaml
 
 from genesis.analytics.batch import run_experiment
+from genesis.analytics.experiments import apply_changes
 from genesis.analytics.recorder import RunRecorder
 from genesis.analytics.runs import execute_run
 from genesis.analytics.spec import load_spec
+from genesis.api.app import create_app
+from genesis.api.runs import RunManager
 from genesis.core import spatial
-from genesis.core.config import SimulationConfig
+from genesis.core.config import SimulationConfig, load_config
 from genesis.core.organism import DeathCause
 from genesis.core.simulation import Simulation
 from genesis.evolution.genome import gene_names
@@ -273,3 +293,562 @@ def test_a_batch_of_one_hundred_and_twenty_runs_loads_into_the_lake(tmp_path):
     ).fetchall()
     assert [g for g, _ in means] == sorted(gene_names())
     assert all(count <= 120 for _, count in means)
+
+
+# --- The API server under load (Milestone 5 review) -----------------------------------------------
+#
+# The in-process test client (tests/api/) calls the app directly, one request at a time. These
+# tests start uvicorn on a free port and hit it from threads and real WebSocket clients, which is
+# the only way to see request latency under load, dropped viewers, or a race between requests.
+
+
+class ErrorLog(logging.Handler):
+    """Collects everything the server logs at WARNING or above (a 500 shows up here)."""
+
+    def __init__(self):
+        super().__init__(level=logging.WARNING)
+        self.records: list[str] = []
+
+    def emit(self, record):
+        self.records.append(self.format(record))
+
+
+class LiveServer:
+    """A real uvicorn server in a thread, with its event loop in hand (to inspect tasks)."""
+
+    def __init__(self, tmp: Path):
+        self.manager = RunManager()
+        self.app = create_app(self.manager)
+        self.app.state.saved_roots = (tmp / "runs",)
+        self.app.state.export_root = tmp / "runs" / "live"
+        self.app.state.lake = tmp / "lake"
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            self.port = s.getsockname()[1]
+        self.base = f"http://127.0.0.1:{self.port}/api"
+        self.ws_base = f"ws://127.0.0.1:{self.port}/api"
+        self.server = uvicorn.Server(
+            uvicorn.Config(self.app, host="127.0.0.1", port=self.port, log_level="warning")
+        )
+        self.loop = asyncio.new_event_loop()
+        self.errors = ErrorLog()
+        self.thread = threading.Thread(target=self._serve, daemon=True)
+
+    def _serve(self):
+        asyncio.set_event_loop(self.loop)
+        self.loop.run_until_complete(self.server.serve())
+
+    def __enter__(self):
+        for name in ("uvicorn.error", "uvicorn", "asyncio"):
+            logging.getLogger(name).addHandler(self.errors)
+        self.thread.start()
+        deadline = time.monotonic() + 15
+        while not self.server.started:
+            assert time.monotonic() < deadline, "the server never started"
+            time.sleep(0.01)
+        self.http = httpx2.Client(base_url=self.base, timeout=120)
+        return self
+
+    def __exit__(self, *exc):
+        self.http.close()
+        self.server.should_exit = True
+        self.thread.join(timeout=30)
+        for name in ("uvicorn.error", "uvicorn", "asyncio"):
+            logging.getLogger(name).removeHandler(self.errors)
+
+    def create(self, **body) -> dict:
+        response = self.http.post("/runs", json=body)
+        assert response.status_code == 201, response.text
+        return response.json()
+
+    def info(self, run_id: str) -> dict:
+        return self.http.get(f"/runs/{run_id}").json()
+
+    def loop_tasks(self) -> list[str]:
+        """Names of the live tasks on the server's loop (a stepping loop is named after its run)."""
+
+        async def names():
+            return [t.get_name() for t in asyncio.all_tasks() if not t.done()]
+
+        return asyncio.run_coroutine_threadsafe(names(), self.loop).result(timeout=30)
+
+    def run_loops(self) -> list[str]:
+        return [n for n in self.loop_tasks() if n in self.manager.runs or "-s" in n]
+
+
+@pytest.fixture
+def live_server(tmp_path):
+    with LiveServer(tmp_path) as server:
+        yield server
+    assert server.errors.records == [], server.errors.records[:5]
+
+
+def rss_mb() -> float:
+    try:
+        with open("/proc/self/status") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    return int(line.split()[1]) / 1024
+    except OSError:
+        pass
+    return math.nan
+
+
+def quantiles(seconds: list[float]) -> str:
+    s = sorted(seconds)
+    at = lambda q: s[min(len(s) - 1, int(q * len(s)))] * 1000  # noqa: E731
+    return f"n={len(s)} p50={at(0.5):.1f} ms p95={at(0.95):.1f} ms max={s[-1] * 1000:.1f} ms"
+
+
+def sample_latency(server: LiveServer, path: str, seconds: float) -> list[float]:
+    """GET ``path`` every 20 ms for ``seconds``; the time each answer took."""
+    out = []
+    with httpx2.Client(base_url=server.base, timeout=60) as client:
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            t0 = time.perf_counter()
+            assert client.get(path).status_code == 200
+            out.append(time.perf_counter() - t0)
+            time.sleep(0.02)
+    return out
+
+
+async def watch(
+    server: LiveServer, run_id: str, seconds: float, fps: int = 15, until_tick: int | None = None
+) -> list[dict]:
+    """The snapshots one viewer receives in ``seconds`` (or until it sees ``until_tick``),
+    each with the time it arrived."""
+    seen = []
+    url = f"{server.ws_base}/runs/{run_id}/stream?fps={fps}"
+    async with websockets.connect(url, max_size=None) as ws:
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            try:
+                raw = await asyncio.wait_for(ws.recv(), timeout=max(0.01, end - time.monotonic()))
+            except TimeoutError:
+                break
+            message = json.loads(raw)
+            if message["type"] == "snapshot":
+                seen.append({"at": time.perf_counter(), "tick": message["tick"], "bytes": len(raw)})
+                if until_tick is not None and message["tick"] >= until_tick:
+                    break
+    return seen
+
+
+def headless_digest(config_name: str, seed: int, ticks: int) -> str:
+    config = apply_changes(
+        load_config(CONFIGS / f"{config_name}.yaml"), {"run.seed": seed, "run.max_ticks": ticks}
+    )
+    sim = Simulation(config)
+    sim.run()
+    return sim.state_digest()
+
+
+NEURAL_CROWD = {  # the lab's worst case: 2,000 neural organisms, held there
+    "organisms.initial_count": 2000,
+    "organisms.max_population": 2000,
+    "organisms.initial_energy": 200.0,
+    "food.max_count": 2000,
+    "food.initial_count": 1000,
+    "food.regrowth_per_tick": 100.0,
+    "run.stop_on_extinction": False,
+}
+
+
+def test_controls_raced_from_eight_clients_leave_one_loop_and_a_headless_digest(live_server):
+    """resume, pause, step and speed fired at one run from eight threads at once: every answer
+    is 200 or a clean 409, exactly one loop steps the run, and the final state is still the
+    headless run's (a race that stepped twice, or two loops, would change the digest)."""
+    ticks = 1500
+    rid = live_server.create(config="evolution", seed=21, max_ticks=ticks)["run_id"]
+    statuses: dict[int, int] = {}
+    lock = threading.Lock()
+
+    def client(seed):
+        rng = random.Random(seed)
+        with httpx2.Client(base_url=live_server.base, timeout=60) as http:
+            for _ in range(60):
+                action = rng.choice(["resume", "pause", "step", "speed", "flat_out", "read"])
+                if action == "step":
+                    r = http.post(f"/runs/{rid}/step", json={"ticks": rng.choice([1, 3, 10])})
+                elif action == "speed":
+                    r = http.put(
+                        f"/runs/{rid}/speed", json={"ticks_per_second": rng.choice([5, 500, 5000])}
+                    )
+                elif action == "flat_out":
+                    r = http.put(f"/runs/{rid}/speed", json={"ticks_per_second": None})
+                elif action == "read":
+                    r = http.get(f"/runs/{rid}")
+                else:
+                    r = http.post(f"/runs/{rid}/{action}")
+                with lock:
+                    statuses[r.status_code] = statuses.get(r.status_code, 0) + 1
+
+    threads = [threading.Thread(target=client, args=(i,)) for i in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert set(statuses) <= {200, 409}, statuses
+    assert statuses.get(409, 0) > 0  # the race really happened
+    if live_server.info(rid)["state"] == "running":
+        assert len([n for n in live_server.loop_tasks() if n == rid]) == 1
+        live_server.http.post(f"/runs/{rid}/pause")
+    live_server.http.put(f"/runs/{rid}/speed", json={"ticks_per_second": None})
+    if live_server.info(rid)["state"] != "completed":
+        live_server.http.post(f"/runs/{rid}/resume")
+    deadline = time.monotonic() + 60
+    while live_server.info(rid)["state"] != "completed":
+        assert time.monotonic() < deadline
+        time.sleep(0.02)
+    digest = live_server.http.get(f"/runs/{rid}/digest").json()
+    assert digest["tick"] == ticks and digest["digest"] == headless_digest("evolution", 21, ticks)
+    print(f"\n  control races: {statuses}")
+
+
+def test_reset_delete_and_create_spam_leaves_no_orphan_or_duplicate_loops(live_server):
+    """Eight clients create, reset, delete, resume, pause and step whatever runs exist. Every
+    answer is one of the documented codes, at most four runs exist afterwards, and every
+    running run has exactly one loop (none for runs that were deleted or reset)."""
+    known = [
+        live_server.create(config="default", seed=s, max_ticks=100_000)["run_id"] for s in range(2)
+    ]
+    for rid in known:
+        live_server.http.put(f"/runs/{rid}/speed", json={"ticks_per_second": 50})
+        live_server.http.post(f"/runs/{rid}/resume")
+    statuses: dict[int, int] = {}
+    lock = threading.Lock()
+
+    def client(seed):
+        rng = random.Random(seed)
+        with httpx2.Client(base_url=live_server.base, timeout=60) as http:
+            for _ in range(60):
+                with lock:
+                    target = rng.choice(known) if known else None
+                action = rng.choice(
+                    ["reset", "delete", "create", "resume", "pause", "step", "list"]
+                )
+                if action == "create":
+                    r = http.post(
+                        "/runs",
+                        json={"config": "default", "seed": rng.randint(0, 9), "max_ticks": 100_000},
+                    )
+                    if r.status_code == 201:
+                        with lock:
+                            known.append(r.json()["run_id"])
+                elif target is None:
+                    continue
+                elif action == "reset":
+                    r = http.post(f"/runs/{target}/reset")
+                    if r.status_code == 200:
+                        with lock:
+                            known.append(r.json()["run_id"])
+                elif action == "delete":
+                    r = http.delete(f"/runs/{target}")
+                elif action == "list":
+                    r = http.get("/runs")
+                elif action == "step":
+                    r = http.post(f"/runs/{target}/step", json={"ticks": 5})
+                else:
+                    r = http.post(f"/runs/{target}/{action}")
+                with lock:
+                    statuses[r.status_code] = statuses.get(r.status_code, 0) + 1
+
+    threads = [threading.Thread(target=client, args=(i,)) for i in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert set(statuses) <= {200, 201, 204, 404, 409, 429}, statuses
+    live = live_server.http.get("/runs").json()
+    assert len(live) <= 4
+    time.sleep(0.2)  # cancelled loops finish at their next await
+    loops = live_server.run_loops()
+    running = sorted(r["run_id"] for r in live if r["state"] == "running")
+    assert sorted(loops) == running, (loops, running)  # one each, no orphans, no duplicates
+    for r in live:
+        live_server.http.delete(f"/runs/{r['run_id']}")
+    time.sleep(0.2)
+    assert live_server.run_loops() == []
+    print(f"\n  reset/delete/create spam: {statuses}")
+
+
+def test_fifty_viewers_some_never_reading_some_churning_leave_no_trace(live_server):
+    """40 viewers reading, 10 that never read a byte after connecting, and two clients
+    connecting and disconnecting as fast as they can: the run keeps going, memory stays
+    bounded, nothing is logged, and the viewer count returns to 0."""
+    rid = live_server.create(config="neural", seed=5, max_ticks=1_000_000)["run_id"]
+    live_server.http.put(f"/runs/{rid}/speed", json={"ticks_per_second": 200})
+    live_server.http.post(f"/runs/{rid}/resume")
+    url = f"{live_server.ws_base}/runs/{rid}/stream?fps=30"
+    seconds = 3.0
+
+    async def reader():
+        frames = 0
+        async with websockets.connect(url, max_size=None) as ws:
+            end = time.monotonic() + seconds
+            while time.monotonic() < end:
+                try:
+                    await asyncio.wait_for(ws.recv(), timeout=0.5)
+                    frames += 1
+                except TimeoutError:
+                    pass
+        return frames
+
+    async def never_reads():
+        async with websockets.connect(url, max_size=None) as ws:
+            ws.transport.pause_reading()  # not even the socket buffer is drained
+            await asyncio.sleep(seconds)
+            ws.transport.resume_reading()
+        return 0
+
+    async def churn(count):
+        for i in range(count):
+            async with websockets.connect(url, max_size=None) as ws:
+                if i % 3 == 0:
+                    await ws.recv()  # sometimes read the hello, mostly not
+        return count
+
+    async def everyone():
+        readers = [reader() for _ in range(40)]
+        silent = [never_reads() for _ in range(10)]
+        return await asyncio.gather(*readers, *silent, churn(40), churn(40))
+
+    peak = 0
+
+    def count_viewers():
+        nonlocal peak
+        end = time.monotonic() + seconds - 0.5
+        while time.monotonic() < end:
+            peak = max(peak, live_server.info(rid)["viewers"])
+            time.sleep(0.05)
+
+    rss_before = rss_mb()
+    tracemalloc.start()
+    heap_before = tracemalloc.get_traced_memory()[0]
+    counter = threading.Thread(target=count_viewers)
+    counter.start()
+    results = asyncio.run(everyone())
+    counter.join()
+    heap_after = tracemalloc.get_traced_memory()[0]
+    tracemalloc.stop()
+    deadline = time.monotonic() + 5
+    while live_server.info(rid)["viewers"] != 0 and time.monotonic() < deadline:
+        time.sleep(0.05)
+    info = live_server.info(rid)
+    assert info["viewers"] == 0 and info["state"] == "running" and info["tick"] > 100
+    assert peak >= 50 and sum(results[:40]) > 40 * 10  # everyone was there; readers got frames
+    heap_growth = (heap_after - heap_before) / 1e6  # server and clients share this process
+    assert heap_growth < 40, f"python heap grew by {heap_growth:.0f} MB"
+    live_server.http.delete(f"/runs/{rid}")
+    time.sleep(0.2)
+    assert [n for n in live_server.loop_tasks() if n == rid] == []
+    print(
+        f"\n  viewers: peak {peak}, frames to 40 readers {sum(results[:40])}, "
+        f"churn {results[50] + results[51]} connections, "
+        f"RSS {rss_before:.0f} -> {rss_mb():.0f} MB, heap +{heap_growth:.1f} MB"
+    )
+
+
+def test_lake_routes_answer_while_runs_step_and_exports_ingest(live_server):
+    """Six threads query every lake route without pause while two runs step flat out and a
+    seventh thread steps a third run and exports it into the lake again and again. Every
+    answer is 200 (the DuckDB connection is shared under a lock), and no export fails."""
+    a = live_server.create(
+        config="default", seed=31, max_ticks=100_000, changes={"run.stop_on_extinction": False}
+    )["run_id"]
+    b = live_server.create(config="neural", seed=32, max_ticks=100_000)["run_id"]
+    c = live_server.create(config="evolution", seed=33, max_ticks=5000)["run_id"]
+    for rid in (a, b, c):
+        live_server.http.put(f"/runs/{rid}/speed", json={"ticks_per_second": None})
+    live_server.http.post(f"/runs/{c}/step", json={"ticks": 300})
+    first = live_server.http.post(f"/runs/{c}/export", params={"ingest": "true"})
+    assert first.status_code == 200 and first.json()["ingested"], first.text
+    for rid in (a, b):
+        live_server.http.post(f"/runs/{rid}/resume")
+    statuses: dict[tuple[str, int], int] = {}
+    lock = threading.Lock()
+    stop = threading.Event()
+    latencies: list[float] = []
+    paths = (
+        "/lake/experiments",
+        "/lake/runs",
+        f"/lake/runs/{c}-t300",
+        f"/lake/runs/{c}-t300/series",
+    )
+
+    def querier():
+        with httpx2.Client(base_url=live_server.base, timeout=120) as http:
+            while not stop.is_set():
+                for path in paths:
+                    t0 = time.perf_counter()
+                    r = http.get(path)
+                    with lock:
+                        latencies.append(time.perf_counter() - t0)
+                        statuses[(path, r.status_code)] = statuses.get((path, r.status_code), 0) + 1
+
+    def exporter():
+        with httpx2.Client(base_url=live_server.base, timeout=300) as http:
+            while not stop.is_set():
+                http.post(f"/runs/{c}/step", json={"ticks": 50})
+                r = http.post(f"/runs/{c}/export", params={"ingest": "true"})
+                with lock:
+                    statuses[("export", r.status_code)] = (
+                        statuses.get(("export", r.status_code), 0) + 1
+                    )
+                assert r.status_code == 200 and r.json()["ingested"], r.text
+
+    threads = [threading.Thread(target=querier) for _ in range(6)] + [
+        threading.Thread(target=exporter)
+    ]
+    for t in threads:
+        t.start()
+    time.sleep(5.0)
+    stop.set()
+    for t in threads:
+        t.join()
+    for rid in (a, b):
+        live_server.http.post(f"/runs/{rid}/pause")
+    assert {code for _, code in statuses} == {200}, statuses
+    assert sum(n for (p, _), n in statuses.items() if p == "export") >= 2
+    print(
+        f"\n  lake under load: {sum(statuses.values())} requests, GET {quantiles(latencies)}, "
+        f"runs reached {live_server.info(a)['tick']} and {live_server.info(b)['tick']} ticks"
+    )
+
+
+@pytest.mark.slow
+def test_four_runs_flat_out_including_two_thousand_neural_organisms_stay_responsive(live_server):
+    """The limit of four live runs, all flat out, one of them the lab's worst case. Requests
+    and a viewer's frames keep coming (a tick of the big run is ~50 ms and can't be cut, so
+    a request may wait for one), and nothing is logged."""
+    rids = [
+        live_server.create(config="evolution", seed=1, max_ticks=1_000_000)["run_id"],
+        live_server.create(
+            config="default", seed=2, max_ticks=1_000_000, changes={"run.stop_on_extinction": False}
+        )["run_id"],
+        live_server.create(config="neural", seed=3, max_ticks=1_000_000)["run_id"],
+        live_server.create(config="neural", seed=4, max_ticks=1_000_000, changes=NEURAL_CROWD)[
+            "run_id"
+        ],
+    ]
+    assert live_server.info(rids[3])["population"] == 2000
+    for rid in rids:
+        live_server.http.put(f"/runs/{rid}/speed", json={"ticks_per_second": None})
+        live_server.http.post(f"/runs/{rid}/resume")
+    seconds = 10.0
+    with ThreadPoolExecutor(1) as pool:
+        viewer = pool.submit(lambda: asyncio.run(watch(live_server, rids[3], seconds)))
+        latencies = sample_latency(live_server, "/runs", seconds)
+        frames = viewer.result()
+    infos = [live_server.info(rid) for rid in rids]
+    for rid in rids:
+        live_server.http.post(f"/runs/{rid}/pause")
+    assert all(i["state"] == "running" and i["tick"] > 50 for i in infos), infos
+    assert statistics.median(latencies) < 1.0 and max(latencies) < 5.0, quantiles(latencies)
+    gaps = [b["at"] - a["at"] for a, b in zip(frames, frames[1:], strict=False)]
+    assert len(frames) >= seconds * 2 and max(gaps) < 2.0, quantiles(gaps)
+    assert [f["tick"] for f in frames] == sorted(f["tick"] for f in frames)  # newest only
+    size_kb = statistics.mean(f["bytes"] for f in frames) / 1024
+    print(
+        f"\n  four runs flat out: GET /runs {quantiles(latencies)}; viewer of the 2,000-organism "
+        f"run: {len(frames)} frames, gaps {quantiles(gaps)}, {size_kb:.0f} KB each; "
+        + "; ".join(f"{i['config_name']} s{i['seed']} tick {i['tick']}" for i in infos)
+    )
+
+
+@pytest.mark.slow
+def test_a_long_step_keeps_viewers_connected_and_the_server_answering(live_server):
+    """Before the review a 2,500-tick step of the 2,000-organism run blocked the server for
+    44 s and every viewer was dropped (keepalive ping timeout, close code 1011). Now a step
+    yields between slices: the viewer sees the tick advance, and requests are answered."""
+    rid = live_server.create(config="neural", seed=4, max_ticks=1_000_000, changes=NEURAL_CROWD)[
+        "run_id"
+    ]
+    ticks = 300  # 6-15 s of stepping, depending on the machine
+    with ThreadPoolExecutor(2) as pool:
+        viewer = pool.submit(lambda: asyncio.run(watch(live_server, rid, 120.0, until_tick=ticks)))
+        time.sleep(0.5)
+        step = pool.submit(
+            lambda: httpx2.post(
+                f"{live_server.base}/runs/{rid}/step", json={"ticks": ticks}, timeout=300
+            )
+        )
+        time.sleep(0.5)
+        latencies = sample_latency(live_server, "/health", 3.0)
+        frames = viewer.result()
+        response = step.result()
+    assert response.status_code == 200 and response.json()["tick"] == ticks
+    ticks_seen = sorted({f["tick"] for f in frames})
+    # Before the fix the viewer saw tick 0 and then nothing until the step ended (or the drop).
+    assert len(ticks_seen) > 10 and ticks_seen[-1] == ticks, ticks_seen[:5]
+    assert max(latencies) < 1.0, quantiles(latencies)
+    print(
+        f"\n  step {ticks} on 2,000 neural organisms: {response.elapsed.total_seconds():.1f} s; "
+        f"viewer saw {len(frames)} frames ({len(ticks_seen)} distinct ticks); "
+        f"GET /health {quantiles(latencies)}"
+    )
+
+
+@pytest.mark.slow
+def test_a_long_run_keeps_history_small_and_exports_exactly_while_another_steps(live_server):
+    """120,000 ticks flat out: the per-tick history stays at 88 bytes a tick, a client's
+    once-a-second "what's new" poll stays cheap, and the export's replay (in a worker thread)
+    matches the live digest while another run keeps stepping."""
+    ticks = 120_000
+    rid = live_server.create(
+        config="default", seed=7, max_ticks=ticks, changes={"run.stop_on_extinction": False}
+    )["run_id"]
+    other = live_server.create(config="evolution", seed=8, max_ticks=1_000_000)["run_id"]
+    for r in (rid, other):
+        live_server.http.put(f"/runs/{r}/speed", json={"ticks_per_second": None})
+    rss_before = rss_mb()
+    t0 = time.monotonic()
+    live_server.http.post(f"/runs/{rid}/resume")
+    polls: list[float] = []
+    since = 0
+    while live_server.info(rid)["state"] != "completed":
+        assert time.monotonic() - t0 < 600, "the run should finish in a few minutes"
+        t1 = time.perf_counter()
+        page = live_server.http.get(
+            f"/runs/{rid}/history", params={"every": 200, "since": since}
+        ).json()
+        polls.append(time.perf_counter() - t1)
+        if page["columns"]["tick"]:
+            since = page["columns"]["tick"][-1] + 1
+        time.sleep(1.0)
+    run_seconds = time.monotonic() - t0
+    history = live_server.manager.get(rid).history
+    history_mb = sum(len(a) * a.itemsize for a in history._data.values()) / 1e6
+    assert len(history) == ticks and history_mb < 12
+    assert statistics.median(polls) < 0.25, quantiles(polls)
+    whole = live_server.http.get(f"/runs/{rid}/history", params={"every": 200}).json()["columns"]
+    assert whole["tick"][-1] == ticks - 1 and len(whole["tick"]) == ticks // 200
+
+    live_server.http.post(f"/runs/{other}/resume")
+    time.sleep(1.0)
+    before = live_server.info(other)["tick"]
+    t2 = time.perf_counter()
+    with ThreadPoolExecutor(1) as pool:
+        export = pool.submit(
+            lambda: httpx2.post(
+                f"{live_server.base}/runs/{rid}/export", params={"ingest": "true"}, timeout=900
+            )
+        )
+        latencies = sample_latency(live_server, "/runs", 5.0)
+        result = export.result()
+    export_seconds = time.perf_counter() - t2
+    after = live_server.info(other)["tick"]
+    live_server.http.post(f"/runs/{other}/pause")
+    body = result.json()
+    assert result.status_code == 200 and body["matches_live_run"] and body["ingested"], body
+    assert body["ticks"] == ticks
+    assert after - before > 100, "the other run stalled during the export"
+    assert statistics.median(latencies) < 0.5, quantiles(latencies)
+    print(
+        f"\n  long run: {ticks} ticks in {run_seconds:.0f} s, history {history_mb:.1f} MB, "
+        f"RSS {rss_before:.0f} -> {rss_mb():.0f} MB, since-poll {quantiles(polls)}; "
+        f"export {export_seconds:.0f} s, the other run did "
+        f"{(after - before) / export_seconds:.0f} ticks/s meanwhile, "
+        f"GET /runs {quantiles(latencies)}"
+    )

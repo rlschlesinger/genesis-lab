@@ -252,7 +252,7 @@ def create_app(manager: RunManager | None = None, lab_dir: Path | None = None) -
     async def step_run(run_id: str, request: StepRequest | None = None) -> RunInfo:
         """Take exactly ``ticks`` ticks now (default 1), then stay paused."""
         run = app.state.manager.get(run_id)
-        stepping.step(run, (request or StepRequest()).ticks)
+        await stepping.step(run, (request or StepRequest()).ticks)
         return run.info()
 
     @app.put("/api/runs/{run_id}/speed", response_model=RunInfo, responses=ERROR_RESPONSES)

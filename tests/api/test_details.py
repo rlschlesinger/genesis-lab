@@ -1,6 +1,7 @@
 """Tests for organism details, saved runs and export-by-replay."""
 
 import json
+import time
 
 import pytest
 from fastapi.testclient import TestClient
@@ -133,6 +134,34 @@ def test_export_replays_the_live_run_exactly_and_loads_it_into_the_lake(client, 
         assert (folder / name).read_bytes() == (headless / name).read_bytes(), name
 
 
+def test_a_second_export_of_the_same_run_waits_its_turn(client, monkeypatch):
+    """Two exports at once would replay into the same folder at the same time, each writing
+    the other's files. The second is refused (409) while the first runs, and works after."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    from genesis.api import saved
+
+    real = saved.execute_run
+
+    def slow_execute_run(*args, **kwargs):
+        time.sleep(0.5)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(saved, "execute_run", slow_execute_run)
+    rid = create(client, max_ticks=100)
+    client.post(f"/api/runs/{rid}/step", json={"ticks": 5})
+    run = client.app.state.manager.get(rid)
+    with ThreadPoolExecutor(1) as pool:
+        first = pool.submit(client.post, f"/api/runs/{rid}/export?ingest=false")
+        while not run.exporting:
+            time.sleep(0.001)
+        second = client.post(f"/api/runs/{rid}/export?ingest=false")
+        assert second.status_code == 409 and "already in progress" in second.json()["detail"]
+        assert first.result().status_code == 200
+    assert not run.exporting
+    assert client.post(f"/api/runs/{rid}/export?ingest=false").status_code == 200
+
+
 @pytest.mark.parametrize("situation", ["unstarted", "running", "failed"])
 def test_export_is_refused_when_it_cannot_match_a_fixed_moment(client, situation):
     rid = create(client, max_ticks=100_000)
@@ -163,6 +192,20 @@ def test_saved_runs_lists_folders_newest_first_and_filters(client, tmp_path):
     client.post(f"/api/runs/{rid}/step", json={"ticks": 10})
     client.post(f"/api/runs/{rid}/export?ingest=false")
     assert client.get("/api/saved-runs").json()[0]["condition"] == "live"
+
+
+def test_saved_runs_skips_a_run_json_that_is_not_a_run_record(client, tmp_path):
+    """A stray or half-written run.json (no run_id or seed) used to make the whole listing
+    fail with a 500; it is skipped like an unreadable one."""
+    config = with_overrides(load_config("configs/default.yaml"), max_ticks=20)
+    execute_run(config, tmp_path / "runs" / "good")
+    (tmp_path / "runs" / "empty").mkdir(parents=True)
+    (tmp_path / "runs" / "empty" / "run.json").write_text("{}")
+    (tmp_path / "runs" / "list").mkdir(parents=True)
+    (tmp_path / "runs" / "list" / "run.json").write_text("[1, 2]")
+    response = client.get("/api/saved-runs")
+    assert response.status_code == 200
+    assert [r["path"] for r in response.json()] == ["good"]
 
 
 def test_viewing_and_selecting_never_change_the_simulation(client):

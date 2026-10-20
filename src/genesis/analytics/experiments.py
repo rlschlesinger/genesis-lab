@@ -33,8 +33,12 @@ def apply_changes(base: SimulationConfig, changes: dict) -> SimulationConfig:
         *parents, leaf = path.split(".")
         section = raw
         for key in parents:
+            # A path through a value that isn't a section ("run.seed.x") is as wrong as a
+            # typo: KeyError, not a TypeError from indexing an int or a list.
+            if not isinstance(section, dict) or key not in section:
+                raise KeyError(f"unknown config path {path!r}")
             section = section[key]
-        if leaf not in section:
+        if not isinstance(section, dict) or leaf not in section:
             raise KeyError(f"unknown config path {path!r}")  # catch typos before running
         section[leaf] = value
     return SimulationConfig.model_validate(raw)

@@ -77,6 +77,22 @@ def test_since_pages_forward_without_repeats(client):
     assert first[-1] == 49 and later[0] == 54 and later[-1] == 79
 
 
+def test_since_returns_exactly_the_points_of_a_full_query_from_that_tick():
+    """``query(since, every)`` reduces only the rows from ``since``'s interval on (cheap for a
+    long run's once-a-second poll). Every value must equal the full query's, bit for bit."""
+    sim = Simulation(with_overrides(load_config("configs/neural.yaml"), seed=4, max_ticks=5000))
+    h = RunHistory()
+    for _ in range(203):
+        h.append(sim.step(), sim.last_decision)
+    for every in (1, 2, 7, 10, 50, 203, 204):
+        full = h.query(0, every)
+        for since in (0, 1, 6, 7, 8, 9, 10, 11, 99, 100, 101, 150, 202, 203, 1000):
+            paged = h.query(since, every)
+            keep = [i for i, t in enumerate(full["tick"]) if t >= since]
+            for name, values in full.items():
+                assert paged[name] == [values[i] for i in keep], (every, since, name)
+
+
 def test_an_empty_or_young_run_has_no_points_yet():
     assert RunHistory().query(0, 1)["tick"] == []
     h = RunHistory()

@@ -48,6 +48,8 @@ def test_create_list_get_and_delete_a_run(client):
         ({"seed": -1}, 422, "greater than or equal"),
         ({"max_ticks": 0}, 422, "greater than"),
         ({"changes": {"food.regrowth_per_tik": 1.0}}, 422, "unknown config path"),
+        ({"changes": {"run.seed.x": 1}}, 422, "unknown config path"),  # through a value
+        ({"changes": {"recording.events.0": "x"}}, 422, "unknown config path"),  # into a list
         ({"surprise": True}, 422, "Extra inputs"),  # unknown fields are refused, not ignored
     ],
 )

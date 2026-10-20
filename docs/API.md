@@ -43,7 +43,7 @@ All paths start with `/api`. Request and response bodies are JSON. Unknown field
 | GET | `/runs/{id}/digest` | | `{run_id, tick, digest}` (hashes every organism ever: don't poll) |
 | POST | `/runs/{id}/resume` | | `RunInfo`; runs in the background at the run's speed |
 | POST | `/runs/{id}/pause` | | `RunInfo`; stops after the tick in progress (running runs only) |
-| POST | `/runs/{id}/step` | `{ticks: 1–10000}` (default 1) | `RunInfo`; idle or paused runs only; leaves it paused |
+| POST | `/runs/{id}/step` | `{ticks: 1–10000}` (default 1) | `RunInfo`; idle or paused runs only; leaves it paused. A long step is taken in slices, so other requests are answered meanwhile; resume, another step and export are refused (409) until it finishes |
 | PUT | `/runs/{id}/speed` | `{ticks_per_second: >0–100000 or null}` | `RunInfo`; null = as fast as possible; default 30 |
 | POST | `/runs/{id}/reset` | `{seed}` (optional) | `RunInfo` of a fresh run from tick 0, **new ID**; viewers of the old ID get `gone` with `replaced_by` |
 | GET | `/runs/{id}/organisms/{oid}` | | `OrganismDetail` |
@@ -95,7 +95,7 @@ Identity (`id`, `alive`, `parent_id`, `founder_id`, `generation`, `birth_tick`, 
  "ticks": 150, "digest": "…", "matches_live_run": true, "ingested": true}
 ```
 
-The live run is **replayed** headlessly for its `tick` ticks with the normal recorder, writing exactly what `genesis run` would for that config (`max_ticks` = the tick reached); with `ingest=true` it is loaded into the lake (condition `live`). Refused (409) for runs that haven't started, are running (pause first), or failed.
+The live run is **replayed** headlessly for its `tick` ticks with the normal recorder, writing exactly what `genesis run` would for that config (`max_ticks` = the tick reached); with `ingest=true` it is loaded into the lake (condition `live`). Refused (409) for runs that haven't started, are running or mid-step (pause first), or failed, and while an export of the same run is still in progress (two replays would write the same folder at once).
 
 ### `History`
 
@@ -155,7 +155,7 @@ Every error body is `{"detail": "…"}` with a readable reason.
 | Status | Meaning | Example |
 |---|---|---|
 | 404 | No such run or organism | a deleted run's ID |
-| 409 | Not possible in the run's current state | resume a completed run; step a running one; export before the first tick |
+| 409 | Not possible in the run's current state | resume a completed run; step a running one; export before the first tick; resume, step or export while a step or an export of the run is in progress |
 | 422 | Invalid request or config | `max_ticks: 0`; a misspelled dotted path; an unknown field |
 | 429 | Too many live runs | a fifth run while four exist |
 

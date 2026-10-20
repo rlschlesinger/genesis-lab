@@ -78,6 +78,9 @@ class LiveRun:
     viewers: int = 0  # open WebSocket streams (stream.py)
     snapshot_cache: tuple[tuple, str] | None = None  # (key, JSON): built once per tick
     history: RunHistory = field(default_factory=RunHistory)  # one row per tick (history.py)
+    stepping: bool = False  # a POST /step is in progress (stepping.step yields between slices)
+    exporting: bool = False  # a POST /export is replaying this run in a worker thread
+    dropped: bool = False  # deleted or reset: a step in progress stops at its next slice
 
     def info(self) -> RunInfo:
         return RunInfo(
@@ -167,6 +170,7 @@ class RunManager:
         run = self.get(run_id)
         if run.task is not None and not run.task.done():
             run.task.cancel()
+        run.dropped = True
         del self.runs[run_id]
 
     def reset(self, run_id: str, seed: int | None = None) -> LiveRun:
