@@ -60,11 +60,18 @@ class RunHistory:
             raise ValueError("every must be 1 or more")
         n = len(self)
         complete = n // every  # intervals [k*every, (k+1)*every - 1], all ticks present
-        if complete == 0:
+        # Row i holds tick i, so the first interval that can end at or after ``since`` is the
+        # one containing it. Starting there (instead of reducing the whole history and then
+        # filtering) keeps a client's once-a-second "what's new" poll cheap however long the
+        # run gets: each row's sum and mean are the same whichever rows come before it.
+        first = min(since // every, complete)
+        rows = complete - first
+        if rows == 0:
             return {name: [] for name in COLUMNS}
-        cols = {name: np.frombuffer(self._data[name], dtype=np.float64)[: complete * every]
+        start, stop = first * every, complete * every
+        cols = {name: np.frombuffer(self._data[name], dtype=np.float64)[start:stop]
                 for name in COLUMNS}  # fmt: skip
-        shaped = {name: values.reshape(complete, every) for name, values in cols.items()}
+        shaped = {name: values.reshape(rows, every) for name, values in cols.items()}
         out: dict[str, np.ndarray] = {"tick": shaped["tick"][:, -1]}
         for name in STOCKS:
             out[name] = shaped[name][:, -1]
