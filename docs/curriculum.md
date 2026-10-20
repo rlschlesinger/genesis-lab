@@ -479,5 +479,11 @@ What has been covered, where it appears in the code, and what comes next.
 - **Edge cases hide at walls:** hard walls clamp positions, so two organisms can share a corner exactly; a "harmless" test predator still caught a prey that way.
 - **Overkill:** predators that hunt well can eat their own food supply to extinction, and then starve themselves.
 
+### 6.4 · Recording two species
+- **Schema evolution:** new tables and new nullable columns let a database grow without touching data already in it; `union_by_name` reads old and new files as one.
+- **Record the attempt, not just the outcome:** every strike, caught or not, so a success rate can be computed and questioned later.
+- **Validation across tables:** strikes must match the capture counts and the prey's `predation` deaths; a missing predator is caught the moment anything refers to it.
+- **The phase plot:** prey against predators in one picture; a cycle draws a loop, a collapse a line into an axis.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.

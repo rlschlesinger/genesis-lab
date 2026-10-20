@@ -5,6 +5,7 @@ energy passed on as specified, caught prey doing nothing more, contested strikes
 chance and not by ID, extinction of either species, and reproducible recorded runs.
 """
 
+import json
 import math
 from pathlib import Path
 
@@ -174,3 +175,13 @@ def test_recorded_predator_runs_replay_byte_for_byte(tmp_path, seed):
     assert first.final_state_digest == second.final_state_digest
     for csv in sorted((tmp_path / "a").glob("*.csv")):
         assert csv.read_bytes() == (tmp_path / "b" / csv.name).read_bytes(), csv.name
+
+
+def test_a_run_whose_prey_died_out_but_whose_predators_lived_on_reached_max_ticks(tmp_path):
+    # stop_reason (6.4): "extinction" means nobody left at all. Certain capture and a short
+    # run: the prey are eaten within a few ticks; the predators (120 EU) outlive the run.
+    config = predator_config(**CERTAIN, **{"run.max_ticks": 30})
+    result = execute_run(config, tmp_path / "run")
+    meta = json.loads((tmp_path / "run" / "run.json").read_text())
+    assert meta["final_population"] == 0 and meta["final_predators"] > 0
+    assert result.stop_reason == meta["stop_reason"] == "max_ticks"

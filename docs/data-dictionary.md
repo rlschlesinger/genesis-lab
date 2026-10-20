@@ -57,6 +57,10 @@ One row per simulation run, including failed ones. Source: `run.json`.
 | `error` | VARCHAR | — | | 1 | status ≠ failed | Exception type and message |
 | `ticks_every` | INTEGER | tick | | 3 (1 for older) | never | Sampling interval of `ticks` and `gene_stats` rows |
 | `events_recorded` | VARCHAR | — | | 3 | never | Which event kinds were logged, e.g. `birth,death` or empty |
+| `final_predators` | INTEGER | — | | 5 | no predators; status ≠ completed | Living predators at the end |
+| `predators_ever` | INTEGER | — | | 5 | no predators; status ≠ completed | Predators that ever lived |
+
+`stop_reason` is `extinction` only when nobody at all is left: prey gone while predators lived on to `max_ticks` is `max_ticks` (6.4).
 
 ## `ticks`
 
@@ -179,7 +183,7 @@ One row per recorded tick (same ticks as `ticks`), for every controller. Source:
 
 ## `brains` (new in 4.5)
 
-One row per organism that had a brain: its 62 parameters. Source: `brains.csv` (always written; header only without brains). A brain never changes during a lifetime, so one row describes it completely.
+One row per organism that had a brain: its 62 parameters, or 80 for prey in a world with predators (6.3). Source: `brains.csv` (always written; header only without brains). A brain never changes during a lifetime, so one row describes it completely.
 
 | Column | Type | Unit | Key | Null when | Meaning |
 |---|---|---|---|---|---|
@@ -189,8 +193,53 @@ One row per organism that had a brain: its 62 parameters. Source: `brains.csv` (
 | `bh_{h}` (6) | DOUBLE | weight | | never | Hidden unit *h*'s bias |
 | `wo_{output}_{h}` (12) | DOUBLE | weight | | never | Output `turn` or `throttle`: its weight on hidden unit *h* |
 | `bo_{output}` (2) | DOUBLE | weight | | never | Output bias |
+| `wh_{h}_{input}` (18, since 6.4) | DOUBLE | weight | | the world had no predators | Hidden unit *h*'s weight on a predator input (`predator_seen`, `predator_left`, `predator_closeness`) |
 
-Column order is `Brain.to_vector()` order ([neural-networks.md](neural-networks.md)). Every value lies within ±`brain.weight_limit`.
+The first 62 columns are in `Brain.to_vector()` order ([neural-networks.md](neural-networks.md)); the 18 predator weights follow them, so older runs keep their columns in their old places (a prey brain's own vector interleaves them: each hidden unit's ten weights in a row). Every value lies within ±`brain.weight_limit`.
+
+## Worlds with predators (new in 6.4)
+
+Four tables written only by runs whose config has a `predators:` section (D-060). Runs without predators have no rows in them.
+
+### `predator_ticks`
+
+The predators' side of `ticks`: one row per `ticks` row, sampled the same way. Source: `predator_ticks.csv`.
+
+| Column | Type | Unit | Key | Null when | Meaning |
+|---|---|---|---|---|---|
+| `run_id` | VARCHAR | — | PK, FK → runs | never | |
+| `tick` | INTEGER | tick | PK | never | As in `ticks` |
+| `population` | INTEGER | — | | never | Predators alive at the end of the tick (newborns included) |
+| `births` | INTEGER | — | | never | Predator births since the previous row (a flow) |
+| `deaths` | INTEGER | — | | never | Predator deaths since the previous row (a flow) |
+| `mean_energy` | DOUBLE | EU | | no predators alive | Mean predator energy at the end of the tick |
+| `lineages` | INTEGER | — | | never | Predator founder lineages still alive |
+| `attempts` | INTEGER | — | | never | Strikes at prey within reach since the previous row (a flow) |
+| `captures` | INTEGER | — | | never | Strikes that caught their prey (a flow); each is a `predation` death in `organisms` |
+
+### `predators`
+
+One row per predator that ever lived. Source: `predators.csv`. The same columns as `organisms`, except `predator_id` for `organism_id` and `prey_eaten` (prey caught) for `food_eaten`; genes and traits are the predators' own (their ranges are in the config's `predators.genome`). `parent_id` and `founder_id` refer to predators.
+
+### `predator_brains`
+
+As `brains`, for predators that had a brain (neural predators, or brains carried by a rule-based controller): `run_id`, `predator_id` and the 62 standard weights, a predator's "food" inputs meaning prey. Source: `predator_brains.csv`.
+
+### `strikes`
+
+Every strike, caught or not. Source: `strikes.csv`.
+
+| Column | Type | Unit | Key | Null when | Meaning |
+|---|---|---|---|---|---|
+| `run_id` | VARCHAR | — | PK, FK → runs | never | |
+| `tick` | INTEGER | tick | PK | never | When |
+| `predator_id` | INTEGER | — | PK, FK → predators | never | Who struck (one strike per predator per tick) |
+| `prey_id` | INTEGER | — | FK → organisms | never | At whom |
+| `caught` | BOOLEAN | — | | never | Whether the strike caught the prey (probability `capture_probability`) |
+| `prey_energy` | DOUBLE | EU | | never | What the prey held when struck, this tick's meal included |
+| `predator_gain` | DOUBLE | EU | | never | What the predator gained: `capture_efficiency` × `prey_energy`, or 0 if the prey escaped |
+
+The view **`species_counts`** joins `ticks` and `predator_ticks` per run and tick: `prey`, `predators`, `attempts`, `captures`, `prey_deaths`. `run_params` adds `has_predators`, `initial_predators` and `predator_controller`.
 
 ## Checks the ETL performs (3.2)
 
@@ -198,6 +247,6 @@ For every run before loading it; a run failing any check is refused with a messa
 
 1. Every primary key is unique.
 2. Every foreign key points at an existing row (`organisms.parent_id`, `mutations.child_id`, `genomes.organism_id` …), within the same run.
-3. Row counts are consistent: `ticks` has one row per tick that is a multiple of `ticks_every`, plus the final tick if it isn't one; flow totals in `ticks` equal the event counts when events were logged; `organisms` has `organisms_ever` rows; `mutations` has `mutations` rows; `behaviour` has one row per `ticks` row; `brains` has `organisms_ever` rows when the run had brains and none otherwise.
-4. Values are in range: counts ≥ 0, genes within their configured `[min, max]`, `alive` ⇔ `death_tick` is NULL, behaviour shares within [0, 1], brain weights within ±`weight_limit`.
+3. Row counts are consistent: `ticks` has one row per tick that is a multiple of `ticks_every`, plus the final tick if it isn't one; flow totals in `ticks` equal the event counts when events were logged; `organisms` has `organisms_ever` rows; `mutations` has `mutations` rows; `behaviour` has one row per `ticks` row; `brains` has `organisms_ever` rows when the run had brains and none otherwise. With predators: `predator_ticks` has one row per `ticks` row; `predators` has `predators_ever` rows, and `predator_brains` as many when predators had brains; `strikes` has as many rows as `predator_ticks.attempts` totals, and as many caught as `captures` totals.
+4. Values are in range: counts ≥ 0, genes within their configured `[min, max]`, `alive` ⇔ `death_tick` is NULL (prey and predators), behaviour shares within [0, 1], brain weights within ±`weight_limit`; prey brains' 18 predator weights present exactly when the world had predators.
 5. Every column's type matches this dictionary.

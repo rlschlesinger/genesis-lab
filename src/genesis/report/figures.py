@@ -247,6 +247,72 @@ def behaviour_figure(run: RunData) -> go.Figure | None:
     return fig
 
 
+def predators_figure(run: RunData) -> go.Figure | None:
+    """Worlds with predators (6.4): both species' numbers, and the predators' strikes and
+    captures per recorded row (summed between rows when ticks are sampled)."""
+    if not run.has_predators:
+        return None
+    pairs = list(zip(run.ticks, run.predator_ticks, strict=True))
+    keep = downsample(list(range(len(pairs))))
+    ticks = [pairs[i][0]["tick"] for i in keep]
+    fig = make_subplots(
+        rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.12,
+        subplot_titles=["prey and predators alive", "predator strikes, and those that caught"],
+    )  # fmt: skip
+    lines = [
+        (1, "prey", [pairs[i][0]["population"] for i in keep], theme.PREY, None),
+        (1, "predators", [pairs[i][1]["population"] for i in keep], theme.PREDATOR, None),
+        (2, "strikes", [pairs[i][1]["attempts"] for i in keep], theme.MUTED, "dot"),
+        (2, "captures", [pairs[i][1]["captures"] for i in keep], theme.PREDATOR, None),
+    ]
+    for row, label, values, color, dash in lines:
+        fig.add_trace(
+            go.Scatter(x=ticks, y=values, name=label, line=dict(color=color, width=1.4, dash=dash)),
+            row=row, col=1,
+        )  # fmt: skip
+    fig.update_layout(**theme.base_layout(height=420))
+    fig.update_xaxes(title_text="tick", row=2, col=1)
+    theme.style_axes(fig)
+    # Name each line at its last point (charts have no legend).
+    for row, label, values, color, _ in lines:
+        fig.add_annotation(
+            x=ticks[-1], y=values[-1], text=label, showarrow=False, xanchor="right",
+            yanchor="bottom", font=dict(color=color, size=11), row=row, col=1,
+        )  # fmt: skip
+    return fig
+
+
+def phase_figure(run: RunData) -> go.Figure | None:
+    """Prey against predators, one point per recorded tick, joined in time order: the classic
+    view of a predator-prey system. A cycle shows as a loop; a collapse as a line to an axis."""
+    if not run.has_predators:
+        return None
+    pairs = list(zip(run.ticks, run.predator_ticks, strict=True))
+    keep = downsample(list(range(len(pairs))))
+    prey = [pairs[i][0]["population"] for i in keep]
+    hunters = [pairs[i][1]["population"] for i in keep]
+    ticks = [pairs[i][0]["tick"] for i in keep]
+    fig = go.Figure(
+        go.Scatter(
+            x=prey, y=hunters, mode="lines", customdata=ticks,
+            line=dict(color=theme.PREDATOR, width=1.2),
+            hovertemplate="tick %{customdata}<br>prey %{x}<br>predators %{y}<extra></extra>",
+        )
+    )  # fmt: skip
+    fig.update_layout(**theme.base_layout(height=380))
+    fig.update_layout(hovermode="closest")
+    fig.update_xaxes(title_text="prey alive", rangemode="tozero")
+    fig.update_yaxes(title_text="predators alive", rangemode="tozero")
+    theme.style_axes(fig)  # before the labels: it treats annotations as subplot titles
+    # Where the path starts and ends, so its direction can be read.
+    for k, text in ((0, "start"), (-1, "end")):
+        fig.add_annotation(
+            x=prey[k], y=hunters[k], text=text, showarrow=True, arrowcolor=theme.MUTED,
+            font=dict(color=theme.BONE, size=11), ax=24, ay=-24,
+        )  # fmt: skip
+    return fig
+
+
 def mutation_summary(run: RunData) -> list[dict]:
     """Per gene: number of mutations, and mean absolute step as a fraction of the gene's range."""
     summary = []

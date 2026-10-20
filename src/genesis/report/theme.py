@@ -14,6 +14,10 @@ RULE = "#27302c"  # hairlines and grid
 BONE = "#e7e2d4"  # primary text
 MUTED = "#8b958e"  # secondary text, axes
 ACCENT = "#d9a441"  # amber: highlights, the population line
+# Two species (6.4): prey keep the population's amber; predators take the terracotta that
+# already means "cost" and "warning" here.
+PREY = ACCENT
+PREDATOR = "#e07a5f"
 
 SERIF = '"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif'
 MONO = 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace'

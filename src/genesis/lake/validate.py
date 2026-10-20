@@ -10,7 +10,12 @@ from __future__ import annotations
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from genesis.lake.tables import ALL_TABLES, BRAIN_COLUMNS, GENE_COLUMNS
+from genesis.lake.tables import (
+    ALL_TABLES,
+    BASE_BRAIN_COLUMNS,
+    GENE_COLUMNS,
+    THREAT_BRAIN_COLUMNS,
+)
 
 STATUSES = {"completed", "failed", "running"}
 COUNT_COLUMNS = {
@@ -26,6 +31,8 @@ COUNT_COLUMNS = {
     ],
     "organisms": ["generation", "birth_tick", "age", "food_eaten", "offspring_count"],
     "behaviour": ["n", "seeing_food"],
+    "predator_ticks": ["population", "births", "deaths", "lineages", "attempts", "captures"],
+    "predators": ["generation", "birth_tick", "age", "prey_eaten", "offspring_count"],
 }
 # behaviour columns that are shares or fractions, so must lie in [0, 1] (NULL allowed).
 FRACTION_COLUMNS = ["toward_food", "mean_turn", "mean_throttle"]
@@ -49,6 +56,8 @@ def validate_run(meta: dict, tables: dict[str, pa.Table]) -> None:
     check_foreign_keys(tables)
     check_row_counts(run, tables)
     check_ranges(meta, tables)
+    if "predators" in tables:
+        check_predators(run, meta, tables)
 
 
 def check_primary_keys(tables: dict[str, pa.Table]) -> None:
@@ -172,6 +181,63 @@ def check_ranges(meta: dict, tables: dict[str, pa.Table]) -> None:
                 )
 
 
+def check_predators(run: dict, meta: dict, tables: dict[str, pa.Table]) -> None:
+    """Worlds with predators (D-060): checks 2-4 for the predators' tables.
+
+    Keys: a predator's parent and founder are predators; a strike names a predator and a prey
+    of this run. Counts: one predator_ticks row per ticks row; predators and their brains as
+    run.json says; strikes agree with the captures and attempts in predator_ticks.
+    """
+    predators, strikes = tables["predators"], tables["strikes"]
+    ids = predators["predator_id"]
+    prey_ids = tables["organisms"]["organism_id"]
+    for table, column, valid, what in [
+        (predators, "parent_id", ids, "a predator"),
+        (predators, "founder_id", ids, "a predator"),
+        (tables["predator_brains"], "predator_id", ids, "a predator"),
+        (strikes, "predator_id", ids, "a predator"),
+        (strikes, "prey_id", prey_ids, "a prey"),
+    ]:
+        values = pc.drop_null(table[column])
+        missing = pc.invert(pc.is_in(values, value_set=valid))
+        if len(values) and pc.any(missing).as_py():
+            example = pc.filter(values, missing)[0].as_py()
+            raise ValidationError("foreign key", f"{column} = {example} is not {what} of this run")
+
+    if tables["predator_ticks"]["tick"].to_pylist() != tables["ticks"]["tick"].to_pylist():
+        raise ValidationError("row counts", "predator_ticks needs one row per ticks row")
+    _expect_rows(predators, run["predators_ever"], "predators", "predators_ever")
+    brain = meta["config"]["predators"].get("brain")
+    _expect_rows(
+        tables["predator_brains"], run["predators_ever"] if brain else 0,
+        "predator_brains", "predators_ever" if brain else "(no predator brains)",
+    )  # fmt: skip
+    caught = pc.sum(strikes["caught"]).as_py() or 0
+    ticks = tables["predator_ticks"]
+    for name, logged in [("captures", caught), ("attempts", strikes.num_rows)]:
+        total = pc.sum(ticks[name]).as_py() or 0
+        if logged != total:
+            raise ValidationError(
+                "row counts", f"strikes has {logged} {name}; predator_ticks totals {total}"
+            )
+
+    alive, no_death = predators["alive"], pc.is_null(predators["death_tick"])
+    if not pc.all(pc.equal(alive, no_death)).as_py():
+        raise ValidationError("ranges", "predators: alive disagrees with death_tick")
+    if brain:
+        _check_weights(tables["predator_brains"], BASE_BRAIN_COLUMNS, brain["weight_limit"],
+                       "predator_brains")  # fmt: skip
+
+
+def _check_weights(table: pa.Table, columns: list[str], limit: float, name: str) -> None:
+    for column in columns:
+        values = table[column]
+        if values.null_count:
+            raise ValidationError("ranges", f"{name}.{column} has empty values")
+        if table.num_rows and pc.max(pc.abs(values)).as_py() > limit:
+            raise ValidationError("ranges", f"{name}.{column} leaves [-{limit}, {limit}]")
+
+
 def check_brains(meta: dict, tables: dict[str, pa.Table]) -> None:
     """Brains: one row per organism when the run had brains, none otherwise; every weight
     within the configured limit (part of checks 3 and 4)."""
@@ -184,10 +250,13 @@ def check_brains(meta: dict, tables: dict[str, pa.Table]) -> None:
             raise ValidationError("row counts", "brains has rows but the run had no brains")
         return
     _expect_rows(brains, meta.get("organisms_ever"), "brains", "organisms_ever")
-    limit = brain_config["weight_limit"]
-    for column in BRAIN_COLUMNS:
-        values = brains[column]
-        if values.null_count:
-            raise ValidationError("ranges", f"brains.{column} has empty values")
-        if brains.num_rows and pc.max(pc.abs(values)).as_py() > limit:
-            raise ValidationError("ranges", f"brains.{column} leaves [-{limit}, {limit}]")
+    # Prey brains have the 18 predator-input weights exactly when the world has predators.
+    hunted = meta["config"].get("predators") is not None
+    columns = [*BASE_BRAIN_COLUMNS, *THREAT_BRAIN_COLUMNS] if hunted else BASE_BRAIN_COLUMNS
+    _check_weights(brains, columns, brain_config["weight_limit"], "brains")
+    if not hunted:
+        for column in THREAT_BRAIN_COLUMNS:
+            if brains[column].null_count != brains.num_rows:
+                raise ValidationError(
+                    "ranges", f"brains.{column} has values but the world had no predators"
+                )

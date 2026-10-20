@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 
 from genesis.analytics.spec import PROJECT_ROOT, load_spec
+from genesis.lake.tables import BASE_BRAIN_COLUMNS
 
 EXPERIMENTS = PROJECT_ROOT / "experiments"
 
@@ -139,8 +140,9 @@ def test_e007_evaluation_follows_the_pre_registered_rule(e007_trained):
     for seed in (9100, 9101):
         away = configs[("evolved", seed + 100)]
         # Independently re-derive the sample: survivors by ID, default_rng(eval seed).choice.
+        columns = ", ".join(f"b.{c}" for c in BASE_BRAIN_COLUMNS)  # the 62 weights (D-060)
         survivors = e007.query_df(
-            "SELECT b.* EXCLUDE (run_id, organism_id) FROM brains b JOIN organisms o "
+            f"SELECT {columns} FROM brains b JOIN organisms o "
             "USING (run_id, organism_id) JOIN runs r USING (run_id) "
             "WHERE r.seed = $s AND o.alive ORDER BY b.organism_id",
             lake,

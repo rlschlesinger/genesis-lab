@@ -26,6 +26,7 @@ from genesis.analytics.experiment_script import SMOKE_SEEDS
 from genesis.analytics.significance import paired_permutation_test
 from genesis.analytics.spec import PROJECT_ROOT, ExperimentSpec, load_spec
 from genesis.lake.ingest import DEFAULT_LAKE
+from genesis.lake.tables import BASE_BRAIN_COLUMNS
 
 TRAIN_SPEC = PROJECT_ROOT / "experiments" / "specs" / "E007-train.yaml"
 EVAL_OFFSET = 100  # training seed 7000 + i -> evaluation world 7100 + i
@@ -59,9 +60,12 @@ def training_outcomes(spec: ExperimentSpec, lake: Path) -> pd.DataFrame:
 def evolved_sample(lake: Path, run_id: str, eval_seed: int) -> list[list[float]]:
     """30 brains from a training run's survivors: ordered by organism ID, then drawn with
     ``default_rng(eval_seed).choice(n, 30, replace=False)`` (the pre-registered rule)."""
+    # The 62 weights by name, in Brain.to_vector() order. Not `b.*`: since 6.4 the brains
+    # table also has 18 columns for prey that sense predators, empty for E007's runs (D-060).
+    columns = ", ".join(f"b.{c}" for c in BASE_BRAIN_COLUMNS)
     brains = query_df(
-        """
-        SELECT b.* EXCLUDE (run_id)
+        f"""
+        SELECT b.organism_id, {columns}
         FROM brains AS b
         JOIN organisms AS o USING (run_id, organism_id)
         WHERE b.run_id = $r AND o.alive

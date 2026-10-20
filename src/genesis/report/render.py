@@ -46,8 +46,12 @@ def render(run: RunData) -> str:
         ),
         behaviour_figure=_behaviour_html(run),
         mutation_table=_mutation_table(run),
+        predators_section=_predators_section(run),
         run_dir=html.escape(run.run_dir.name),
-        files=", ".join(f"<code>{name}</code>" for name in REQUIRED_FILES),
+        files=", ".join(
+            f"<code>{name}</code>"
+            for name in [*REQUIRED_FILES, *(["predator_ticks.csv"] if run.has_predators else [])]
+        ),
         max_points=MAX_POINTS,
         stride_note=_stride_note(run),
     )
@@ -58,6 +62,37 @@ def _behaviour_html(run: RunData) -> str:
     if figure is None:
         return "<p class='caveat'>This run was recorded before behaviour was measured.</p>"
     return chart_html(figure, "behaviour")
+
+
+def _predators_section(run: RunData) -> str:
+    """Section 06, only for worlds with predators (6.4); nothing at all otherwise."""
+    if not run.has_predators:
+        return ""
+    meta = run.meta
+    caught = sum(r["captures"] for r in run.predator_ticks)
+    struck = sum(r["attempts"] for r in run.predator_ticks)
+    gone = next((r["tick"] for r in run.predator_ticks if r["population"] == 0), None)
+    ending = (
+        f"The predators died out on tick {gone:,}."
+        if gone is not None
+        else f"{meta.get('final_predators', 0)} predators were alive at the end."
+    )
+    return f"""
+  <section>
+    <div class="rail"><span class="num">06</span><h2>Predators and prey</h2></div>
+    <div class="body">
+      <p>{meta.get("predators_ever", 0):,} predators lived in this run. They struck
+      {struck:,} times and caught {caught:,} prey. {ending} The top panel shows both
+      species; the bottom, strikes and captures per recorded row.</p>
+      {chart_html(figures.predators_figure(run), "predators")}
+      <p>The same two populations against each other, one point per recorded tick. Predator
+      and prey numbers that rise and fall in turn trace a loop; a line running into an axis
+      is a species dying out. A toy model's loop is a pattern in this simulation, not
+      evidence about real ecosystems.</p>
+      {chart_html(figures.phase_figure(run), "phase")}
+    </div>
+  </section>
+"""
 
 
 def _lede(run: RunData) -> str:
@@ -80,6 +115,7 @@ def _facts(run: RunData) -> str:
         ("ticks run", f"{meta['ticks_run']:,}"),
         ("stopped by", meta["stop_reason"]),
         ("final population", str(meta["final_population"])),
+        *([("predators at end", str(meta.get("final_predators", 0)))] if run.has_predators else []),
         ("organisms ever", f"{meta['organisms_ever']:,}"),
         ("mutations", f"{meta.get('mutations', 0):,}"),
         (

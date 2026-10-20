@@ -16,7 +16,7 @@ from dataclasses import dataclass
 import pyarrow as pa
 
 from genesis.evolution.genome import gene_names
-from genesis.intelligence.brain_inputs import parameter_names
+from genesis.intelligence.brain_inputs import PREY_INPUT_NAMES, parameter_names
 
 INT, FLOAT, BOOL, TEXT = pa.int32(), pa.float64(), pa.bool_(), pa.string()
 # Microseconds: Parquet has no whole-second timestamp type (it would silently widen "s" to
@@ -25,7 +25,14 @@ TIMESTAMP = pa.timestamp("us", tz="UTC")
 
 GENE_COLUMNS = [f"gene_{g}" for g in gene_names()]
 TRAIT_COLUMNS = [f"trait_{g}" for g in gene_names() if g != "neutral_marker"]
-BRAIN_COLUMNS = parameter_names()  # wh_0_food_seen, ..., bo_throttle (62)
+BASE_BRAIN_COLUMNS = parameter_names()  # wh_0_food_seen, ..., bo_throttle (62)
+# Prey in worlds with predators have 18 more weights, on their three predator inputs (D-059).
+# Appended after the 62, so the table keeps its old columns in their old order; older runs
+# have them empty (NULL).
+THREAT_BRAIN_COLUMNS = [
+    c for c in parameter_names(PREY_INPUT_NAMES) if c not in set(BASE_BRAIN_COLUMNS)
+]
+BRAIN_COLUMNS = [*BASE_BRAIN_COLUMNS, *THREAT_BRAIN_COLUMNS]
 
 
 @dataclass(frozen=True)
@@ -36,6 +43,7 @@ class Table:
     csv_file: str | None  # source file in a run folder (None: built from run.json)
     since_version: int  # first run-folder schema version that has this table
     renames: tuple[tuple[str, str], ...] = ()  # CSV column -> table column
+    predators_only: bool = False  # written only by worlds with predators (D-060)
 
 
 def _schema(*columns: tuple[str, pa.DataType]) -> pa.Schema:
@@ -73,6 +81,8 @@ RUNS = Table(
         ("error", TEXT),
         ("ticks_every", INT),
         ("events_recorded", TEXT),
+        ("final_predators", INT),  # worlds with predators only (6.4)
+        ("predators_ever", INT),
     ),
     ("run_id",),
     None,
@@ -217,5 +227,71 @@ BRAINS = Table(
     renames=(("id", "organism_id"),),
 )
 
-DATA_TABLES = [TICKS, GENE_STATS, GENOMES, ORGANISMS, MUTATIONS, EVENTS, BEHAVIOUR, BRAINS]
+# --- Worlds with predators (6.4, D-060) ------------------------------------------------------
+
+PREDATOR_TICKS = Table(
+    "predator_ticks",
+    _schema(
+        ("run_id", TEXT),
+        ("tick", INT),
+        ("population", INT),
+        ("births", INT),
+        ("deaths", INT),
+        ("mean_energy", FLOAT),
+        ("lineages", INT),
+        ("attempts", INT),
+        ("captures", INT),
+    ),
+    ("run_id", "tick"),
+    "predator_ticks.csv",
+    5,
+    predators_only=True,
+)
+
+PREDATORS = Table(
+    "predators",
+    _schema(
+        *[
+            ("predator_id", INT) if f.name == "organism_id"
+            else ("prey_eaten", INT) if f.name == "food_eaten"
+            else (f.name, f.type)
+            for f in ORGANISMS.schema
+        ]
+    ),
+    ("run_id", "predator_id"),
+    "predators.csv",
+    5,
+    renames=(("id", "predator_id"),),
+    predators_only=True,
+)  # fmt: skip
+
+PREDATOR_BRAINS = Table(
+    "predator_brains",
+    _schema(("run_id", TEXT), ("predator_id", INT), *[(c, FLOAT) for c in BASE_BRAIN_COLUMNS]),
+    ("run_id", "predator_id"),
+    "predator_brains.csv",
+    5,
+    renames=(("id", "predator_id"),),
+    predators_only=True,
+)
+
+STRIKES = Table(
+    "strikes",
+    _schema(
+        ("run_id", TEXT),
+        ("tick", INT),
+        ("predator_id", INT),
+        ("prey_id", INT),
+        ("caught", BOOL),
+        ("prey_energy", FLOAT),
+        ("predator_gain", FLOAT),
+    ),
+    ("run_id", "tick", "predator_id"),  # one strike per predator per tick
+    "strikes.csv",
+    5,
+    predators_only=True,
+)
+
+DATA_TABLES = [TICKS, GENE_STATS, GENOMES, ORGANISMS, MUTATIONS, EVENTS, BEHAVIOUR, BRAINS,
+               PREDATOR_TICKS, PREDATORS, PREDATOR_BRAINS, STRIKES]  # fmt: skip
 ALL_TABLES = [RUNS, *DATA_TABLES]

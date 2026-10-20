@@ -8,11 +8,13 @@ file uses absolute paths, so rebuild it if the project folder moves.
 Views and macros (docs/schema.md):
 
     runs, ticks, gene_stats, genomes, organisms, mutations, events,
-    behaviour, brains                                                 one per lake table
+    behaviour, brains, predator_ticks, predators, predator_brains,
+    strikes                                                           one per lake table
     experiments          built from docs/experiments/*.md
     completed_runs       runs WHERE status = 'completed' (start analyses here)
     run_params           common config values as plain columns
     lineage_sizes        per run and founder: descendants born, alive at the end
+    species_counts       per run and recorded tick: prey and predators side by side
     settled_gene_means(first_tick, last_tick)   per run and gene: mean over a window
 """
 
@@ -58,8 +60,20 @@ SELECT
     (config ->> '$.organisms.sense_cost_per_unit')::DOUBLE        AS sense_cost_per_unit,
     (config -> '$.brain') IS NOT NULL                             AS has_brains,
     (config ->> '$.brain.mutation_rate')::DOUBLE                  AS brain_mutation_rate,
-    (config ->> '$.brain.mutation_size')::DOUBLE                  AS brain_mutation_size
+    (config ->> '$.brain.mutation_size')::DOUBLE                  AS brain_mutation_size,
+    (config -> '$.predators') IS NOT NULL                         AS has_predators,
+    (config ->> '$.predators.initial_count')::INTEGER             AS initial_predators,
+    config ->> '$.predators.controller'                           AS predator_controller
 FROM runs;
+
+CREATE OR REPLACE VIEW species_counts AS
+SELECT
+    t.run_id, t.tick,
+    t.population                   AS prey,
+    p.population                   AS predators,
+    p.attempts, p.captures,
+    t.deaths                       AS prey_deaths
+FROM ticks AS t JOIN predator_ticks AS p USING (run_id, tick);
 
 CREATE OR REPLACE VIEW lineage_sizes AS
 SELECT
@@ -95,7 +109,7 @@ def define_views(con: duckdb.DuckDBPyConnection, lake: Path) -> None:
         folder = lake / spec.name
         if any(folder.glob("*.parquet")):
             pattern = (folder.resolve() / "*.parquet").as_posix()
-            source = f"SELECT * FROM read_parquet('{pattern}')"
+            source = _aligned(con, spec.schema, pattern)
         else:
             source = _empty_select(spec.schema)  # e.g. no run has logged events yet
         if spec.name == "runs":
@@ -114,6 +128,23 @@ def rebuild_db(db_path: str | Path = DEFAULT_DB, lake: str | Path = DEFAULT_LAKE
     with duckdb.connect(str(db_path)) as con:
         define_views(con, Path(lake))
     return db_path
+
+
+def _aligned(con: duckdb.DuckDBPyConnection, schema: pa.Schema, pattern: str) -> str:
+    """Read every file of a table with exactly the dictionary's columns, in its order.
+
+    A table can gain columns (brains' 18 predator weights and runs' predator counts, 6.4).
+    ``union_by_name`` lines up files written before and after by column name; a column no
+    file has yet (a lake with only older runs) is still offered, as NULL, so a query naming
+    it works on any lake (D-060).
+    """
+    files = f"read_parquet('{pattern}', union_by_name = true)"
+    present = {row[0] for row in con.execute(f"DESCRIBE SELECT * FROM {files}").fetchall()}
+    columns = ", ".join(
+        f.name if f.name in present else f"CAST(NULL AS {DUCKDB_TYPES[f.type]}) AS {f.name}"
+        for f in schema
+    )
+    return f"SELECT {columns} FROM {files}"
 
 
 def _empty_select(schema: pa.Schema) -> str:

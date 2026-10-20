@@ -13,6 +13,9 @@ Collected per run:
     events       optional log of births, deaths and meals (``recording.events``)
     behaviour    one row per recorded tick: what organisms did, and brain diversity and drift
                  (analytics/behaviour.py; every controller, brain columns only with brains)
+    predator_ticks  worlds with predators only (D-060): one PredatorSummary row per
+                 recorded tick, sampled like ticks
+    strikes      worlds with predators only: every strike, caught or not
 
 With ``ticks_every`` > 1, ticks, gene_stats and behaviour keep every n-th tick (plus the final
 one).
@@ -31,7 +34,13 @@ from dataclasses import fields
 import numpy as np
 
 from genesis.analytics.behaviour import behaviour_row
-from genesis.analytics.metrics import GENE_FIELDS, tick_row
+from genesis.analytics.metrics import (
+    GENE_FIELDS,
+    PREDATOR_FLOW_FIELDS,
+    STRIKE_FIELDS,
+    predator_tick_row,
+    tick_row,
+)
 from genesis.core.simulation import Event, Simulation, TickSummary
 from genesis.evolution.genome import gene_names
 
@@ -115,11 +124,17 @@ class RunRecorder:
         self._founder_brains: dict[int, np.ndarray] | None = None
         # Flow columns accumulated since the last recorded tick row.
         self._pending = dict.fromkeys(FLOW_FIELDS, 0)
+        self.predator_ticks: list[dict] = []
+        self.strikes: list[dict] = []
+        self._predator_pending = dict.fromkeys(PREDATOR_FLOW_FIELDS, 0)
 
     def observe(self, sim: Simulation, summary: TickSummary) -> None:
         """Call once after every ``sim.step()``. Reads the simulation; never changes it."""
         tick = summary.tick
         self._record_events(sim)
+        hunted = sim.predator_summary is not None
+        if hunted:
+            self._record_predators(sim)
 
         # Flows (things that happened during a tick) are summed between recorded rows, so a
         # sampled ticks.csv still gives true totals. Stocks (population, food count, mean
@@ -131,6 +146,12 @@ class RunRecorder:
             return
         self.ticks.append(row | self._pending)
         self._pending = dict.fromkeys(FLOW_FIELDS, 0)
+        if hunted:
+            # The same rows as ticks.csv, flows summed the same way.
+            self.predator_ticks.append(
+                predator_tick_row(sim.predator_summary) | self._predator_pending
+            )
+            self._predator_pending = dict.fromkeys(PREDATOR_FLOW_FIELDS, 0)
 
         living = sim.organisms
         if self._founder_brains is None:
@@ -152,6 +173,14 @@ class RunRecorder:
             for org in living:
                 genes = {f"gene_{g}": v for g, v in org.genome.as_dict().items()}
                 self.genomes.append({"tick": tick, "id": org.id, **genes})
+
+    def _record_predators(self, sim: Simulation) -> None:
+        """Every tick, recorded row or not: flows into the pending totals, and every strike."""
+        row = predator_tick_row(sim.predator_summary)
+        for field in PREDATOR_FLOW_FIELDS:
+            self._predator_pending[field] += row[field]
+        for strike in sim.strikes_this_tick:
+            self.strikes.append({name: getattr(strike, name) for name in STRIKE_FIELDS})
 
     def _record_events(self, sim: Simulation) -> None:
         if not self.event_kinds:

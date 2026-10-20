@@ -79,7 +79,8 @@ def damaged_copy(run_dir: Path, tmp_path: Path, csv_name: str, change) -> Path:
 def test_every_table_reproduces_its_csv_value_for_value(run_dir, tmp_path):
     result = ingest_run(run_dir, tmp_path)
     assert result.ingested, result.reason
-    for spec in ALL_TABLES[1:]:
+    # Predator tables are written only by worlds with predators (tests/lake/test_predators.py)
+    for spec in [t for t in ALL_TABLES[1:] if not t.predators_only]:
         source = read_csv(run_dir / spec.csv_file)
         loaded = lake_rows(tmp_path, spec.name, result.run_id)
         assert len(loaded) == len(source) == result.rows[spec.name], spec.name
@@ -100,7 +101,8 @@ def test_every_table_reproduces_its_csv_value_for_value(run_dir, tmp_path):
 
 def test_parquet_files_have_exactly_the_dictionary_schema(run_dir, tmp_path):
     result = ingest_run(run_dir, tmp_path)
-    for spec in ALL_TABLES:
+    for spec in [t for t in ALL_TABLES if not t.predators_only]:
+        assert not (tmp_path / "predator_ticks").exists()
         schema = pq.read_schema(tmp_path / spec.name / f"{result.run_id}.parquet")
         assert schema.remove_metadata() == spec.schema, spec.name
 
@@ -110,7 +112,7 @@ def test_runs_row_carries_metadata(run_dir, tmp_path):
     (row,) = lake_rows(tmp_path, "runs", result.run_id)
     meta = json.loads((run_dir / "run.json").read_text())
     assert row["experiment_id"] == "E900" and row["condition"] == "S_plenty"
-    assert row["condition_derived"] is False and row["schema_version"] == 4
+    assert row["condition_derived"] is False and row["schema_version"] == 5
     assert (
         row["config_hash"]
         == meta["config_hash"]

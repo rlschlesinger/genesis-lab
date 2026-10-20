@@ -13,7 +13,16 @@ Output directory layout:
     mutations.csv   one row per gene change at a birth (header only when mutation is off)
     events.csv      optional log of births, deaths and meals (header only when off)
     behaviour.csv   one row per recorded tick: what organisms did; brain diversity and drift
-    brains.csv      one row per organism with a brain: its 62 weights (header only without)
+    brains.csv      one row per organism with a brain: its 62 weights (header only without;
+                    80 for prey in a world with predators)
+
+Worlds with predators (a `predators:` config section) also get (D-060):
+
+    predator_ticks.csv   the predators' side of ticks.csv: count, births, deaths, energy,
+                         lineages, strike attempts and captures
+    predators.csv        one row per predator that ever lived (as organisms.csv)
+    predator_brains.csv  one row per predator with a brain: its 62 weights
+    strikes.csv          every strike, caught or not
 
 Retention policy (spec section 9): every tick, every organism and every mutation is recorded;
 full genomes are sampled (default every 50 ticks). Measured for a 20,000-tick evolution run
@@ -34,11 +43,17 @@ from genesis.analytics.behaviour import BEHAVIOUR_FIELDS
 from genesis.analytics.metrics import (
     MUTATION_FIELDS,
     ORGANISM_FIELDS,
+    PREDATOR_BRAIN_FIELDS,
+    PREDATOR_FIELDS,
+    PREDATOR_TICK_FIELDS,
+    STRIKE_FIELDS,
     TICK_FIELDS,
     brain_fields,
     brain_rows,
     mutation_rows,
     organism_rows,
+    predator_brain_rows,
+    predator_rows,
 )
 from genesis.analytics.provenance import environment, git_info
 from genesis.analytics.recorder import (
@@ -56,12 +71,15 @@ MUTATIONS_FILE = "mutations.csv"
 GENE_STATS_FILE, GENOMES_FILE = "gene_stats.csv", "genomes.csv"
 EVENTS_FILE = "events.csv"
 BEHAVIOUR_FILE, BRAINS_FILE = "behaviour.csv", "brains.csv"
+PREDATOR_TICKS_FILE, PREDATORS_FILE = "predator_ticks.csv", "predators.csv"
+PREDATOR_BRAINS_FILE, STRIKES_FILE = "predator_brains.csv", "strikes.csv"
 
 # Version of the run-folder format (docs/schema.md). 1: Milestone 1 (E001). 2: Milestone 2
 # (gene files, condition only in the folder name). 3: condition, config_hash, sampling
 # settings in run.json, and events.csv. 4: behaviour.csv and brains.csv (Milestone 4); every
-# earlier file unchanged.
-SCHEMA_VERSION = 4
+# earlier file unchanged. 5: predator worlds' four files and run.json predator counts
+# (Milestone 6, D-060); worlds without predators write exactly the version 4 files.
+SCHEMA_VERSION = 5
 
 # run.json fields that legitimately differ between two otherwise identical runs.
 VOLATILE_FIELDS = {"run_id", "started_at", "finished_at", "duration_seconds"}
@@ -159,8 +177,16 @@ def execute_run(
     write_csv(out_dir / MUTATIONS_FILE, MUTATION_FIELDS, mutation_rows(sim))
     write_csv(out_dir / BEHAVIOUR_FILE, BEHAVIOUR_FIELDS, recorder.behaviour)
     write_csv(out_dir / BRAINS_FILE, brain_fields(sim), brain_rows(sim))
+    hunted = config.predators is not None
+    if hunted:
+        write_csv(out_dir / PREDATOR_TICKS_FILE, PREDATOR_TICK_FIELDS, recorder.predator_ticks)
+        write_csv(out_dir / PREDATORS_FILE, PREDATOR_FIELDS, predator_rows(sim))
+        write_csv(out_dir / PREDATOR_BRAINS_FILE, PREDATOR_BRAIN_FIELDS, predator_brain_rows(sim))
+        write_csv(out_dir / STRIKES_FILE, STRIKE_FIELDS, recorder.strikes)
 
-    stop_reason = "extinction" if not sim.organisms else "max_ticks"
+    # Extinction: nobody left at all. Prey gone while predators lived on to max_ticks is a run
+    # that reached max_ticks (without predators the two rules are the same).
+    stop_reason = "extinction" if not sim.organisms and not sim.predators else "max_ticks"
     digest = sim.state_digest()
     ticks_run = sim.tick  # ticks simulated; with sampling, ticks.csv has fewer rows
     meta.update(
@@ -174,6 +200,11 @@ def execute_run(
         mutations=len(sim.mutation_log),
         final_state_digest=digest,
     )
+    if hunted:
+        meta.update(
+            final_predators=len(sim.predators),
+            predators_ever=len(sim.predators) + len(sim.dead_predators),
+        )
     write_json(run_path, meta)
     return RunResult(run_id, out_dir, ticks_run, stop_reason, len(sim.organisms), digest)
 

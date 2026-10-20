@@ -1,6 +1,6 @@
 # Database schema (Milestone 3)
 
-Status: **approved 2026-10-19**; run-folder schema version 3 implemented in 3.1. Column-level detail is in the [data dictionary](data-dictionary.md).
+Status: **approved 2026-10-19**; run-folder schema version 3 implemented in 3.1, version 5 (worlds with predators) in 6.4. Column-level detail is in the [data dictionary](data-dictionary.md).
 
 ## Why a database at all
 
@@ -168,6 +168,7 @@ Run folders were written by different code over time. Each gets a `schema_versio
 | 2 | Milestone 2 (E002, E003) | + `gene_stats.csv`, `genomes.csv`, `mutations.csv` | `condition` only in the folder name |
 | 3 | Milestone 3 | + optional `events.csv`; `condition`, `config_hash`, sampling settings in `run.json` | |
 | 4 | Milestone 4 | + `behaviour.csv`, `brains.csv` | Every earlier file byte-identical to version 3 for the same config and seed |
+| 5 | Milestone 6 (6.4) | + `predator_ticks.csv`, `predators.csv`, `predator_brains.csv`, `strikes.csv`, only in worlds with predators; `run.json` gains `final_predators`, `predators_ever` | Worlds without predators write exactly the version 4 files, byte-identical; `brains` gains 18 nullable predator-weight columns (D-060) |
 
 The ETL fills columns a version lacks with NULL ("unknown"), never with 0 or a guess. For versions 1–2, `condition` is taken from the folder name (`S_plenty-s2000` → `S_plenty`), and the data dictionary records that it was derived.
 

@@ -140,3 +140,16 @@ def test_rolling_mean_skips_missing_values():
     # Window 2: [1], [1, -], [-, 3], [3, -], [-, 5]; a window of only missing values is None.
     assert rolling_mean([1, None, 3, float("nan"), 5], window=2) == [1.0, 1.0, 3.0, 3.0, 5.0]
     assert rolling_mean([None, None, 4.0], window=2) == [None, None, 4.0]
+
+
+def test_predator_worlds_get_their_own_section_and_others_do_not(run_dir, tmp_path):
+    # 6.4 (D-060): section 06 and the phase plot only where predators were recorded.
+    hunted = tmp_path / "hunted"
+    execute_run(config("predators.yaml", **{"run.seed": 3}), hunted)
+    page = write_report(hunted).read_text()
+    assert "Predators and prey" in page and 'id="predators"' in page and 'id="phase"' in page
+    assert "predators at end" in page and "<code>predator_ticks.csv</code>" in page
+    first = write_report(hunted, tmp_path / "again.html").read_text()
+    assert first == page  # still deterministic
+    plain = write_report(run_dir).read_text()
+    assert "Predators and prey" not in plain and 'id="phase"' not in plain

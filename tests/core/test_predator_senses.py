@@ -214,7 +214,7 @@ def test_organism_details_name_all_ten_inputs_and_eighty_weights():
     assert len(detail.thought.inputs) == 10
 
 
-def test_brains_csv_has_eighty_columns_and_the_lake_refuses_the_run_for_now(tmp_path):
+def test_brains_csv_has_eighty_columns_and_the_lake_takes_them(tmp_path):
     from genesis.analytics.runs import execute_run
 
     config = predator_config(**{"run.max_ticks": 20})
@@ -222,4 +222,4 @@ def test_brains_csv_has_eighty_columns_and_the_lake_refuses_the_run_for_now(tmp_
     header = (tmp_path / "run" / "brains.csv").read_text().splitlines()[0].split(",")
     assert header == ["id", *parameter_names(PREY_INPUT_NAMES)]
     result = ingest_run(tmp_path / "run", tmp_path / "lake")
-    assert not result.ingested and "from increment 6.4" in result.reason
+    assert result.ingested, result.reason  # from 6.4 (D-060)

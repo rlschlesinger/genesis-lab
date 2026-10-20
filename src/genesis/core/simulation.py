@@ -172,6 +172,18 @@ class PredatorSummary:
 
 
 @dataclass(frozen=True, slots=True)
+class Strike:
+    """One predator's strike at one prey (6.2), caught or not: a row of strikes.csv (6.4)."""
+
+    tick: int
+    predator_id: int
+    prey_id: int
+    caught: bool
+    prey_energy: float  # what the prey held when struck (this tick's meal included)
+    predator_gain: float  # what the predator gained: 0 when the prey escaped
+
+
+@dataclass(frozen=True, slots=True)
 class TickSummary:
     """What happened in one tick. Population and energy are measured at the end of the tick."""
 
@@ -267,6 +279,7 @@ class Simulation:
         self.predator_summary: PredatorSummary | None = None
         self.predator_events_this_tick: list[Event] = []
         self.predator_mutation_log: list[MutationEvent] = []
+        self.strikes_this_tick: list[Strike] = []  # every strike, in predator order
         # The predators' latest decision, as last_decision is the prey's (None until tick 0).
         self.last_predator_decision: Decision | None = None
         if hunters is not None:
@@ -523,19 +536,21 @@ class Simulation:
                 hunt.capture_probability, self.predator_rng.capture,
             )  # fmt: skip
             caught = np.zeros(len(living), dtype=bool)
-            gains, losses = [], []
+            losses = []
+            struck: list[Strike] = []
             for p, q, hit in zip(
                 strikes.predators.tolist(), strikes.prey.tolist(), strikes.caught.tolist(),
                 strict=True,
             ):  # fmt: skip
-                if not hit:
-                    continue
                 hunter, victim = hunters[p], living[q]
                 held = float(energies[q])  # the prey's energy, this tick's meal included
+                if not hit:
+                    struck.append(Strike(self.tick, hunter.id, victim.id, False, held, 0.0))
+                    continue
                 gain = held * hunt.capture_efficiency
+                struck.append(Strike(self.tick, hunter.id, victim.id, True, held, gain))
                 hunter.eat_prey(gain)
                 pred.energies[p] += gain  # the working copy gets the same addition
-                gains.append(gain)
                 losses.append(held - gain)
                 caught[q] = True
                 # The prey's death names no other organism: events.csv may only refer to this
@@ -552,6 +567,7 @@ class Simulation:
                 victim.die(self.tick, DeathCause.PREDATION)
                 self.dead.append(victim)
             self.ledger.predation += math.fsum(losses)
+            self.strikes_this_tick = struck
             if caught.any():
                 # From here on the tick works on the prey still alive. Without predators none
                 # of this runs, so prey-only worlds keep exactly their old arrays.
