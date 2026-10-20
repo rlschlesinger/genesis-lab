@@ -9,6 +9,27 @@
     "birth_tick": 0,
     "children": [
       {
+        "alive": false,
+        "birth_tick": 58,
+        "children": [
+          {
+            "alive": false,
+            "birth_tick": 156,
+            "children": [],
+            "death_tick": 292,
+            "generation": 2,
+            "hidden_children": 1,
+            "id": 40,
+            "offspring_count": 1
+          }
+        ],
+        "death_tick": 358,
+        "generation": 1,
+        "hidden_children": 0,
+        "id": 34,
+        "offspring_count": 1
+      },
+      {
         "alive": true,
         "birth_tick": 268,
         "children": [],
@@ -16,16 +37,6 @@
         "generation": 1,
         "hidden_children": 0,
         "id": 61,
-        "offspring_count": 0
-      },
-      {
-        "alive": true,
-        "birth_tick": 336,
-        "children": [],
-        "death_tick": null,
-        "generation": 1,
-        "hidden_children": 0,
-        "id": 83,
         "offspring_count": 0
       }
     ],
