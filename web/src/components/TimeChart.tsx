@@ -3,10 +3,8 @@ import "uplot/dist/uPlot.min.css";
 import { useEffect, useRef } from "react";
 import uPlot from "uplot";
 
-import { type TokenName, token } from "../styles/tokens";
+import { type TokenName, token, tokenPx } from "../styles/tokens";
 import styles from "./TimeChart.module.css";
-
-const HEIGHT = 170;
 
 export interface SeriesStyle {
   label: string;
@@ -27,8 +25,9 @@ function showLatest(u: uPlot): void {
   if ((u.cursor.left ?? -1) < 0 && n > 0) u.setLegend({ idx: n - 1 });
 }
 
-function options(props: TimeChartProps, width: number): uPlot.Options {
-  const font = `12px ${token("--font")}`;
+function options(props: TimeChartProps, width: number, height: number): uPlot.Options {
+  // uPlot draws on a canvas, which can't read CSS: sizes come from the tokens as pixels.
+  const font = `${tokenPx("--size-small")}px ${token("--font")}`;
   const axis = {
     stroke: token("--stain-ink-soft"),
     font,
@@ -37,7 +36,7 @@ function options(props: TimeChartProps, width: number): uPlot.Options {
   };
   return {
     width,
-    height: HEIGHT,
+    height,
     cursor: { drag: { x: false, y: false } },
     legend: { show: true, live: true },
     // Not hovering: the legend shows the latest values (what a live run asks). Done in uPlot's
@@ -53,7 +52,7 @@ function options(props: TimeChartProps, width: number): uPlot.Options {
     // the gridlines so the eye can line up across charts.
     axes: [
       props.showTicks ? { ...axis, label: "tick", labelFont: font } : { ...axis, size: 8, values: () => [] },
-      { ...axis, size: 52 },
+      { ...axis, size: tokenPx("--chart-axis") },
     ],
     series: [
       { label: "tick" },
@@ -78,9 +77,10 @@ export function TimeChart(props: TimeChartProps) {
   useEffect(() => {
     const element = host.current;
     if (!element) return;
-    const created = new uPlot(options(props, element.clientWidth || 600), props.data as uPlot.AlignedData, element);
+    const height = tokenPx("--chart-height");
+    const created = new uPlot(options(props, element.clientWidth || 600, height), props.data as uPlot.AlignedData, element);
     plot.current = created;
-    const resize = new ResizeObserver(() => created.setSize({ width: element.clientWidth, height: HEIGHT }));
+    const resize = new ResizeObserver(() => created.setSize({ width: element.clientWidth, height }));
     resize.observe(element);
     return () => {
       resize.disconnect();

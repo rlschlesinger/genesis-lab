@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Milestones 1–5 complete** (2026-10-20). Milestone 6 (predator and prey, then one research extension) has not been approved; scope in [roadmap/](roadmap/README.md). Schema in [schema.md](schema.md), columns in [data-dictionary.md](data-dictionary.md).
+Status: **Milestones 1–5 complete** (2026-10-20). **Milestone 6 approved 2026-10-20** for chunk 06A (predator and prey; plan below); chunk 06B (one research extension) needs its own go-ahead. Scope in [roadmap/](roadmap/README.md). Schema in [schema.md](schema.md), columns in [data-dictionary.md](data-dictionary.md).
 
 ## Component map
 
@@ -476,3 +476,24 @@ Scope: [roadmap/05A](roadmap/05A_API_STREAMING.md) and [roadmap/05B](roadmap/05B
 | Learning: frontend vs backend, API contracts, state synchronisation, Canvas/WebGL, evidence vs decoration | [curriculum.md](curriculum.md) 5.1–5.10 |
 | Local UI doesn't affect seeded numerical results | Golden values unchanged throughout; viewing test |
 
+## Milestone 6 plan, chunk 06A (approved 2026-10-20)
+
+Scope: [roadmap/06A](roadmap/06A_PREDATOR_PREY.md). After trying the lab, the user found it worked but was "very simplistic", above all the world itself and how it looks; this plan answers both. Decisions (the recommendations, approved as proposed):
+
+- **Predators have brains and evolve**, like prey: coevolution is possible but not designed in (06A: "do not bake in arms race outcomes").
+- **Prey brains get three predator inputs** (seen, side, closeness): 7 → 10 inputs, 62 → 80 parameters. Configs without predators keep the 7-input brain, so E007 and every saved run reproduce exactly.
+- **New data goes in new files** (`species.csv`, `captures.csv`): existing CSVs stay byte-identical for every old config; species is joined in the lake rather than added to `organisms.csv`.
+- **Tune before pre-registering:** labelled pilot runs find settings where both species usually persist for a whole run; then E008 is fixed and run, and extinctions are reported, not hidden.
+- **The plate is redrawn** (6.5): oriented cells instead of dots, predators a different shape and colour, energy as how full a cell looks, a fading mark at each capture (the one motion not caused by the user, because it marks a real event), predator and prey counts plus a phase plot.
+- E008 is this experiment; the crowding experiment suggested after E007 becomes E009.
+
+| # | Increment | Key test | Status |
+|---|---|---|---|
+| 6.0 | Chart sizes from the design tokens (Milestone 5 review recommendation) | Lengths in rem/px converted exactly; charts unchanged in the lab | done |
+| 6.1 | Species and predator bodies: optional `predators:` config section (own costs, speed, brains), no capture yet | Old configs: hashes, golden values and CSVs unchanged | |
+| 6.2 | Capture phase after eating: one capture per predator per tick, contested prey closest-first with seeded tie-breaks, energy transfer through the ledger, captured prey never act again | One prey can't be eaten twice; energy as specified; no crash when either species dies out; replay reproducible | |
+| 6.3 | Senses: predators sense the nearest prey; prey sense the nearest predator (3 inputs) | Sensor values against hand-worked cases; old brains unchanged | |
+| 6.4 | Recording: counts per species, capture attempts and successes, extinctions, traits per species; schema version; lake tables; report sections | Saved-run schema compatibility; lake validation | |
+| 6.5 | The lab redrawn: cell bodies, species, energy, capture marks; predator/prey charts and phase plot; species in the specimen panel | Snapshot contract (fixtures) and drawing rules unit-tested; checked in Chrome | |
+| 6.6 | E008 pre-registered (after labelled tuning pilots): prey evolved with vs without predators, plus a designed fleeing rule, tested against the same frozen predators | Spec and definition committed before running | |
+| 6.7 | Run E008; effect sizes and uncertainty; honest limits of a toy model; 06A scope check; docs | Verdicts from the pre-registered analysis | |

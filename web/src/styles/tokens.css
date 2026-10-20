@@ -42,6 +42,10 @@
   --space-8: 2rem;
   --space-12: 3rem;
 
+  /* Charts (uPlot draws on a canvas, so TimeChart reads these as pixels: styles/tokens.ts) */
+  --chart-height: 10.625rem; /* 170 px: four small multiples fit beside the plate's height */
+  --chart-axis: 3.25rem; /* 52 px: room for a five-digit count on the value axis */
+
   /* Shape: the plate is a dish, round at the corners like the real thing; everything else is
      cut glass, square. No other radius is used. */
   --plate-radius: 1.25rem;
