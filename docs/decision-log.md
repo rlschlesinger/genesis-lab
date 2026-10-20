@@ -60,6 +60,14 @@ Each entry records a decision, why it was made, and what would make us revisit i
 **Why:** food has no state beyond its position, and sensing needs distances to all food every tick, which is a single vectorized operation on an array.
 **Revisit if:** food gains per-item state (e.g. varying energy, decay). Then add parallel arrays first, and objects only if needed.
 
+## D-054 · Live history and the Analytics view (2026-10-20)
+
+**Decision:**
+- **Server:** each live run keeps one row per tick (`api/history.py`, typed arrays of 8-byte numbers: ~2 MB for 20,000 ticks): the tick summary and the decision-record behaviour measures (`analytics.behaviour.decision_measures`, split out of `behaviour_row`; `behaviour.csv` stays byte-identical). `GET /runs/{id}/history?since=&every=` returns complete intervals of `every` ticks as columns, with flows summed, stocks at the interval's end and shares averaged (the D-028 rule), null where nothing was measured.
+- **Lab:** the Analytics view stacks four small charts on one tick axis (population and food; births, deaths and meals; mean energy; behaviour), each with a caption stating what it shows, its unit and what one point covers, plus the run's ID. uPlot (1.6.32) draws them, coloured from the CSS tokens. Points are round sizes (1, 2, 5, 10, 20, 50 … ticks) keeping a chart under 600 points; new points are fetched about once a second with `since`, and the whole series is refetched once when the run outgrows its point size. Gaps stay gaps. Legends show the latest values unless hovering.
+**Why:** charts need the past, which snapshots don't carry; keeping it server-side costs little and means every viewer gets the same numbers. Complete intervals only means a drawn point never changes. 600 points: 1,500 made the births chart a solid thicket at normal widths (seen in the browser). One shared axis and latest-value legends answer "what is it now, and how did it get here".
+**Alternatives:** charting from snapshots in the browser (loses whatever happened between pictures and everything before the tab opened); recording live runs to disk (the export already does that on request); Plotly.js (the reports' library, but 3.5 MB and slow to update live).
+
 ## D-053 · Controls, the run picker and the specimen panel (2026-10-20)
 
 **Decision:**

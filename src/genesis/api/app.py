@@ -35,6 +35,7 @@ from genesis.api.schemas import (
     ErrorBody,
     ExportResult,
     Health,
+    History,
     OrganismDetail,
     ResetRequest,
     RunCreate,
@@ -130,6 +131,15 @@ def create_app(manager: RunManager | None = None) -> FastAPI:
     async def get_organism(run_id: str, organism_id: int) -> OrganismDetail:
         """One organism: family, genome, body and, with a brain, its latest decision."""
         return details.organism_detail(app.state.manager.get(run_id), organism_id)
+
+    @app.get("/api/runs/{run_id}/history", response_model=History, responses=ERROR_RESPONSES)
+    async def run_history(run_id: str, since: int = 0, every: int = 1) -> History:
+        """Per-tick history for charts, from tick ``since``, each point covering ``every``
+        ticks (1-100,000)."""
+        if not 1 <= every <= 100_000 or since < 0:
+            raise InvalidRunRequest("every must be 1-100,000 and since 0 or more")
+        run = app.state.manager.get(run_id)
+        return History(run_id=run.run_id, every=every, columns=run.history.query(since, every))
 
     @app.post("/api/runs/{run_id}/export", response_model=ExportResult, responses=ERROR_RESPONSES)
     async def export_live_run(run_id: str, ingest: bool = True) -> ExportResult:

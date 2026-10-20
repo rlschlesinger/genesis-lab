@@ -36,6 +36,7 @@ def capture() -> dict[str, object]:
             "configs": client.get("/api/configs").json(),
             "run_info": client.get(f"/api/runs/{rid}").json(),
             "organism_detail": client.get(f"/api/runs/{rid}/organisms/0").json(),
+            "history": client.get(f"/api/runs/{rid}/history", params={"every": 10}).json(),
         }
         with client.websocket_connect(f"/api/runs/{rid}/stream?fps=30") as ws:
             fixtures["hello"] = ws.receive_json()

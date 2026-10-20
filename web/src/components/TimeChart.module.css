@@ -1,0 +1,21 @@
+/* uPlot's own stylesheet, brought into the brightfield system. */
+.chart :global(.u-legend) {
+  font-family: var(--font);
+  font-size: var(--size-small);
+  font-variation-settings: var(--mono-on);
+  color: var(--stain-ink-soft);
+  text-align: left;
+}
+
+.chart :global(.u-legend .u-marker) {
+  border-radius: 0;
+}
+
+.chart :global(.u-legend th) {
+  font-weight: 400;
+}
+
+.chart :global(.u-cursor-x),
+.chart :global(.u-cursor-y) {
+  border-color: var(--graticule-strong);
+}

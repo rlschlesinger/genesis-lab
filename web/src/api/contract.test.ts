@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import configs from "./__fixtures__/configs.json";
 import gone from "./__fixtures__/gone.json";
 import hello from "./__fixtures__/hello.json";
+import history from "./__fixtures__/history.json";
 import organism from "./__fixtures__/organism_detail.json";
 import runInfo from "./__fixtures__/run_info.json";
 import snapshot from "./__fixtures__/snapshot.json";
@@ -21,6 +22,8 @@ import type {
   ConfigSummary,
   GoneMessage,
   HelloMessage,
+  History,
+  HistoryColumns,
   LastTick,
   OrganismColumns,
   OrganismDetail,
@@ -69,6 +72,16 @@ describe("the TypeScript types match the server's real responses", () => {
     expect(organism.thought.hidden).toHaveLength(6);
     expect(organism.thought.outputs).toHaveLength(2);
     expect(Object.keys(organism.brain_weights)).toHaveLength(62);
+  });
+
+  it("History and its columns", () => {
+    expect(sortedKeys(history)).toEqual(allKeys<History>()("run_id", "every", "columns"));
+    expect(sortedKeys(history.columns)).toEqual(
+      allKeys<HistoryColumns>()("tick", "population", "food_count", "lineages", "mean_energy",
+        "births", "deaths", "food_eaten", "toward_food", "mean_turn", "mean_throttle"),
+    );
+    const lengths = new Set(Object.values(history.columns).map((c) => c.length));
+    expect(lengths.size).toBe(1); // every column has one value per point
   });
 
   it("the stream's hello, snapshot and gone messages", () => {

@@ -5,6 +5,7 @@ import type {
   ConfigSummary,
   ExportResult,
   Health,
+  History,
   OrganismDetail,
   RunCreate,
   RunInfo,
@@ -79,6 +80,8 @@ export function createClient(fetcher: Fetch = (...args) => fetch(...args)) {
       call<RunInfo>("PUT", `${run(id)}/speed`, { ticks_per_second: ticksPerSecond }),
     reset: (id: string, seed?: number) =>
       call<RunInfo>("POST", `${run(id)}/reset`, seed === undefined ? {} : { seed }),
+    history: (id: string, since: number, every: number) =>
+      call<History>("GET", `${run(id)}/history?since=${since}&every=${every}`),
     organism: (id: string, organismId: number) =>
       call<OrganismDetail>("GET", `${run(id)}/organisms/${organismId}`),
     exportRun: (id: string, ingest = true) =>

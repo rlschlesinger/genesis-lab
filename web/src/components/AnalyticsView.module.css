@@ -1,0 +1,58 @@
+/* A column of small charts on one tick axis: captions to the left, charts to the right,
+   so the eye runs down the shared time axis. */
+.analytics {
+  display: grid;
+  gap: var(--space-6);
+  max-width: 76rem;
+}
+
+.header {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.title {
+  font-size: var(--size-title);
+}
+
+.meta,
+.describe {
+  color: var(--stain-ink-soft);
+  font-size: var(--size-small);
+}
+
+.error {
+  color: var(--safranin);
+  font-size: var(--size-small);
+}
+
+.chart {
+  display: grid;
+  grid-template-columns: 16rem minmax(0, 1fr);
+  gap: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: var(--edge);
+}
+
+.caption {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+
+.chartTitle {
+  font-size: var(--size-body);
+}
+
+.empty {
+  padding: var(--space-12) 0;
+  color: var(--stain-ink-soft);
+  font-size: var(--size-lead);
+}
+
+@media (max-width: 56rem) {
+  .chart {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+}

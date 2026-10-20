@@ -100,6 +100,27 @@ export interface ExportResult {
   ingested: boolean;
 }
 
+/** A live run's history as columns (docs/API.md, "History"): one point per `every` ticks. */
+export interface HistoryColumns {
+  tick: number[];
+  population: number[];
+  food_count: number[];
+  lineages: number[];
+  mean_energy: (number | null)[];
+  births: number[];
+  deaths: number[];
+  food_eaten: number[];
+  toward_food: (number | null)[];
+  mean_turn: (number | null)[];
+  mean_throttle: (number | null)[];
+}
+
+export interface History {
+  run_id: string;
+  every: number;
+  columns: HistoryColumns;
+}
+
 // --- The stream -----------------------------------------------------------------------------
 
 export interface HelloMessage {

@@ -46,6 +46,7 @@ All paths start with `/api`. Request and response bodies are JSON. Unknown field
 | PUT | `/runs/{id}/speed` | `{ticks_per_second: >0–100000 or null}` | `RunInfo`; null = as fast as possible; default 30 |
 | POST | `/runs/{id}/reset` | `{seed}` (optional) | `RunInfo` of a fresh run from tick 0, **new ID**; viewers of the old ID get `gone` with `replaced_by` |
 | GET | `/runs/{id}/organisms/{oid}` | | `OrganismDetail` |
+| GET | `/runs/{id}/history?since=0&every=1` | | `History`: the run so far as columns, for charts (below) |
 | POST | `/runs/{id}/export?ingest=true` | | `ExportResult`; paused or finished runs only |
 | GET | `/saved-runs?experiment_id=&limit=200` | | `[SavedRun]`, newest first (limit ≤ 1000) |
 | WebSocket | `/runs/{id}/stream?fps=15` | | `hello`, `snapshot`s, `gone` (below) |
@@ -89,6 +90,19 @@ Identity (`id`, `alive`, `parent_id`, `founder_id`, `generation`, `birth_tick`, 
 ```
 
 The live run is **replayed** headlessly for its `tick` ticks with the normal recorder, writing exactly what `genesis run` would for that config (`max_ticks` = the tick reached); with `ingest=true` it is loaded into the lake (condition `live`). Refused (409) for runs that haven't started, are running (pause first), or failed.
+
+### `History`
+
+```json
+{"run_id": "…", "every": 10,
+ "columns": {"tick": [9, 19, 29], "population": [31, 34, 36], "food_count": [140, 133, 129],
+             "lineages": [30, 30, 29], "mean_energy": [44.1, 41.8, 40.2],
+             "births": [0, 3, 2], "deaths": [0, 0, 1], "food_eaten": [4, 7, 6],
+             "toward_food": [0.52, 0.61, 0.58], "mean_turn": [0.41, 0.39, 0.40],
+             "mean_throttle": [0.55, 0.54, 0.56]}}
+```
+
+One point per `every` ticks, the same rule as recorded runs: **flows** (births, deaths, food eaten) summed over the interval, **stocks** (population, food, lineages, mean energy) at its last tick, **shares** (turning toward food, mean turn as a fraction of max turn, mean throttle) averaged over its ticks; `null` where there was nothing to measure. Only complete intervals are returned, so a point never changes once drawn; ask again with `since` = the last tick received + 1 for newer points. Values are examples.
 
 ## The stream
 

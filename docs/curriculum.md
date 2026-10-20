@@ -435,6 +435,13 @@ What has been covered, where it appears in the code, and what comes next.
 - **The address as state:** `?run=` survives a refresh.
 - **Walking the real flow found five problems** the unit tests couldn't see.
 
+### 5.8 · Live charts (`api/history.py`, the Analytics view)
+- **Stocks vs flows, again:** a point covering 20 ticks reads population at its end but sums its births.
+- **Incremental fetching:** ask only for what's new (`since`); start over only when the resolution must change.
+- **Small multiples:** several short charts on one shared axis beat one crowded chart.
+- **Honest charts:** units, what a point covers, the run's ID, gaps left as gaps, no invented numbers.
+- **Too many points hide the data:** 1,500 points in 860 pixels was a thicket; 600 shows it.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.
 - **Milestone 5:** HTTP APIs with FastAPI, WebSockets, TypeScript, React, rendering with PixiJS.

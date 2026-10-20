@@ -1,3 +1,4 @@
+import { AnalyticsView } from "../components/AnalyticsView";
 import { EmptyView } from "../components/EmptyView";
 import { Masthead } from "../components/Masthead";
 import { WorldView } from "../components/WorldView";
@@ -17,7 +18,9 @@ export function App() {
     <div className={styles.lab}>
       <Masthead />
       <main className={styles.main} id="main">
-        {view === "world" ? <WorldView /> : <EmptyView message={entry?.empty ?? ""} />}
+        {view === "world" && <WorldView />}
+        {view === "analytics" && <AnalyticsView />}
+        {view !== "world" && view !== "analytics" && <EmptyView message={entry?.empty ?? ""} />}
       </main>
     </div>
   );

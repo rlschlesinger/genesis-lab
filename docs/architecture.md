@@ -66,6 +66,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `lake/db.py` | `connect()`: in-memory DuckDB with a view per lake table, derived views, `settled_gene_means` macro, `experiments` from docs; `rebuild_db()` | Store data |
 | `api/schemas.py` | The API contract: request/response models, `RunState`, `API_VERSION` (D-047) | Contain logic |
 | `api/runs.py` | `RunManager`, `LiveRun`, the allowed state transitions (`ALLOWED`), config loading by name | Know about HTTP |
+| `api/history.py` | `RunHistory`: one row per tick, `query(since, every)` with flows summed, stocks at the end, shares averaged (D-054) | Change the simulation |
 | `api/stepping.py` | `step`, `resume`, `pause`, `stop`, the background `run_loop` (slices, tick budget) (D-048) | Choose which tick comes next (only how many) |
 | `api/stream.py` | WebSocket snapshots: `hello`/`snapshot`/`gone`, `build_snapshot` (columnar, rounded), per-viewer sender and listener (D-049) | Queue messages; send exact state |
 | `api/details.py` | `organism_detail`, `thought` from the latest decision record, `deciders` (D-050) | Recompute a decision |
@@ -86,7 +87,8 @@ A separate TypeScript project that only views and requests; the Python API is th
 | `src/world/` | `camera.ts` (world↔screen, zoom about a point, clamping), `interpolate.ts` (gliding), `hitTest.ts` (click and keyboard selection), `trails.ts`, `renderer.ts` (PixiJS: the only GPU code), `usePlateInput.ts` (pointer, wheel, keys) (D-052) | Reach the server |
 | `src/store/` | `labStore.ts`: the one Zustand store (view, watched run, latest snapshot, status, selection) | Send anything to the server |
 | `src/data/` | Labels, copy and small pure rules: `views.ts`, `status.ts`, `controls.ts` (which controls each state allows; the speed scale), `brain.ts` (the brain view's encodings) | Touch state or the network |
-| `src/hooks/` | `useRunActions` (controls with pending/error/result), `useOrganismDetail` (throttled, stale-safe), `useServerLists` (configs, live runs) | Render anything |
+| `src/hooks/` | `useRunActions` (controls with pending/error/result), `useOrganismDetail` (throttled, stale-safe), `useServerLists` (configs, live runs), `useRunHistory` (polls `/history`) | Render anything |
+| `src/analytics/` | `series.ts`: point sizes, merging new points, the next request (D-054) | Fetch or render |
 | `src/components/` | Small components, one CSS module each | Fetch or open sockets directly |
 | `src/styles/` | `tokens.css` (every colour, size, radius), `base.css` | |
 
@@ -440,7 +442,7 @@ Scope: [roadmap/05A](roadmap/05A_API_STREAMING.md) and [roadmap/05B](roadmap/05B
 | 5.5 | Vite + React + TypeScript; design tokens, fonts, layout shell; API client, reconnecting WebSocket hook; Zustand store | Store and payload unit tests | done |
 | 5.6 | Live World: PixiJS canvas, food, organisms, pan/zoom, selection, trails; 1,000+ organisms | Selection never changes the simulation | done |
 | 5.7 | Controls and the organism inspector with a brain view | Out-of-range input rejected in place | done |
-| 5.8 | Run Analytics: live charts with units, sample sizes, run IDs | Chart values = backend values | |
+| 5.8 | Run Analytics: live charts with units, sample sizes, run IDs | Chart values = backend values | done |
 | 5.9 | Experiment Comparison and Lineage Explorer from the lake | Two runs compared; tree correct | |
 | 5.10 | Hardening and wrap-up: reconnect, extinction, refresh, keyboard and accessibility, phone width; `genesis lab`; quickstart, manual E2E checklist, docs | Checklist passes | |
 

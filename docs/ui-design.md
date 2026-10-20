@@ -70,6 +70,12 @@ Tick 1,501 of 100,000   106 alive                       running
 - **The specimen panel** reads top to bottom as a specimen card: status, body, family, brain, genome.
 - **The brain diagram:** nodes shaded by value, connections by the signal they carried, violet for positive and safranin for negative, always with the decision in words and the inputs as numbers beside it.
 
+## Analytics (5.8)
+
+- **A column of small multiples** sharing one tick axis: captions on the left (title, unit, what a point covers), charts on the right; only the bottom chart numbers the axis.
+- **Series colours** follow the stains: organisms and their behaviour in crystal violet, food and meals in iodine, deaths in safranin; meals dashed so three series stay distinguishable without colour alone.
+- **Legends** show the latest values unless the pointer is over a chart.
+
 ## Checked
 
 At 1360 × 860: the plate is square (668 × 668 px) and the stage bar ends at its edge. At 390 × 844 (phone): no sideways scrolling, a 16 px margin, the panel under the plate.

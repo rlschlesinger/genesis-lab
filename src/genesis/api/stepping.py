@@ -43,6 +43,7 @@ def step_once(run: LiveRun) -> None:
         run.error = f"{type(exc).__name__} at tick {run.sim.tick}: {exc}"
         run.move_to(RunState.FAILED)
         return
+    run.history.append(run.last_summary, run.sim.last_decision)
     if run.sim.finished:
         run.move_to(RunState.COMPLETED)
 

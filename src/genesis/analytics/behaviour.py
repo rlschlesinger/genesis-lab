@@ -47,6 +47,32 @@ BEHAVIOUR_FIELDS: list[str] = [
 ]
 
 
+DECISION_FIELDS = ("n", "seeing_food", "toward_food", "mean_turn", "mean_throttle")
+
+
+def decision_measures(decision: Decision | None) -> dict:
+    """The behaviour columns that come from one tick's decision record alone: cheap enough to
+    compute every tick (the live API's history uses them too, api/history.py). NaN where there
+    is nothing to measure."""
+    row: dict = {"n": 0, "seeing_food": 0, "toward_food": math.nan, "mean_turn": math.nan,
+                 "mean_throttle": math.nan}  # fmt: skip
+    if decision is None or len(decision.observations) == 0:
+        return row
+    obs, actions = decision.observations, decision.actions
+    turn = np.clip(actions.turn, -decision.max_turn, decision.max_turn)
+    throttle = np.clip(actions.throttle, 0.0, 1.0)
+    row["n"] = len(obs)
+    row["seeing_food"] = int(np.count_nonzero(obs.food_found))
+    row["mean_turn"] = float(np.mean(np.abs(turn) / decision.max_turn))
+    row["mean_throttle"] = float(np.mean(throttle))
+    judged = obs.food_found & (obs.food_bearing != 0.0)
+    if judged.any():
+        bearing = obs.food_bearing[judged]
+        closer = np.abs(wrap_angle(bearing - turn[judged])) < np.abs(bearing)
+        row["toward_food"] = float(np.mean(closer))
+    return row
+
+
 def behaviour_row(
     tick: int,
     decision: Decision | None,
@@ -55,20 +81,8 @@ def behaviour_row(
 ) -> dict:
     """One behaviour.csv row. ``founder_brains`` maps founder ID -> that founder's weights."""
     row: dict = dict.fromkeys(BEHAVIOUR_FIELDS, math.nan)
-    row.update(tick=tick, n=0, seeing_food=0)
-    if decision is not None and len(decision.observations) > 0:
-        obs, actions = decision.observations, decision.actions
-        turn = np.clip(actions.turn, -decision.max_turn, decision.max_turn)
-        throttle = np.clip(actions.throttle, 0.0, 1.0)
-        row["n"] = len(obs)
-        row["seeing_food"] = int(np.count_nonzero(obs.food_found))
-        row["mean_turn"] = float(np.mean(np.abs(turn) / decision.max_turn))
-        row["mean_throttle"] = float(np.mean(throttle))
-        judged = obs.food_found & (obs.food_bearing != 0.0)
-        if judged.any():
-            bearing = obs.food_bearing[judged]
-            closer = np.abs(wrap_angle(bearing - turn[judged])) < np.abs(bearing)
-            row["toward_food"] = float(np.mean(closer))
+    row["tick"] = tick
+    row.update(decision_measures(decision))
 
     with_brains = [o for o in living if o.brain is not None]
     if with_brains:

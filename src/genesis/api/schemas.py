@@ -167,5 +167,15 @@ class ExportResult(BaseModel):
     ingested: bool
 
 
+class History(BaseModel):
+    """A live run's history as columns (api/history.py). Each point covers ``every`` ticks:
+    flows summed, stocks at the interval's last tick, shares averaged; null = nothing to
+    measure. Only complete intervals."""
+
+    run_id: str
+    every: int
+    columns: dict[str, list[float | int | None]]
+
+
 class ErrorBody(BaseModel):
     detail: str

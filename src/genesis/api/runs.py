@@ -21,6 +21,7 @@ from pathlib import Path
 
 from genesis.analytics.experiments import apply_changes
 from genesis.analytics.runs import new_run_id
+from genesis.api.history import RunHistory
 from genesis.api.schemas import ConfigSummary, RunCreate, RunInfo, RunState
 from genesis.core.config import ConfigError, SimulationConfig, load_config, with_overrides
 from genesis.core.simulation import Simulation, TickSummary
@@ -76,6 +77,7 @@ class LiveRun:
     last_summary: TickSummary | None = None  # the most recent tick's counts (for snapshots)
     viewers: int = 0  # open WebSocket streams (stream.py)
     snapshot_cache: tuple[tuple, str] | None = None  # (key, JSON): built once per tick
+    history: RunHistory = field(default_factory=RunHistory)  # one row per tick (history.py)
 
     def info(self) -> RunInfo:
         return RunInfo(
