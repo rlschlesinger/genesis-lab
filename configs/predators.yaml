@@ -2,8 +2,9 @@
 # Identical to neural.yaml except for the `predators:` section at the end
 # (tests/core/test_predators.py::test_predator_config_differs_from_neural_only_by_predators).
 # Prey are neural.yaml's evolving brains. Predators are a second species with their own body
-# and genes. Until 6.2 they cannot catch anything, so they wander and starve: this file grows
-# with each increment and its numbers are placeholders until the tuning pilots (6.6).
+# and genes that catch prey (6.2); until 6.3 they have no senses, so they catch only what
+# they bump into. This file grows with each increment and its numbers are placeholders until
+# the tuning pilots (6.6).
 # Units: distance = world units, time = ticks, energy = EU (abstract), angle = radians.
 
 run:
@@ -68,7 +69,7 @@ recording:
   events: []                  # log any of: birth, death, meal (events.csv)
 
 # PREDATORS (6.1): a second species. Same kinds of settings as `organisms:` and `genome:`,
-# with their own values. They never eat food; from 6.2 they eat prey.
+# with their own values. They never eat food: they catch prey.
 predators:
   initial_count: 10
   max_population: 150
@@ -80,6 +81,10 @@ predators:
   offspring_energy: 80.0
   reproduction_overhead: 20.0
   controller: random_walk    # 6.3 adds senses for prey and neural predators
+  # Capture (6.2, D-058): strike at prey within reach after moving; closest pairs first.
+  capture_radius: 3.0        # world units (prey eat food within 2.0)
+  capture_probability: 0.5   # chance a strike catches; otherwise the prey escapes this tick
+  capture_efficiency: 0.8    # share of the prey's energy the predator gains; the rest is lost
   # Frozen like the prey's expressed genes, so behaviour can change only through brains (6.3).
   genome:
     speed:                  {initial: 1.8,  min: 0.25, max: 4.0, mutable: false}   # prey: 1.5

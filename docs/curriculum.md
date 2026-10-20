@@ -465,5 +465,11 @@ What has been covered, where it appears in the code, and what comes next.
 - **Independent random streams pay off:** predators draw from their own stream, so a world with predators and one without start identically on the same seed, a matched pair for experiments.
 - **A null result as a check:** predators that can't eat yet must leave the prey's history untouched, tick for tick. Testing that proves the machinery adds nothing by accident before 6.2 adds something on purpose.
 
+### 6.2 · Capture
+- **Reuse a solved rule:** catching prey is the meal problem again (who gets what, closest first, ties by chance), so it uses the same code and inherits its tests.
+- **Energy along a food chain:** a predator gains only part of what its prey held; the rest is lost, as in real food chains, and the ledger records where it went.
+- **Attempts versus successes:** a strike can miss, which makes escape possible, and gives two numbers to measure instead of one.
+- **Validators catch modelling slips:** the lake refused a run whose events pointed at organisms outside its tables; the fix was in the model's records, not the validator.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.

@@ -1,7 +1,8 @@
 """Predators as a second species (Milestone 6, increment 6.1, D-057).
 
-In 6.1 predators have bodies, costs, deaths and reproduction, but no way to eat: these tests
-pin down that machinery, and that worlds without predators are exactly what they were.
+Predators' bodies, costs, deaths and reproduction, and that worlds without predators are
+exactly what they were. Tests that need predators unable to eat set a capture radius no
+encounter can reach (``HARMLESS``); capture itself is tested in test_predation.py.
 """
 
 import math
@@ -18,6 +19,10 @@ from genesis.core.simulation import PredatorStreams, RngStreams, Simulation
 
 CONFIGS = Path(__file__).parents[2] / "configs"
 PREDATORS = CONFIGS / "predators.yaml"
+
+
+# A capture radius nothing reaches in practice: predators that never catch anything.
+HARMLESS = {"predators.capture_radius": 1e-9}
 
 
 def predator_config(**changes) -> SimulationConfig:
@@ -142,9 +147,9 @@ def test_predator_worlds_are_deterministic_and_balance_their_energy():
 
 
 def test_predators_never_eat_food_and_starve_on_schedule():
-    # Without prey to catch (until 6.2), a predator's energy only goes down; each pays at least
-    # its metabolism every tick, so all must have starved by initial_energy / metabolic_rate.
-    config = predator_config(**{"run.max_ticks": 1000})
+    # Unable to catch prey, a predator's energy only goes down; each pays at least its
+    # metabolism every tick, so all must have starved by initial_energy / metabolic_rate.
+    config = predator_config(**{"run.max_ticks": 1000}, **HARMLESS)
     sim = Simulation(config)
     limit = math.ceil(
         config.predators.initial_energy / config.predators.genome.metabolic_rate.initial
@@ -153,7 +158,7 @@ def test_predators_never_eat_food_and_starve_on_schedule():
     while sim.predators and sim.tick <= limit:
         sim.step()
         for o in sim.predators:
-            assert o.energy < previous[o.id] and o.food_eaten == 0
+            assert o.energy < previous[o.id] and o.food_eaten == 0 and o.prey_eaten == 0
             previous[o.id] = o.energy
     assert sim.predators == []
     assert len(sim.dead_predators) == config.predators.initial_count
@@ -162,7 +167,7 @@ def test_predators_never_eat_food_and_starve_on_schedule():
 
 
 def test_prey_records_never_include_predators():
-    sim = Simulation(predator_config())
+    sim = Simulation(predator_config(**HARMLESS))
     predator_ids = {o.id for o in sim.predators}
     for _ in range(200):
         summary = sim.step()
@@ -209,17 +214,17 @@ def test_a_world_runs_on_after_the_prey_die_out_and_stops_when_everyone_has():
 
 
 def test_a_prey_world_runs_on_after_the_predators_die_out():
-    sim = Simulation(predator_config(**{"run.max_ticks": 800}))
+    sim = Simulation(predator_config(**{"run.max_ticks": 800}, **HARMLESS))
     sim.run()
     assert sim.predators == [] and sim.organisms and sim.tick == 800
 
 
-def test_predators_that_cannot_eat_leave_the_prey_history_untouched():
-    # In 6.1 predators can't affect prey, and draw only from their own streams, so the prey's
-    # whole history is the predator-free world's, tick for tick (only later IDs shift, since
-    # predator founders take IDs after the prey founders). 6.2 gives predators a way to eat,
-    # and this stops holding: that is the point of predators.
-    with_p = Simulation(predator_config())
+def test_predators_that_catch_nothing_leave_the_prey_history_untouched():
+    # Predators that never reach a prey can't affect it, and they draw only from their own
+    # streams, so the prey's whole history is the predator-free world's, tick for tick (only
+    # later IDs shift, since predator founders take IDs after the prey founders). Once they
+    # catch prey this stops holding: that is the point of predators.
+    with_p = Simulation(predator_config(**HARMLESS))
     without = Simulation(without_predators(predator_config()))
     for _ in range(300):
         assert with_p.step() == without.step()

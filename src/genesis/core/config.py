@@ -170,6 +170,21 @@ class PredatorConfig(OrganismConfig):
 
     controller: PredatorControllerName = "random_walk"  # type: ignore[assignment]
     genome: GenomeConfig
+    # Capture (6.2, D-058; core/predation.py).
+    capture_radius: PositiveFloat = Field(
+        description="Max distance at which a predator can strike a prey (both after moving)."
+    )
+    capture_probability: float = Field(
+        gt=0, le=1, description="Chance that a strike catches its prey; otherwise it escapes."
+    )
+    capture_efficiency: float = Field(
+        gt=0,
+        le=1,
+        description=(
+            "Share of a caught prey's energy the predator gains; the rest leaves the system "
+            "(the energy ledger's predation flow)."
+        ),
+    )
 
     @model_validator(mode="after")
     def _reproduction_affordable(self) -> Self:
@@ -342,6 +357,11 @@ class SimulationConfig(_Strict):
         # The binding limit is the world's shorter side. Checking only width would accept a
         # radius that is wider than a narrow world is tall.
         shortest_side = min(self.world.width, self.world.height)
+        if self.predators is not None and self.predators.capture_radius > shortest_side:
+            raise ValueError(
+                f"predators.capture_radius ({self.predators.capture_radius}) exceeds the "
+                f"world's shortest side ({shortest_side})"
+            )
         if self.food.eat_radius > shortest_side:
             # Pydantic catches this ValueError and reports it as a ValidationError,
             # alongside any other problems in the file.

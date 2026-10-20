@@ -5,9 +5,9 @@ only through recorded flows:
 
     in:    food spawned after the start (initial food is part of the starting stock)
     out:   metabolism, sensing, movement, energy still held at death (D-011), reproduction
-           overhead
-    moves: eating (food -> organism) and parent -> offspring. Transfers between accounts,
-           or within one, change neither in nor out.
+           overhead, and the share of a caught prey's energy its predator doesn't get (D-058)
+    moves: eating (food -> organism), parent -> offspring, and a caught prey's energy to its
+           predator. Transfers between accounts, or within one, change neither in nor out.
 
 Every tick the simulation checks: initial stock + in - out == actual stock. A mismatch means
 a bug created or destroyed energy, and the run stops instead of producing corrupt data.
@@ -32,6 +32,7 @@ class EnergyLedger:
     sensing: float = 0.0
     lost_at_death: float = 0.0
     reproduction_overhead: float = 0.0
+    predation: float = 0.0  # caught prey's energy not passed on to the predator (D-058)
 
     @property
     def inflow(self) -> float:
@@ -47,6 +48,8 @@ class EnergyLedger:
                 self.movement,
                 self.lost_at_death,
                 self.reproduction_overhead,
+                # 0.0 without predators, and fsum is exact: the total is what it was.
+                self.predation,
             ]
         )
 

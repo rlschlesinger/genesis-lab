@@ -6,7 +6,8 @@ Tick order (docs/architecture.md):
     2. sense: every organism observes the same snapshot
     3. decide: the controller turns observations into actions
     4. move
-    5. eat (closest pairs first), then pay living costs (metabolism, sensing, movement)
+    5. eat (closest pairs first); predators catch prey; then pay living costs (metabolism,
+       sensing, movement)
     6. deaths, all decided first and then applied
     7. reproduction: eligible survivors each produce one child with a mutated copy of their
        genome (an exact copy when mutation is off); newborns join the
@@ -17,7 +18,9 @@ Tick order (docs/architecture.md):
 Predators (Milestone 6, D-057), when configured, are a second list of organisms that go
 through the same steps beside the prey: they sense the same start-of-tick snapshot, move,
 pay their own costs, die and reproduce by the same rules with their own settings. They don't
-eat food. ``sim.organisms`` and everything recorded from it remain the prey.
+eat food: after the prey have eaten (5a), predators strike at prey within reach (D-058);
+a caught prey dies there and does nothing more that tick. ``sim.organisms`` and everything
+recorded from it remain the prey.
 """
 
 from __future__ import annotations
@@ -36,6 +39,7 @@ from genesis.core.energy import EnergyLedger
 from genesis.core.feeding import resolve_feeding
 from genesis.core.movement import move
 from genesis.core.organism import DeathCause, Organism, spend_all
+from genesis.core.predation import resolve_strikes
 from genesis.core.world import World
 from genesis.evolution.brain import founder_brains, mutate_brain
 from genesis.evolution.genome import Genome, express
@@ -92,6 +96,7 @@ class PredatorStreams:
     controller: np.random.Generator  # predators' decisions
     reproduction: np.random.Generator  # who reproduces at the cap; newborn placement
     mutation: np.random.Generator  # offspring genome mutation
+    capture: np.random.Generator  # strike ties and success (6.2, D-058)
 
     @classmethod
     def from_generator(cls, parent: np.random.Generator) -> PredatorStreams:
@@ -161,6 +166,8 @@ class PredatorSummary:
     deaths: int
     mean_energy: float  # NaN when there are no predators left
     lineages: int
+    attempts: int  # strikes at prey within reach (6.2)
+    captures: int  # strikes that caught their prey
 
 
 @dataclass(frozen=True, slots=True)
@@ -366,6 +373,7 @@ class Simulation:
         """Advance the simulation by exactly one tick."""
         cfg = self.config.organisms
         living = self.organisms
+        started = len(living)  # prey alive at the start of the tick (some may be caught)
 
         food_value = self.config.food.energy_value
         events: list[Event] = []
@@ -455,6 +463,58 @@ class Simulation:
         # The working copy gets the same meals: the same addition, so the same value.
         energies[meals.eaters] += food_value
 
+        # 5a, predators. Capture (6.2, D-058; core/predation.py). After the prey have eaten,
+        #     so a prey that reached food this tick is caught with that meal inside it. A caught
+        #     prey dies here and does nothing more this tick: it pays no costs, can't reproduce
+        #     and doesn't age. Its predator gains capture_efficiency of the prey's energy
+        #     (before its own costs, as a prey eats before paying); the rest leaves the system.
+        distances = moved.distances
+        pred_events: list[Event] = []
+        if hunting:
+            hunt = self.config.predators
+            strikes = resolve_strikes(
+                pred_moved.positions, moved.positions, hunt.capture_radius,
+                hunt.capture_probability, self.predator_rng.capture,
+            )  # fmt: skip
+            caught = np.zeros(len(living), dtype=bool)
+            gains, losses = [], []
+            for p, q, hit in zip(
+                strikes.predators.tolist(), strikes.prey.tolist(), strikes.caught.tolist(),
+                strict=True,
+            ):  # fmt: skip
+                if not hit:
+                    continue
+                hunter, victim = hunters[p], living[q]
+                held = float(energies[q])  # the prey's energy, this tick's meal included
+                gain = held * hunt.capture_efficiency
+                hunter.eat_prey(gain)
+                pred.energies[p] += gain  # the working copy gets the same addition
+                gains.append(gain)
+                losses.append(held - gain)
+                caught[q] = True
+                # The prey's death names no other organism: events.csv may only refer to this
+                # run's organisms (the prey). Who caught whom is the predator's meal event,
+                # and captures.csv from 6.4.
+                events.append(
+                    Event(self.tick, "death", victim.id, None, held, victim.x, victim.y,
+                          str(DeathCause.PREDATION))
+                )  # fmt: skip
+                pred_events.append(
+                    Event(self.tick, "meal", hunter.id, victim.id, gain, hunter.x, hunter.y,
+                          None)
+                )  # fmt: skip
+                victim.die(self.tick, DeathCause.PREDATION)
+                self.dead.append(victim)
+            self.ledger.predation += math.fsum(losses)
+            if caught.any():
+                # From here on the tick works on the prey still alive. Without predators none
+                # of this runs, so prey-only worlds keep exactly their old arrays.
+                keep = ~caught
+                living = list(compress(living, keep))
+                energies, energy_spent = energies[keep], energy_spent[keep]
+                metabolic_rates, sense_ranges = metabolic_rates[keep], sense_ranges[keep]
+                speeds, thresholds, distances = speeds[keep], thresholds[keep], distances[keep]
+
         # 5b. Pay costs *after* eating, so a nearly-empty organism that reaches food gets to
         #     eat before its energy hits zero. spend_all() returns what was actually paid, and
         #     that (not the amount requested) is what the ledger records.
@@ -464,7 +524,7 @@ class Simulation:
         #     per tick. Adding millions of small payments one by one to a running total of
         #     ~10^6 loses a sliver to rounding each time, and those slivers add up (D-026).
         costs = living_costs(
-            metabolic_rates, sense_ranges, speeds, moved.distances, cfg, self._reference_speed
+            metabolic_rates, sense_ranges, speeds, distances, cfg, self._reference_speed
         )
         paid, energies, energy_spent = spend_all(energies, energy_spent, *costs)
         spent_each = energy_spent.tolist()
@@ -493,7 +553,6 @@ class Simulation:
 
         # 6. Deaths: decide for every organism first, then apply. Nobody dies mid-update.
         survivors, dying, lost = self._deaths(living, energies, cfg.max_age, self.dead, events)
-        pred_events: list[Event] = []
         if hunting:
             pred_survivors, pred_dying, pred_lost = self._deaths(
                 hunters, pred_energies, self.config.predators.max_age, self.dead_predators,
@@ -543,7 +602,7 @@ class Simulation:
             tick=self.tick,
             population=len(population),
             births=len(newborns),
-            deaths=len(living) - len(survivors),
+            deaths=started - len(survivors),  # caught prey included
             food_count=self.world.food.count,
             food_spawned=food_spawned,
             food_eaten=len(meals),
@@ -564,6 +623,8 @@ class Simulation:
                 deaths=len(hunters) - len(pred_survivors),
                 mean_energy=float(np.mean([o.energy for o in now])) if now else math.nan,
                 lineages=len({o.founder_id for o in now}),  # counted, never iterated
+                attempts=strikes.attempts,
+                captures=strikes.captures,
             )
 
         # 9. Advance time. Newborns stay at age 0: they have not lived through a tick yet.

@@ -43,6 +43,7 @@ class DeathCause(StrEnum):
     # while code still gets typo protection: DeathCause.STARVATON is an error.
     STARVATION = "starvation"
     OLD_AGE = "old_age"
+    PREDATION = "predation"  # caught by a predator (Milestone 6)
 
 
 @dataclass(slots=True, kw_only=True)
@@ -79,10 +80,11 @@ class Organism:
     death_cause: DeathCause | None = None
 
     # Lifetime totals, recorded for analysis (spec section 9, "Organism Records").
-    energy_gained: float = 0.0  # from food only; starting energy is not "gained"
+    energy_gained: float = 0.0  # from food (predators: from prey); starting energy isn't "gained"
     energy_spent: float = 0.0  # living costs only: metabolism, sensing and movement
     energy_invested: float = 0.0  # given to offspring plus reproduction overhead
     food_eaten: int = 0
+    prey_eaten: int = 0  # predators only: prey caught (not a column of organisms.csv)
     offspring_count: int = 0
 
     def spend(self, amount: float) -> float:
@@ -111,6 +113,16 @@ class Organism:
         self.energy += energy_value
         self.energy_gained += energy_value
         self.food_eaten += 1
+
+    def eat_prey(self, energy: float) -> None:
+        """A predator gains ``energy`` EU from one caught prey (its share of the prey's
+        energy; the rest is lost, D-058)."""
+        self._require_alive("eat")
+        if energy < 0:
+            raise ValueError(f"a meal can't take energy away, got {energy}")
+        self.energy += energy
+        self.energy_gained += energy
+        self.prey_eaten += 1
 
     @property
     def can_reproduce(self) -> bool:

@@ -119,7 +119,7 @@ One row per organism that ever lived in a run. Source: `organisms.csv`.
 | `generation` | INTEGER | — | | 1 | never | 0 for founders; parent's + 1 |
 | `birth_tick` | INTEGER | tick | | 1 | never | Tick of birth (0 for founders, who act from tick 0; newborns act from birth_tick + 1) |
 | `death_tick` | INTEGER | tick | | 1 | still alive | Tick of death |
-| `death_cause` | VARCHAR | — | | 1 | still alive | `starvation` or `old_age` |
+| `death_cause` | VARCHAR | — | | 1 | still alive | `starvation`, `old_age`, or `predation` (caught by a predator; only in worlds with predators, 6.2) |
 | `alive` | BOOLEAN | — | | 1 | never | Alive at the end of the run |
 | `age` | INTEGER | tick | | 1 | never | Ticks survived |
 | `final_energy` | DOUBLE | EU | | 1 | never | Energy at the end of the run, or at death |
@@ -159,7 +159,7 @@ One row per logged event, when `recording.events` lists that kind. Source: `even
 | `other_id` | INTEGER | — | FK → organisms | not a birth | The parent, for births |
 | `energy` | DOUBLE | EU | | never | Births: energy given to the child. Deaths: energy held at death. Meals: energy gained |
 | `x`, `y` | DOUBLE | wu | | never | Where it happened |
-| `detail` | VARCHAR | — | | not a death | Cause of death |
+| `detail` | VARCHAR | — | | not a death | Cause of death (`starvation`, `old_age`, `predation`); a predation death has no `other_id`, since predators aren't organisms of the prey's tables (who caught whom: `captures.csv`, 6.4) |
 
 ## `behaviour` (new in 4.5)
 
