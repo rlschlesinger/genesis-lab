@@ -2,7 +2,7 @@
 // renderer so they can be read and tested without a GPU. Colours are not here: they come
 // from the CSS tokens (--prey, --predator), as everywhere in the lab.
 
-import type { Capture } from "../api/types";
+import type { Capture, Snapshot } from "../api/types";
 
 export type SpeciesName = "prey" | "predator";
 
@@ -44,6 +44,15 @@ export function markLook(ageMs: number, reducedMotion: boolean): MarkLook | null
   if (reducedMotion) return { alpha: 0.7, radius: 3 };
   const t = ageMs / MARK_MS;
   return { alpha: 0.85 * (1 - t), radius: 2 + 2.5 * t };
+}
+
+/** Whether ``next`` is the first picture of another run than ``previous``: a different run ID
+ *  (a reset followed through ``gone.replaced_by``), or time running backwards (the same ID can't
+ *  do that; a lower tick is a fresh run of a stream that reconnected before the ID changed).
+ *  Nothing from the old run (trails, marks, the newest capture seen) may carry over. Checking
+ *  the tick alone misses a replacement that has already run past the old run's tick. */
+export function startsNewRun(previous: Pick<Snapshot, "run_id" | "tick"> | null, next: Pick<Snapshot, "run_id" | "tick">): boolean {
+  return previous !== null && (next.run_id !== previous.run_id || next.tick < previous.tick);
 }
 
 /** The captures in ``captures`` newer than ``seenUpTo`` (the newest tick already marked). A

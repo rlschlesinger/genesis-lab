@@ -1,4 +1,5 @@
 import type { OrganismDetail } from "../api/types";
+import { dietWords } from "../data/diet";
 import { useOrganismDetail } from "../hooks/useOrganismDetail";
 import { useLabStore } from "../store/labStore";
 import { BrainDiagram } from "./BrainDiagram";
@@ -12,12 +13,6 @@ const GENE_LABELS: Record<string, string> = {
   reproduction_threshold: "reproduces at",
   neutral_marker: "neutral marker",
 };
-
-/** A diet in words beside its number: which food it digests well (6.9). */
-function dietWords(diet: number): string {
-  const kind = diet < 0.2 ? "eats A" : diet > 0.8 ? "eats B" : "both";
-  return `${diet.toFixed(2)} (${kind})`;
-}
 
 function number(value: number, digits = 3): string {
   return Number(value.toPrecision(digits)).toLocaleString("en");

@@ -1,8 +1,6 @@
 import type { HistoryColumns } from "../api/types";
-import { phaseGeometry } from "../data/phase";
+import { PHASE_BOX as BOX, phaseGeometry } from "../data/phase";
 import styles from "./PhasePlot.module.css";
-
-const BOX = { width: 420, height: 260, left: 44, bottom: 34, top: 10, right: 14 };
 
 /** Prey against predators over the run: a predator-prey cycle draws a loop, a collapse a
  *  line into an axis. Drawn in SVG from the same history as the charts above it. */

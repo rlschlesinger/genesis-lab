@@ -3,6 +3,7 @@
 
 import type { HistoryColumns } from "../api/types";
 import type { TokenName } from "../styles/tokens";
+import { SPECIALIST } from "./diet";
 
 export interface ChartSeries {
   column: keyof HistoryColumns;
@@ -52,7 +53,7 @@ export const DIET_CHARTS: ChartSpec[] = [
     id: "specialists",
     title: "Specialists",
     describe: () =>
-      "Shares from 0 to 1 of the organisms alive: diet below 0.2 eats mostly A, above 0.8 mostly B. Both rising together would be the population splitting; one alone, one kind taking over.",
+      `Shares from 0 to 1 of the organisms alive: diet below ${SPECIALIST} eats mostly A, above ${1 - SPECIALIST} mostly B. Both rising together would be the population splitting; one alone, one kind taking over.`,
     series: [
       { column: "diet_low", label: "eats A", colour: "--food-a" },
       { column: "diet_high", label: "eats B", colour: "--food-b" },
@@ -111,3 +112,31 @@ export const CHARTS: ChartSpec[] = [
     range: [0, 1],
   },
 ];
+
+/** The phase plot (6.5), drawn by PhasePlot rather than TimeChart: its caption lives here with
+ *  the other charts' so no copy sits in a component. */
+export const PHASE_CHART = {
+  id: "phase",
+  title: "Prey against predators",
+  describe:
+    "The same two counts plotted against each other, one point per interval, joined in time order. Numbers that rise and fall in turn trace a loop; a line running into an axis is a species dying out. A pattern in this simulation, not a claim about real ecosystems.",
+};
+
+/** Which worlds a history describes. A world with predators has a predator count at every
+ *  point (0 once they are extinct; null only without the section); a two-food world has a count
+ *  of food A at every point. ``diet_sd`` is not the marker: it is null whenever nobody is
+ *  alive, so a two-food world whose organisms died out would lose its diet charts. */
+export function worldsOf(columns: HistoryColumns): { hunted: boolean; twoFoods: boolean } {
+  return {
+    hunted: columns.predators.some((v) => v !== null),
+    twoFoods: columns.food_a.some((v) => v !== null),
+  };
+}
+
+/** The charts for a history, in reading order: the population chart, then whatever the world
+ *  has (predators, two foods), then the rest. The phase plot is shown separately when hunted. */
+export function chartsFor(columns: HistoryColumns): ChartSpec[] {
+  const { hunted, twoFoods } = worldsOf(columns);
+  const extra = [...(hunted ? PREDATOR_CHARTS : []), ...(twoFoods ? DIET_CHARTS : [])];
+  return [CHARTS[0]!, ...extra, ...CHARTS.slice(1)];
+}
