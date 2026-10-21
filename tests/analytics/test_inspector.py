@@ -190,3 +190,14 @@ def test_a_dead_founder_can_be_inspected_from_tick_zero():
     with pytest.raises(InspectError, match="choose a tick from 0 to"):
         inspect_tick(starved, 5, 0)
     assert inspect_tick(starved, 0, 0).organism_id == 0
+
+
+def test_a_predator_is_named_as_one_rather_than_reported_dead():
+    # Predators' IDs follow the prey founders' (predators.yaml: prey 0-99, predators 100-103).
+    # Asking for one used to answer "organism 101 is not alive at tick 10; alive then: 0, 1 ..."
+    # about a predator that was alive and hunting.
+    cfg = config("predators.yaml", ticks=50)
+    with pytest.raises(InspectError, match="organism 101 is a predator"):
+        inspect_tick(cfg, 10, 101)
+    sim = Simulation(cfg)
+    assert any(o.id == 101 and o.alive for o in sim.predators)
