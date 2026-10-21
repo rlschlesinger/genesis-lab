@@ -1,7 +1,8 @@
-import { CHARTS } from "../data/charts";
+import { CHARTS, type ChartSpec, PREDATOR_CHARTS } from "../data/charts";
 import { useRunHistory } from "../hooks/useRunHistory";
 import { useLabStore } from "../store/labStore";
 import styles from "./AnalyticsView.module.css";
+import { PhasePlot } from "./PhasePlot";
 import { TimeChart } from "./TimeChart";
 
 /** The watched run over time: small charts sharing one tick axis, each saying what it shows,
@@ -15,6 +16,9 @@ export function AnalyticsView() {
     return <p className={styles.empty}>Start or watch a run on the World view; its charts appear here.</p>;
   }
   const points = series?.columns.tick.length ?? 0;
+  // A world with predators gets their charts after the population chart, and the phase plot.
+  const hunted = series?.columns.predators.some((v) => v !== null) ?? false;
+  const charts: ChartSpec[] = hunted ? [CHARTS[0]!, ...PREDATOR_CHARTS, ...CHARTS.slice(1)] : CHARTS;
   return (
     <div className={styles.analytics}>
       <header className={styles.header}>
@@ -39,7 +43,7 @@ export function AnalyticsView() {
         )}
       </header>
       {series && points > 0 &&
-        CHARTS.map((spec, i) => (
+        charts.map((spec, i) => (
           <section key={spec.id} className={styles.chart} aria-labelledby={`chart-${spec.id}`}>
             <div className={styles.caption}>
               <h3 id={`chart-${spec.id}`} className={styles.chartTitle}>
@@ -51,10 +55,26 @@ export function AnalyticsView() {
               series={spec.series}
               range={spec.range}
               data={[series.columns.tick, ...spec.series.map((s) => series.columns[s.column])]}
-              showTicks={i === CHARTS.length - 1}
+              showTicks={i === charts.length - 1}
             />
           </section>
         ))}
+      {series && points > 0 && hunted && (
+        <section className={styles.chart} aria-labelledby="chart-phase">
+          <div className={styles.caption}>
+            <h3 id="chart-phase" className={styles.chartTitle}>
+              Prey against predators
+            </h3>
+            <p className={styles.describe}>
+              The same two counts plotted against each other, one point per interval, joined in
+              time order. Numbers that rise and fall in turn trace a loop; a line running into an
+              axis is a species dying out. A pattern in this simulation, not a claim about real
+              ecosystems.
+            </p>
+          </div>
+          <PhasePlot columns={series.columns} />
+        </section>
+      )}
     </div>
   );
 }

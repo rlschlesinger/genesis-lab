@@ -63,7 +63,7 @@ All paths start with `/api`. Request and response bodies are JSON. Unknown field
 {"config": "neural", "seed": 7, "max_ticks": 5000, "changes": {"food.regrowth_per_tick": 1.0}}
 ```
 
-All fields optional. `config` is a name from `configs/` (`default`, `evolution`, `neural`), never a path. `changes` uses the experiment specs' dotted paths (up to 32); the result is validated exactly like a config file, so `{"organisms.controller": "neural"}` on `default` is refused (no brain section). At most **4** live runs exist at once (429 beyond that).
+All fields optional. `config` is a name from `configs/` (`default`, `evolution`, `neural`, `predators`), never a path. `changes` uses the experiment specs' dotted paths (up to 32); the result is validated exactly like a config file, so `{"organisms.controller": "neural"}` on `default` is refused (no brain section). At most **4** live runs exist at once (429 beyond that).
 
 ### `RunInfo`
 
@@ -73,11 +73,11 @@ All fields optional. `config` is a name from `configs/` (`default`, `evolution`,
  "viewers": 1, "error": null}
 ```
 
-`tick` counts ticks completed: the state shown is the state after tick `tick − 1`.
+`tick` counts ticks completed: the state shown is the state after tick `tick − 1`. `population` counts the prey; `predators` the predators alive, or null in a world without predators (6.5). `ConfigSummary` likewise says `has_predators`, `predator_controller` and `initial_predators`.
 
 ### `OrganismDetail`
 
-Identity (`id`, `alive`, `parent_id`, `founder_id`, `generation`, `birth_tick`, `death_tick`, `death_cause`), body (`age`, `energy`, `x`, `y`, `heading`, `food_eaten`, `offspring_count`), family (`children`: IDs in birth order), `genome` and `traits` (as in organisms.csv), `brain_weights` (the 62 parameters under their brains.csv names, or null), and `thought`:
+Identity (`id`, `species`: `prey` or `predator`, `alive`, `parent_id`, `founder_id`, `generation`, `birth_tick`, `death_tick`, `death_cause`), body (`age`, `energy`, `x`, `y`, `heading`, `food_eaten`, `prey_eaten` (predators), `offspring_count`), family (`children`: IDs in birth order, same species), `genome` and `traits` (as in organisms.csv), `brain_weights` (the parameters under their brains.csv names: 62, or 80 for prey that sense predators; or null), and `thought`:
 
 ```json
 {"tick": 49, "input_names": ["food_seen", "food_ahead", "food_left", "food_closeness", "energy", "wall_ahead", "noise"],
@@ -86,7 +86,7 @@ Identity (`id`, `alive`, `parent_id`, `founder_id`, `generation`, `birth_tick`, 
  "turn": 0.471, "throttle": 0.58}
 ```
 
-(Values from `scripts/api_example.py`, seed 1, organism 0 on tick 49; `[...6]` stands for six numbers.) `thought` is the organism's decision on the run's latest tick, read from the simulation's own record (the same numbers `genesis inspect` replays). Null without a brain, or if the organism didn't decide on that tick (born on it, or dead before it).
+(Values from `scripts/api_example.py`, seed 1, organism 0 on tick 49; `[...6]` stands for six numbers. Prey that sense predators have ten inputs, the last three `predator_seen`, `predator_left`, `predator_closeness`; a predator's seven inputs are named as a prey's, with "food" meaning prey.) `thought` is the organism's decision on the run's latest tick, read from the simulation's own record (the same numbers `genesis inspect` replays). Null without a brain, or if the organism didn't decide on that tick (born on it, or dead before it).
 
 ### `ExportResult`
 
@@ -103,12 +103,14 @@ The live run is **replayed** headlessly for its `tick` ticks with the normal rec
 {"run_id": "…", "every": 10,
  "columns": {"tick": [9, 19, 29], "population": [31, 34, 36], "food_count": [140, 133, 129],
              "lineages": [30, 30, 29], "mean_energy": [44.1, 41.8, 40.2],
+             "predators": [null, null, null],
              "births": [0, 3, 2], "deaths": [0, 0, 1], "food_eaten": [4, 7, 6],
+             "attempts": [0, 0, 0], "captures": [0, 0, 0],
              "toward_food": [0.52, 0.61, 0.58], "mean_turn": [0.41, 0.39, 0.40],
              "mean_throttle": [0.55, 0.54, 0.56]}}
 ```
 
-One point per `every` ticks, the same rule as recorded runs: **flows** (births, deaths, food eaten) summed over the interval, **stocks** (population, food, lineages, mean energy) at its last tick, **shares** (turning toward food, mean turn as a fraction of max turn, mean throttle) averaged over its ticks; `null` where there was nothing to measure. Only complete intervals are returned, so a point never changes once drawn; ask again with `since` = the last tick received + 1 for newer points. Values are examples.
+One point per `every` ticks, the same rule as recorded runs: **flows** (births, deaths, food eaten, predators' strike `attempts` and `captures`) summed over the interval, **stocks** (population, food, lineages, mean energy, `predators` alive: null without predators) at its last tick, **shares** (turning toward food, mean turn as a fraction of max turn, mean throttle) averaged over its ticks; `null` where there was nothing to measure. Only complete intervals are returned, so a point never changes once drawn; ask again with `since` = the last tick received + 1 for newer points. Values are examples.
 
 ### `Lineage`
 
@@ -131,20 +133,23 @@ Read-only views of completed runs ingested into the lake: every experiment's, an
 `ws://127.0.0.1:8765/api/runs/{id}/stream?fps=15` (fps 1–30). Messages are JSON, each with a `type` (values below are examples):
 
 ```json
-{"type": "hello", "version": 1, "run": {RunInfo}, "world": {"width": 200.0, "height": 200.0}}
+{"type": "hello", "version": 2, "run": {RunInfo}, "world": {"width": 200.0, "height": 200.0}}
 
-{"type": "snapshot", "version": 1, "run_id": "…", "tick": 403, "state": "running", "speed": 200.0,
+{"type": "snapshot", "version": 2, "run_id": "…", "tick": 403, "state": "running", "speed": 200.0,
  "error": null, "population": 86,
  "last_tick": {"births": 2, "deaths": 0, "food_eaten": 3, "mean_energy": 41.2, "lineages": 9},
  "food": {"x": [12.31, …], "y": [180.02, …]},
  "organisms": {"id": [14, …], "x": [103.59, …], "y": [2.22, …], "heading": [-1.427, …],
-               "energy": [23.98, …], "generation": [0, …], "founder": [14, …]}}
+               "energy": [23.98, …], "fullness": [0.3, …], "generation": [0, …], "founder": [14, …]},
+ "predators": null,
+ "captures": []}
 
 {"type": "gone", "run_id": "…", "replaced_by": "…new run ID, after a reset, or null"}
 ```
 
 - **Newest state only.** At most `fps` times a second, the server sends the run's current snapshot if it changed since your last one. Ticks in between are skipped, not queued: a slow viewer gets fewer frames, never stale ones, and never slows the run. A paused run sends nothing until something changes.
-- **Columnar.** Each organism field is one list, all the same length (`population`), in organism ID order.
+- **Columnar.** Each organism field is one list, all the same length (`population`), in organism ID order. `fullness` is energy as a share of the organism's own reproduction threshold (0–1), which the plate draws as how full a cell is.
+- **Predators (version 2, 6.5).** In a world with predators, `predators` holds their columns in the same form (`organisms` are then the prey), and `captures` the latest captures, oldest first, as `{"tick", "x", "y"}` (where the predator was as it ate; at most 64). Each snapshot repeats recent captures: a viewer marks the ones newer than any it has marked. Without predators, `predators` is null and `captures` empty.
 - **Display precision.** Positions to 0.01 world units, headings to 0.001 rad, energy to 0.01 EU. Use `/digest` and exports for exact state.
 - **Close codes.** 4404: no such run (after a `gone` message). 4422: bad `fps`.
 

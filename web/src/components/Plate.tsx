@@ -14,7 +14,10 @@ export function Plate() {
   const runId = useLabStore((s) => s.runId);
   const status = useLabStore((s) => s.status);
   const detail = useLabStore((s) => s.statusDetail);
-  const empty = useLabStore((s) => s.snapshot !== null && s.snapshot.population === 0);
+  // Empty: neither species left (a world with predators runs on while either survives).
+  const empty = useLabStore(
+    (s) => s.snapshot !== null && s.snapshot.population === 0 && (s.snapshot.predators?.id.length ?? 0) === 0,
+  );
   const ended = useLabStore((s) => s.snapshot?.state === "completed");
   const lastTick = useLabStore((s) => (s.snapshot ? s.snapshot.tick - 1 : 0));
   const width = world?.width ?? 200;

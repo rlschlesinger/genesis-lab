@@ -16,6 +16,7 @@ scattered if-statements, makes the whole lifecycle readable in one place and tes
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -29,6 +30,7 @@ from genesis.core.simulation import Simulation, TickSummary
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 CONFIGS_DIR = PROJECT_ROOT / "configs"
 MAX_LIVE_RUNS = 4  # each live run holds its whole history in memory
+RECENT_CAPTURES = 64  # capture marks kept for viewers (6.5)
 DEFAULT_SPEED = 30.0  # ticks per second: slow enough to watch; the client can change it
 
 # (from, to) pairs a run may move along. Anything else is a conflict.
@@ -77,10 +79,18 @@ class LiveRun:
     last_summary: TickSummary | None = None  # the most recent tick's counts (for snapshots)
     viewers: int = 0  # open WebSocket streams (stream.py)
     snapshot_cache: tuple[tuple, str] | None = None  # (key, JSON): built once per tick
-    history: RunHistory = field(default_factory=RunHistory)  # one row per tick (history.py)
+    history: RunHistory = field(init=False)  # one row per tick (history.py)
     stepping: bool = False  # a POST /step is in progress (stepping.step yields between slices)
     exporting: bool = False  # a POST /export is replaying this run in a worker thread
     dropped: bool = False  # deleted or reset: a step in progress stops at its next slice
+    # The latest captures, (tick, x, y), for the plate's capture marks (stream.py). Bounded:
+    # a viewer only needs the ones since its last picture.
+    recent_captures: deque[tuple[int, float, float]] = field(
+        default_factory=lambda: deque(maxlen=RECENT_CAPTURES)
+    )
+
+    def __post_init__(self) -> None:
+        self.history = RunHistory(predators=self.config.predators is not None)
 
     def info(self) -> RunInfo:
         return RunInfo(
@@ -92,6 +102,7 @@ class LiveRun:
             tick=self.sim.tick,
             max_ticks=self.config.run.max_ticks,
             population=len(self.sim.organisms),
+            predators=None if self.config.predators is None else len(self.sim.predators),
             speed=self.speed,
             viewers=self.viewers,
             error=self.error,
@@ -114,29 +125,11 @@ class RunManager:
     # --- Configs --------------------------------------------------------------------------
 
     def config_names(self) -> list[str]:
-        """Configs the lab can run: every file in the folder except predator worlds."""
-        return [name for name in self._all_config_names() if not self._has_predators(name)]
-
-    def _all_config_names(self) -> list[str]:
         return sorted(p.stem for p in self.configs_dir.glob("*.yaml"))
-
-    def _has_predators(self, name: str) -> bool:
-        # Temporary, until 6.5 (D-057): the stream, the specimen panel, history and export all
-        # show prey only, so a predator world would look like a plain neural one with its
-        # predators invisible. Better not to offer it than to show a wrong picture.
-        try:
-            return load_config(self.configs_dir / f"{name}.yaml").predators is not None
-        except (ConfigError, ValueError):
-            return False  # an invalid file is listed, and refused with its reason on use
 
     def load_config(self, name: str) -> SimulationConfig:
         # Only names listed from the folder are accepted: a name can't point anywhere else.
         if name not in self.config_names():
-            if name in self._all_config_names():
-                raise InvalidRunRequest(
-                    f"config {name!r} has predators, which the lab can't show yet; "
-                    f"run it with `genesis run --config configs/{name}.yaml`"
-                )
             raise InvalidRunRequest(f"unknown config {name!r}; choose from {self.config_names()}")
         try:
             return load_config(self.configs_dir / f"{name}.yaml")
@@ -155,6 +148,9 @@ class RunManager:
                     initial_count=c.organisms.initial_count,
                     has_brains=c.brain is not None,
                     mutation_enabled=c.mutation.enabled,
+                    has_predators=c.predators is not None,
+                    predator_controller=None if c.predators is None else c.predators.controller,
+                    initial_predators=None if c.predators is None else c.predators.initial_count,
                 )
             )
         return summaries

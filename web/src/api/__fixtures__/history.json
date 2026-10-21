@@ -1,9 +1,23 @@
 {
   "columns": {
+    "attempts": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
     "births": [
       1,
       0,
       3,
+      0,
+      0
+    ],
+    "captures": [
+      0,
+      0,
+      0,
       0,
       0
     ],
@@ -62,6 +76,13 @@
       34,
       34,
       34
+    ],
+    "predators": [
+      null,
+      null,
+      null,
+      null,
+      null
     ],
     "tick": [
       9,

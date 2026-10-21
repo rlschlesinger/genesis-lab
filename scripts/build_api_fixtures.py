@@ -31,7 +31,8 @@ OUT = ROOT / "web" / "src" / "api" / "__fixtures__"
 
 
 def capture() -> dict[str, object]:
-    """Every response shape the lab reads, from one scripted session (seed 1, neural)."""
+    """Every response shape the lab reads, from one scripted session (seed 1, neural; and seed
+    3 of the predator world)."""
     with TestClient(create_app(RunManager())) as client:
         run = client.post("/api/runs", json={"config": "neural", "seed": 1, "max_ticks": 500})
         rid = run.json()["run_id"]
@@ -49,6 +50,24 @@ def capture() -> dict[str, object]:
             new_id = client.post(f"/api/runs/{rid}/reset").json()["run_id"]
             fixtures["gone"] = ws.receive_json()
         client.delete(f"/api/runs/{new_id}")
+
+        # A world with predators (6.5): seed 3's chasers have caught prey by tick 120.
+        hunted = client.post(
+            "/api/runs", json={"config": "predators", "seed": 3, "max_ticks": 500}
+        ).json()["run_id"]
+        client.post(f"/api/runs/{hunted}/step", json={"ticks": 120})
+        hsim = client.app.state.manager.get(hunted).sim
+        hunter = max((*hsim.predators, *hsim.dead_predators), key=lambda o: (o.prey_eaten, -o.id))
+        fixtures["organism_detail_predator"] = client.get(
+            f"/api/runs/{hunted}/organisms/{hunter.id}"
+        ).json()
+        fixtures["history_predators"] = client.get(
+            f"/api/runs/{hunted}/history", params={"every": 20}
+        ).json()
+        with client.websocket_connect(f"/api/runs/{hunted}/stream?fps=30") as ws:
+            ws.receive_json()  # hello
+            fixtures["snapshot_predators"] = ws.receive_json()
+        client.delete(f"/api/runs/{hunted}")
 
         # Lineage: a run old enough to have grandchildren; the deepest organism, lowest ID.
         grown = client.post("/api/runs", json={"config": "neural", "seed": 1, "max_ticks": 2000})
@@ -84,6 +103,7 @@ def capture() -> dict[str, object]:
 
     text = json.dumps(fixtures)
     text = text.replace(rid, "fixture-run").replace(new_id, "fixture-run-reset")
+    text = text.replace(hunted, "fixture-run-predators")
     return json.loads(text)
 
 

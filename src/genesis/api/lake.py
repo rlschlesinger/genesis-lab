@@ -106,29 +106,36 @@ class LakeReader:
             (s for s in POINT_SIZES if run["ticks_run"] / s <= MAX_POINTS), POINT_SIZES[-1]
         )
         every = recorded * math.ceil(max(wanted, recorded) / recorded)  # whole recorded rows
+        # Predators (6.5): from predator_ticks, which has the same rows as ticks; a run without
+        # predators has none, so predators is NULL and strikes and captures 0, as live.
         rows = self._query(
             """
             WITH t AS (SELECT * FROM ticks WHERE run_id = $r),
-                 b AS (SELECT * FROM behaviour WHERE run_id = $r)
+                 b AS (SELECT * FROM behaviour WHERE run_id = $r),
+                 p AS (SELECT * FROM predator_ticks WHERE run_id = $r)
             SELECT max(t.tick)                                   AS tick,
                    arg_max(t.population, t.tick)                 AS population,
                    arg_max(t.food_count, t.tick)                 AS food_count,
                    arg_max(t.lineages, t.tick)                   AS lineages,
                    arg_max(t.mean_energy, t.tick)                AS mean_energy,
+                   arg_max(p.population, t.tick)                 AS predators,
                    sum(t.births)                                 AS births,
                    sum(t.deaths)                                 AS deaths,
                    sum(t.food_eaten)                             AS food_eaten,
+                   coalesce(sum(p.attempts), 0)                  AS attempts,
+                   coalesce(sum(p.captures), 0)                  AS captures,
                    avg(b.toward_food)                            AS toward_food,
                    avg(b.mean_turn)                              AS mean_turn,
                    avg(b.mean_throttle)                          AS mean_throttle
-            FROM t LEFT JOIN b USING (run_id, tick)
+            FROM t LEFT JOIN b USING (run_id, tick) LEFT JOIN p USING (run_id, tick)
             GROUP BY t.tick // $every
             ORDER BY tick
             """,
             {"r": run_id, "every": every},
         )
-        names = ("tick", "population", "food_count", "lineages", "mean_energy", "births",
-                 "deaths", "food_eaten", "toward_food", "mean_turn", "mean_throttle")  # fmt: skip
+        names = ("tick", "population", "food_count", "lineages", "mean_energy", "predators",
+                 "births", "deaths", "food_eaten", "attempts", "captures", "toward_food",
+                 "mean_turn", "mean_throttle")  # fmt: skip
         columns = {name: [_clean(row[name]) for row in rows] for name in names}
         return every, columns
 

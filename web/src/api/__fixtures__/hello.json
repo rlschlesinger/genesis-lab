@@ -5,6 +5,7 @@
     "error": null,
     "max_ticks": 500,
     "population": 34,
+    "predators": null,
     "run_id": "fixture-run",
     "seed": 1,
     "speed": 30.0,
@@ -13,7 +14,7 @@
     "viewers": 1
   },
   "type": "hello",
-  "version": 1,
+  "version": 2,
   "world": {
     "height": 200.0,
     "width": 200.0

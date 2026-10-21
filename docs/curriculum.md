@@ -485,5 +485,11 @@ What has been covered, where it appears in the code, and what comes next.
 - **Validation across tables:** strikes must match the capture counts and the prey's `predation` deaths; a missing predator is caught the moment anything refers to it.
 - **The phase plot:** prey against predators in one picture; a cycle draws a loop, a collapse a line into an axis.
 
+### 6.5 · Two species on the plate
+- **Versioned messages:** the stream's shape changed, so its version did; a mismatched lab refuses clearly instead of half-drawing.
+- **Encoding with redundancy:** species by colour *and* shape *and* size; energy by how full a cell looks.
+- **Motion that carries meaning:** a capture mark is the only animation the user didn't cause, and it fades in real time so it's visible at any speed.
+- **Repeat-and-deduplicate:** each snapshot repeats recent captures; the viewer marks only the new ones, so nothing is lost between pictures and nothing is marked twice.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.

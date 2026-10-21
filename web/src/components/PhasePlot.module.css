@@ -1,0 +1,51 @@
+/* The phase plot: drawn like the time charts beside it (hairline axes, small labels), with
+   the path in the predators' stain. SVG text sizes are in viewBox units: they scale with
+   the figure. */
+.phase {
+  margin: 0;
+  max-width: 30rem;
+}
+
+.phase svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.axis {
+  stroke: var(--graticule-strong);
+  stroke-width: 1;
+}
+
+.tick,
+.label {
+  font-family: var(--font);
+  font-size: 11px;
+  fill: var(--stain-ink-soft);
+}
+
+.tick {
+  font-variation-settings: var(--mono-on);
+}
+
+.path {
+  fill: none;
+  stroke: var(--predator);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+.start {
+  fill: var(--field);
+  stroke: var(--predator);
+  stroke-width: 1.4;
+}
+
+.end {
+  fill: var(--predator);
+}
+
+.caption {
+  color: var(--stain-ink-soft);
+  font-size: var(--size-small);
+}

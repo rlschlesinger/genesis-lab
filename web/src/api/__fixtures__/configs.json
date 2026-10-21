@@ -2,25 +2,45 @@
   {
     "controller": "nearest_food_seeker",
     "has_brains": false,
+    "has_predators": false,
     "initial_count": 30,
+    "initial_predators": null,
     "max_ticks": 5000,
     "mutation_enabled": false,
-    "name": "default"
+    "name": "default",
+    "predator_controller": null
   },
   {
     "controller": "nearest_food_seeker",
     "has_brains": false,
+    "has_predators": false,
     "initial_count": 30,
+    "initial_predators": null,
     "max_ticks": 20000,
     "mutation_enabled": true,
-    "name": "evolution"
+    "name": "evolution",
+    "predator_controller": null
   },
   {
     "controller": "neural",
     "has_brains": true,
+    "has_predators": false,
     "initial_count": 30,
+    "initial_predators": null,
     "max_ticks": 20000,
     "mutation_enabled": true,
-    "name": "neural"
+    "name": "neural",
+    "predator_controller": null
+  },
+  {
+    "controller": "neural",
+    "has_brains": true,
+    "has_predators": true,
+    "initial_count": 30,
+    "initial_predators": 10,
+    "max_ticks": 20000,
+    "mutation_enabled": true,
+    "name": "predators",
+    "predator_controller": "nearest_prey_seeker"
   }
 ]

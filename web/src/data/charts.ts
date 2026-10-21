@@ -22,6 +22,30 @@ export interface ChartSpec {
 
 const per = (every: number) => (every === 1 ? "per tick" : `per ${every.toLocaleString("en")} ticks`);
 
+/** Charts only a world with predators has (6.5), shown after the population chart. */
+export const PREDATOR_CHARTS: ChartSpec[] = [
+  {
+    id: "predators",
+    title: "Prey and predators",
+    describe: (every) =>
+      `Both species alive, counted at the end of each ${every === 1 ? "tick" : `${every.toLocaleString("en")}-tick interval`}.`,
+    series: [
+      { column: "population", label: "prey", colour: "--prey" },
+      { column: "predators", label: "predators", colour: "--predator" },
+    ],
+  },
+  {
+    id: "strikes",
+    title: "Strikes and captures",
+    describe: (every) =>
+      `Counts ${per(every)}: every strike a predator made at a prey in reach, and those that caught it. Strikes are dashed.`,
+    series: [
+      { column: "attempts", label: "strikes", colour: "--stain-ink-soft", dashed: true },
+      { column: "captures", label: "captures", colour: "--predator" },
+    ],
+  },
+];
+
 export const CHARTS: ChartSpec[] = [
   {
     id: "population",

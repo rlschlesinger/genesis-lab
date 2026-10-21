@@ -85,6 +85,8 @@
   "id": 0,
   "offspring_count": 0,
   "parent_id": null,
+  "prey_eaten": 0,
+  "species": "prey",
   "thought": {
     "hidden": [
       -0.625734529163512,

@@ -7,7 +7,8 @@ server can push messages whenever it likes, which suits a world that changes man
 second. Three message types, all JSON with a ``type`` field (D-049):
 
     hello      once, on connect: protocol version, the run (as GET /runs/{id}), world size
-    snapshot   the run's newest state: tick, state, counts, food and organisms (columnar)
+    snapshot   the run's newest state: tick, state, counts, food, organisms (columnar), and in
+               a world with predators the predators and the latest captures (version 2, 6.5)
     gone       the run was deleted or reset (``replaced_by`` names the new run); then close
 
 Snapshots are **read-only views**: positions are rounded for display (0.01 world units), and
@@ -32,7 +33,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 from genesis.api.runs import LiveRun, RunManager
 
-SNAPSHOT_VERSION = 1
+SNAPSHOT_VERSION = 2  # 2 (6.5): fullness, predators, captures
 MAX_FPS = 30
 DEFAULT_FPS = 15
 POSITION_DECIMALS = 2  # 0.01 world units: far below a pixel at any sensible zoom
@@ -54,6 +55,24 @@ def build_snapshot(run: LiveRun) -> dict:
     def column(values, decimals: int | None = None) -> list:
         array = np.asarray(values, dtype=np.float64)
         return (np.round(array, decimals) if decimals is not None else array).tolist()
+
+    def bodies(group) -> dict:
+        """One species, columnar. fullness: energy as a share of the organism's own
+        reproduction threshold (0-1, rounded), which the plate draws as how full a cell is."""
+        return {
+            "id": [o.id for o in group],
+            "x": column([o.x for o in group], POSITION_DECIMALS),
+            "y": column([o.y for o in group], POSITION_DECIMALS),
+            "heading": column([o.heading for o in group], 3),
+            "energy": column([o.energy for o in group], 2),
+            "fullness": column(
+                [min(1.0, o.energy / o.traits.reproduction_threshold) for o in group], 2
+            ),
+            "generation": [o.generation for o in group],
+            "founder": [o.founder_id for o in group],
+        }
+
+    hunted = run.config.predators is not None
 
     return {
         "type": "snapshot",
@@ -77,15 +96,14 @@ def build_snapshot(run: LiveRun) -> dict:
             "x": column(food[:, 0], POSITION_DECIMALS),
             "y": column(food[:, 1], POSITION_DECIMALS),
         },
-        "organisms": {
-            "id": [o.id for o in living],
-            "x": column([o.x for o in living], POSITION_DECIMALS),
-            "y": column([o.y for o in living], POSITION_DECIMALS),
-            "heading": column([o.heading for o in living], 3),
-            "energy": column([o.energy for o in living], 2),
-            "generation": [o.generation for o in living],
-            "founder": [o.founder_id for o in living],
-        },
+        "organisms": bodies(living),
+        # Worlds with predators (6.5): the predators, and where the latest captures happened
+        # (newest last; a viewer draws the ones newer than its last picture's).
+        "predators": bodies(sim.predators) if hunted else None,
+        "captures": [
+            {"tick": t, "x": round(x, POSITION_DECIMALS), "y": round(y, POSITION_DECIMALS)}
+            for t, x, y in run.recent_captures
+        ],
     }
 
 

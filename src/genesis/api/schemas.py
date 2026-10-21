@@ -12,7 +12,7 @@ talking to a server it doesn't understand.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
@@ -50,6 +50,9 @@ class ConfigSummary(BaseModel):
     initial_count: int
     has_brains: bool
     mutation_enabled: bool
+    has_predators: bool = False  # a predators: section (6.5)
+    predator_controller: str | None = None
+    initial_predators: int | None = None
 
 
 class RunCreate(_Strict):
@@ -73,7 +76,8 @@ class RunInfo(BaseModel):
     controller: str
     tick: int  # ticks completed so far
     max_ticks: int
-    population: int
+    population: int  # prey alive
+    predators: int | None = None  # predators alive; None in a world without predators (6.5)
     speed: float | None  # target ticks per second while running; None = as fast as possible
     viewers: int  # open snapshot streams
     error: str | None = None  # why the run failed, when state is "failed"
@@ -109,7 +113,7 @@ class BrainThought(BaseModel):
 
     tick: int  # the tick this decision was made in
     input_names: list[str]
-    inputs: list[float]  # as passed to the network (7)
+    inputs: list[float]  # as passed to the network (7; 10 for prey that sense predators)
     hidden_sum: list[float]  # weighted sums into the hidden layer (6)
     hidden: list[float]  # tanh of those (6)
     output_sum: list[float]  # weighted sums into the outputs (2)
@@ -120,6 +124,7 @@ class BrainThought(BaseModel):
 
 class OrganismDetail(BaseModel):
     id: int
+    species: Literal["prey", "predator"] = "prey"  # 6.5
     alive: bool
     parent_id: int | None
     founder_id: int
@@ -133,11 +138,13 @@ class OrganismDetail(BaseModel):
     y: float
     heading: float
     food_eaten: int
+    prey_eaten: int = 0  # predators: prey caught
     offspring_count: int
     children: list[int]  # IDs of its offspring, in birth order
     genome: dict[str, float]
     traits: dict[str, float]
-    brain_weights: dict[str, float] | None  # 62 named parameters (brains.csv names); None without
+    # Named parameters as in brains.csv: 62, or 80 for prey that sense predators; None without.
+    brain_weights: dict[str, float] | None
     thought: BrainThought | None  # None: no brain, or it didn't decide on the latest tick
 
 

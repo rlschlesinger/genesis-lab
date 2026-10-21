@@ -20,11 +20,14 @@ function number(value: number, digits = 3): string {
 /** One organism under examination: who it is, its body, its genes, and its brain. */
 export function SpecimenPanel() {
   const selected = useLabStore((s) => s.selectedOrganism);
+  const twoSpecies = useLabStore((s) => s.snapshot?.predators != null);
   const { detail, error } = useOrganismDetail();
+  // In a world with predators, say which kind; otherwise every organism is simply one.
+  const kind = !twoSpecies || detail === null ? "Organism" : detail.species === "predator" ? "Predator" : "Prey";
 
   return (
     <aside className={styles.specimen} aria-label="Selected organism">
-      <h2 className={styles.title}>{selected === null ? "No specimen" : `Organism ${selected}`}</h2>
+      <h2 className={styles.title}>{selected === null ? "No specimen" : `${kind} ${selected}`}</h2>
       {selected === null && (
         <p className={styles.hint}>
           Select an organism on the plate to see its genome, its family and what its brain is
@@ -58,8 +61,8 @@ function Specimen({ detail: d }: { detail: OrganismDetail }) {
           <dd className="num">{number(d.energy)}</dd>
         </div>
         <div>
-          <dt>Meals</dt>
-          <dd className="num">{d.food_eaten}</dd>
+          <dt>{d.species === "predator" ? "Prey caught" : "Meals"}</dt>
+          <dd className="num">{d.species === "predator" ? d.prey_eaten : d.food_eaten}</dd>
         </div>
         <div>
           <dt>Generation</dt>
@@ -101,7 +104,7 @@ function Specimen({ detail: d }: { detail: OrganismDetail }) {
       {d.thought && d.brain_weights ? (
         <section className={styles.section}>
           <h3 className={styles.heading}>Brain, latest decision</h3>
-          <BrainDiagram thought={d.thought} weights={d.brain_weights} />
+          <BrainDiagram thought={d.thought} weights={d.brain_weights} species={d.species} />
         </section>
       ) : (
         <p className={styles.hint}>

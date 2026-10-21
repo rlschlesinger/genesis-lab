@@ -22,9 +22,18 @@ export function StageBar() {
             </span>
           )}
         </span>
-        <span>
-          <span className={`num ${styles.figure}`}>{snapshot.population}</span> alive
-        </span>
+        {snapshot.predators === null ? (
+          <span>
+            <span className={`num ${styles.figure}`}>{snapshot.population}</span> alive
+          </span>
+        ) : (
+          // One item, so the line keeps its three parts and doesn't wrap under the plate.
+          <span>
+            <span className={`num ${styles.figure}`}>{snapshot.population}</span> prey,{" "}
+            <span className={`num ${styles.figure} ${styles.predators}`}>{snapshot.predators.id.length}</span>{" "}
+            {snapshot.predators.id.length === 1 ? "predator" : "predators"}
+          </span>
+        )}
         <span className={styles.state}>{snapshot.state}</span>
       </div>
       <GoneNotice />

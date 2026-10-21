@@ -10,6 +10,7 @@ function columns(rows: Array<[number, number, number, number]>): OrganismColumns
     y: rows.map((r) => r[2]),
     heading: rows.map((r) => r[3]),
     energy: rows.map(() => 10),
+    fullness: rows.map(() => 0.5),
     generation: rows.map(() => 0),
     founder: rows.map((r) => r[0]),
   };

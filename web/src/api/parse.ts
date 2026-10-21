@@ -9,7 +9,7 @@ export class ProtocolError extends Error {
   override name = "ProtocolError";
 }
 
-const COLUMNS = ["id", "x", "y", "heading", "energy", "generation", "founder"] as const;
+const COLUMNS = ["id", "x", "y", "heading", "energy", "fullness", "generation", "founder"] as const;
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -48,14 +48,26 @@ function checkSnapshot(data: Record<string, unknown>): void {
   if (!isObject(organisms) || !isObject(food) || typeof data.population !== "number") {
     throw new ProtocolError("snapshot is missing organisms, food or population");
   }
-  for (const column of COLUMNS) {
-    const values = organisms[column];
-    if (!Array.isArray(values) || values.length !== data.population) {
-      throw new ProtocolError(`organism column "${column}" doesn't have one value per organism`);
+  checkColumns(organisms, data.population, "organism");
+  const predators = data.predators;
+  if (predators !== null) {
+    if (!isObject(predators) || !Array.isArray(predators.id)) {
+      throw new ProtocolError("snapshot predators are neither null nor columns");
     }
+    checkColumns(predators, predators.id.length, "predator");
   }
+  if (!Array.isArray(data.captures)) throw new ProtocolError("snapshot captures are missing");
   if (!Array.isArray(food.x) || !Array.isArray(food.y) || food.x.length !== food.y.length) {
     throw new ProtocolError("food positions are incomplete");
+  }
+}
+
+function checkColumns(columns: Record<string, unknown>, length: number, what: string): void {
+  for (const column of COLUMNS) {
+    const values = columns[column];
+    if (!Array.isArray(values) || values.length !== length) {
+      throw new ProtocolError(`${what} column "${column}" doesn't have one value per ${what}`);
+    }
   }
 }
 

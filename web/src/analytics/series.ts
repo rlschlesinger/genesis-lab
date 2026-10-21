@@ -15,8 +15,9 @@ export function chooseEvery(ticks: number): number {
 
 export function emptyColumns(): HistoryColumns {
   return {
-    tick: [], population: [], food_count: [], lineages: [], mean_energy: [], births: [],
-    deaths: [], food_eaten: [], toward_food: [], mean_turn: [], mean_throttle: [],
+    tick: [], population: [], food_count: [], lineages: [], mean_energy: [], predators: [],
+    births: [], deaths: [], food_eaten: [], attempts: [], captures: [], toward_food: [],
+    mean_turn: [], mean_throttle: [],
   };
 }
 

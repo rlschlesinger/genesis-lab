@@ -48,3 +48,8 @@
 .hint {
   color: var(--stain-ink-soft);
 }
+
+/* The predator count takes the predators' stain, as their cells on the plate do. */
+.predators {
+  color: var(--predator);
+}

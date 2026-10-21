@@ -23,10 +23,11 @@ from genesis.core.simulation import Simulation
 from genesis.intelligence.brain_inputs import input_names, parameter_names
 
 
-def deciders(sim: Simulation) -> list[int]:
-    """IDs of the organisms that decided on the latest tick, in decision-record order."""
+def deciders(sim: Simulation, predators: bool = False) -> list[int]:
+    """IDs of the organisms (or predators) that decided on the latest tick, in
+    decision-record order. Predators follow the same tick rule in their own record."""
     tick = sim.tick - 1
-    everyone = [*sim.organisms, *sim.dead]
+    everyone = [*sim.predators, *sim.dead_predators] if predators else [*sim.organisms, *sim.dead]
     ids = sorted(
         o.id
         for o in everyone
@@ -37,17 +38,22 @@ def deciders(sim: Simulation) -> list[int]:
 
 
 def find(sim: Simulation, organism_id: int) -> Organism:
-    for org in (*sim.organisms, *sim.dead):
+    for org in (*sim.organisms, *sim.dead, *sim.predators, *sim.dead_predators):
         if org.id == organism_id:
             return org
     raise RunNotFound(f"no organism {organism_id} in this run (yet)")
 
 
+def is_predator(sim: Simulation, organism_id: int) -> bool:
+    return any(o.id == organism_id for o in (*sim.predators, *sim.dead_predators))
+
+
 def thought(sim: Simulation, organism_id: int) -> BrainThought | None:
-    decision = sim.last_decision
+    hunter = is_predator(sim, organism_id)
+    decision = sim.last_predator_decision if hunter else sim.last_decision
     if decision is None or decision.thought is None:
         return None
-    ids = deciders(sim)
+    ids = deciders(sim, predators=hunter)
     if len(ids) != len(decision.observations):
         raise RuntimeError(
             f"decision record has {len(decision.observations)} rows but {len(ids)} organisms "
@@ -76,13 +82,16 @@ def thought(sim: Simulation, organism_id: int) -> BrainThought | None:
 def organism_detail(run: LiveRun, organism_id: int) -> OrganismDetail:
     sim = run.sim
     org = find(sim, organism_id)
-    children = sorted(o.id for o in (*sim.organisms, *sim.dead) if o.parent_id == organism_id)
+    hunter = is_predator(sim, organism_id)
+    family = (*sim.predators, *sim.dead_predators) if hunter else (*sim.organisms, *sim.dead)
+    children = sorted(o.id for o in family if o.parent_id == organism_id)
     weights = None
     if org.brain is not None:
         names = parameter_names(input_names(org.brain.shape[0]))
         weights = dict(zip(names, org.brain.to_vector().tolist(), strict=True))
     return OrganismDetail(
         id=org.id,
+        species="predator" if hunter else "prey",
         alive=org.alive,
         parent_id=org.parent_id,
         founder_id=org.founder_id,
@@ -96,6 +105,7 @@ def organism_detail(run: LiveRun, organism_id: int) -> OrganismDetail:
         y=org.y,
         heading=org.heading,
         food_eaten=org.food_eaten,
+        prey_eaten=org.prey_eaten,
         offspring_count=org.offspring_count,
         children=children,
         genome=org.genome.as_dict(),

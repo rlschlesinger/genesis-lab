@@ -22,22 +22,35 @@ from array import array
 import numpy as np
 
 from genesis.analytics.behaviour import decision_measures
-from genesis.core.simulation import Decision, TickSummary
+from genesis.core.simulation import Decision, PredatorSummary, TickSummary
 
-STOCKS = ("population", "food_count", "lineages", "mean_energy")
-FLOWS = ("births", "deaths", "food_eaten")
+# predators: predators alive (NaN, so null, in a world without them); attempts and captures:
+# their strikes, summed like the other flows (6.5).
+STOCKS = ("population", "food_count", "lineages", "mean_energy", "predators")
+FLOWS = ("births", "deaths", "food_eaten", "attempts", "captures")
 SHARES = ("toward_food", "mean_turn", "mean_throttle")
 COLUMNS = ("tick", *STOCKS, *FLOWS, *SHARES)
+PREDATOR_COLUMNS = ("predators", "attempts", "captures")
 
 
 class RunHistory:
-    def __init__(self) -> None:
-        self._data = {name: array("d") for name in COLUMNS}
+    def __init__(self, predators: bool = False) -> None:
+        # Predator columns are stored only in a world with predators; elsewhere they would
+        # always be null or 0, so they're answered without being kept (8 bytes a tick each).
+        self._kept = (
+            COLUMNS if predators else tuple(c for c in COLUMNS if c not in PREDATOR_COLUMNS)
+        )
+        self._data = {name: array("d") for name in self._kept}
 
     def __len__(self) -> int:
         return len(self._data["tick"])
 
-    def append(self, summary: TickSummary, decision: Decision | None) -> None:
+    def append(
+        self,
+        summary: TickSummary,
+        decision: Decision | None,
+        predators: PredatorSummary | None = None,
+    ) -> None:
         measures = decision_measures(decision)
         row = {
             "tick": summary.tick,
@@ -48,9 +61,12 @@ class RunHistory:
             "births": summary.births,
             "deaths": summary.deaths,
             "food_eaten": summary.food_eaten,
+            "predators": math.nan if predators is None else predators.population,
+            "attempts": 0 if predators is None else predators.attempts,
+            "captures": 0 if predators is None else predators.captures,
             **{name: measures[name] for name in SHARES},
         }
-        for name in COLUMNS:
+        for name in self._kept:
             self._data[name].append(float(row[name]))
 
     def query(self, since: int = 0, every: int = 1) -> dict[str, list]:
@@ -69,8 +85,13 @@ class RunHistory:
         if rows == 0:
             return {name: [] for name in COLUMNS}
         start, stop = first * every, complete * every
-        cols = {name: np.frombuffer(self._data[name], dtype=np.float64)[start:stop]
-                for name in COLUMNS}  # fmt: skip
+        absent = {"predators": math.nan, "attempts": 0.0, "captures": 0.0}
+        cols = {
+            name: np.frombuffer(self._data[name], dtype=np.float64)[start:stop]
+            if name in self._data
+            else np.full(stop - start, absent[name])
+            for name in COLUMNS
+        }
         shaped = {name: values.reshape(rows, every) for name, values in cols.items()}
         out: dict[str, np.ndarray] = {"tick": shaped["tick"][:, -1]}
         for name in STOCKS:

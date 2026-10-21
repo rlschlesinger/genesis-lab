@@ -4,6 +4,7 @@
   "error": null,
   "max_ticks": 500,
   "population": 34,
+  "predators": null,
   "run_id": "fixture-run",
   "seed": 1,
   "speed": 30.0,

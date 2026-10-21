@@ -21,21 +21,13 @@ def test_health_reports_the_api_version(client):
 
 def test_configs_are_listed_and_readable(client):
     names = {c["name"]: c for c in client.get("/api/configs").json()}
-    assert set(names) == {"default", "evolution", "neural"}
+    assert set(names) == {"default", "evolution", "neural", "predators"}
+    assert names["predators"]["has_predators"] and not names["neural"]["has_predators"]
+    assert names["predators"]["predator_controller"] == "nearest_prey_seeker"
     assert names["neural"]["has_brains"] and names["neural"]["controller"] == "neural"
     assert not names["default"]["mutation_enabled"]
     full = client.get("/api/configs/evolution").json()
     assert full["run"]["max_ticks"] == 20000 and full["genome"]["speed"]["initial"] == 1.5
-
-
-def test_predator_worlds_are_not_offered_until_the_lab_can_draw_them(client):
-    # Until 6.5 (D-057), predators would be invisible in the lab: the config isn't listed, and
-    # asking for it explains why and how to run it instead.
-    assert "predators" not in {c["name"] for c in client.get("/api/configs").json()}
-    response = client.post("/api/runs", json={"config": "predators"})
-    assert response.status_code == 422
-    assert "can't show yet" in response.json()["detail"]
-    assert "genesis run --config configs/predators.yaml" in response.json()["detail"]
 
 
 def test_create_list_get_and_delete_a_run(client):

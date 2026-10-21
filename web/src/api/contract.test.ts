@@ -21,9 +21,13 @@ import lineage from "./__fixtures__/lineage.json";
 import organism from "./__fixtures__/organism_detail.json";
 import runInfo from "./__fixtures__/run_info.json";
 import snapshot from "./__fixtures__/snapshot.json";
+import predatorDetail from "./__fixtures__/organism_detail_predator.json";
+import predatorHistory from "./__fixtures__/history_predators.json";
+import huntedSnapshot from "./__fixtures__/snapshot_predators.json";
 import { parseServerMessage } from "./parse";
 import type {
   BrainThought,
+  Capture,
   ConfigSummary,
   GoneMessage,
   HelloMessage,
@@ -56,24 +60,27 @@ describe("the TypeScript types match the server's real responses", () => {
   it("RunInfo", () => {
     expect(sortedKeys(runInfo)).toEqual(
       allKeys<RunInfo>()("run_id", "state", "config_name", "seed", "controller", "tick",
-        "max_ticks", "population", "speed", "viewers", "error"),
+        "max_ticks", "population", "predators", "speed", "viewers", "error"),
     );
   });
 
   it("ConfigSummary", () => {
     expect(sortedKeys(configs[0]!)).toEqual(
       allKeys<ConfigSummary>()("name", "controller", "max_ticks", "initial_count", "has_brains",
-        "mutation_enabled"),
+        "mutation_enabled", "has_predators", "predator_controller", "initial_predators"),
     );
   });
 
   it("OrganismDetail and its brain thought", () => {
     expect(sortedKeys(organism)).toEqual(
-      allKeys<OrganismDetail>()("id", "alive", "parent_id", "founder_id", "generation",
+      allKeys<OrganismDetail>()("id", "species", "alive", "parent_id", "founder_id", "generation",
         "birth_tick", "death_tick", "death_cause", "age", "energy", "x", "y", "heading",
-        "food_eaten", "offspring_count", "children", "genome", "traits", "brain_weights",
-        "thought"),
+        "food_eaten", "prey_eaten", "offspring_count", "children", "genome", "traits",
+        "brain_weights", "thought"),
     );
+    expect(sortedKeys(predatorDetail)).toEqual(sortedKeys(organism));
+    expect(predatorDetail.species).toBe("predator");
+    expect(predatorDetail.prey_eaten).toBeGreaterThan(0);
     expect(sortedKeys(organism.thought)).toEqual(
       allKeys<BrainThought>()("tick", "input_names", "inputs", "hidden_sum", "hidden",
         "output_sum", "outputs", "turn", "throttle"),
@@ -88,8 +95,12 @@ describe("the TypeScript types match the server's real responses", () => {
     expect(sortedKeys(history)).toEqual(allKeys<History>()("run_id", "every", "columns"));
     expect(sortedKeys(history.columns)).toEqual(
       allKeys<HistoryColumns>()("tick", "population", "food_count", "lineages", "mean_energy",
-        "births", "deaths", "food_eaten", "toward_food", "mean_turn", "mean_throttle"),
+        "predators", "births", "deaths", "food_eaten", "attempts", "captures", "toward_food",
+        "mean_turn", "mean_throttle"),
     );
+    expect(sortedKeys(predatorHistory.columns)).toEqual(sortedKeys(history.columns));
+    expect(history.columns.predators.every((v) => v === null)).toBe(true);
+    expect(predatorHistory.columns.predators.every((v) => typeof v === "number")).toBe(true);
     const lengths = new Set(Object.values(history.columns).map((c) => c.length));
     expect(lengths.size).toBe(1); // every column has one value per point
   });
@@ -124,11 +135,14 @@ describe("the TypeScript types match the server's real responses", () => {
     expect(sortedKeys(hello)).toEqual(allKeys<HelloMessage>()("type", "version", "run", "world"));
     expect(sortedKeys(snapshot)).toEqual(
       allKeys<Snapshot>()("type", "version", "run_id", "tick", "state", "speed", "error",
-        "population", "last_tick", "food", "organisms"),
+        "population", "last_tick", "food", "organisms", "predators", "captures"),
     );
-    expect(sortedKeys(snapshot.organisms)).toEqual(
-      allKeys<OrganismColumns>()("id", "x", "y", "heading", "energy", "generation", "founder"),
-    );
+    const columns = allKeys<OrganismColumns>()("id", "x", "y", "heading", "energy", "fullness",
+      "generation", "founder");
+    expect(sortedKeys(snapshot.organisms)).toEqual(columns);
+    expect(snapshot.predators).toBeNull();
+    expect(sortedKeys(huntedSnapshot.predators)).toEqual(columns);
+    expect(sortedKeys(huntedSnapshot.captures[0]!)).toEqual(allKeys<Capture>()("tick", "x", "y"));
     expect(sortedKeys(snapshot.last_tick)).toEqual(
       allKeys<LastTick>()("births", "deaths", "food_eaten", "mean_energy", "lineages"),
     );
@@ -136,7 +150,7 @@ describe("the TypeScript types match the server's real responses", () => {
   });
 
   it("every fixture message passes the runtime checks", () => {
-    for (const message of [hello, snapshot, gone]) {
+    for (const message of [hello, snapshot, huntedSnapshot, gone]) {
       expect(parseServerMessage(JSON.stringify(message)).type).toBe(message.type);
     }
   });

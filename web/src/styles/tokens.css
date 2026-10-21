@@ -1,8 +1,8 @@
 /* Design tokens: brightfield microscopy (docs/ui-design.md).
  *
  * Cultures are examined on a lit glass slide, stained so cells stand out: crystal violet
- * (the Gram stain) for the organisms, safranin (its counter-stain) for whatever needs the
- * eye now, iodine brown for food. Text is a violet-black, as ink on a stained slide.
+ * (the Gram stain) for the prey, safranin (its counter-stain) for predators and whatever
+ * needs the eye now, iodine brown for food. Text is a violet-black, as ink on a stained slide.
  * Everything is defined here once; components only ever use these names.
  */
 :root {
@@ -18,6 +18,13 @@
   --safranin: #be3768; /* counter-stain: the selected organism, deaths, errors */
   --iodine: #a9741a; /* food */
   --focus: #be3768;
+
+  /* Two species (6.5), as in a Gram stain: one kind of cell keeps the crystal violet, the
+     other takes the safranin counter-stain. The selection ring moves to ink, since pink now
+     means "predator"; keyboard focus stays safranin (it rings controls, not cells). */
+  --prey: var(--violet);
+  --predator: var(--safranin);
+  --selected: var(--stain-ink);
 
   /* Type: one variable family. Sans for the interface; the same letters with the mono axis
      on for numbers that change (ticks, energies), so digits don't jitter. */

@@ -16,7 +16,7 @@ The lab is for *watching a culture and examining specimens*. Biologists do that 
 | `--field` | `#f2f6f4` | panels, the plate's clear field |
 | `--graticule` | `#c3cfc9` | the plate's grid, borders |
 | `--violet` | `#56399a` | crystal violet: organisms, primary actions, the current view |
-| `--safranin` | `#be3768` | counter-stain: the selected organism, deaths, errors, keyboard focus |
+| `--safranin` | `#be3768` | counter-stain: predators (6.5), deaths, errors, keyboard focus |
 | `--iodine` | `#a9741a` | food; "connecting" |
 | `--stain-ink` | `#221c30` | text (violet-black, ink on a stained slide) |
 
@@ -69,6 +69,15 @@ Tick 1,501 of 100,000   106 alive                       running
 - **The run picker** takes the plate's place, in the same rounded frame: starting a run is putting a culture on the plate.
 - **The specimen panel** reads top to bottom as a specimen card: status, body, family, brain, genome.
 - **The brain diagram:** nodes shaded by value, connections by the signal they carried, violet for positive and safranin for negative, always with the decision in words and the inputs as numbers beside it.
+
+## Two species (6.5)
+
+- **Prey and predators, as in a Gram stain:** one kind of cell keeps the crystal violet, the other takes the safranin counter-stain. Prey (`--prey`) are violet ovals with a short tail behind them; predators (`--predator`) are larger, rounder safranin cells with a notch at the front, their mouth. Shape and size tell them apart without colour.
+- **Energy as how full a cell is:** each cell is a membrane over an interior whose opacity follows its energy against its own reproduction threshold, from pale (starving, never clear) to solid (ready to divide).
+- **The selection ring moves to ink** (`--selected`), since pink now means "predator". Keyboard focus stays safranin: it rings controls, not cells.
+- **Capture marks:** a thin safranin ring where a predator caught a prey, widening slightly and fading over 1.2 s of real time. The one motion not caused by the user, kept because it marks a real event; with reduced motion it appears and disappears without changing.
+- **Counts under the plate** in one item ("4 prey, 18 predators"), the predator count in its stain, so the line never wraps.
+- **Analytics:** "Prey and predators" and "Strikes and captures" after the population chart (strikes dashed), and the phase plot last: prey across, predators up, joined in time order, an open circle at the start and a filled one now, drawn in SVG in the time charts' manner.
 
 ## Analytics (5.8)
 

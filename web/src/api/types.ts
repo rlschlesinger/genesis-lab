@@ -3,7 +3,7 @@
 // scripts/build_api_fixtures.py and checked by tests on both sides).
 
 export const API_VERSION = 1;
-export const SNAPSHOT_VERSION = 1;
+export const SNAPSHOT_VERSION = 2; // 2 (6.5): fullness, predators, captures
 
 export type RunState = "idle" | "running" | "paused" | "completed" | "failed";
 
@@ -20,6 +20,9 @@ export interface ConfigSummary {
   initial_count: number;
   has_brains: boolean;
   mutation_enabled: boolean;
+  has_predators: boolean;
+  predator_controller: string | null;
+  initial_predators: number | null;
 }
 
 export interface RunCreate {
@@ -37,7 +40,10 @@ export interface RunInfo {
   controller: string;
   tick: number;
   max_ticks: number;
+  /** Prey alive. */
   population: number;
+  /** Predators alive; null in a world without predators. */
+  predators: number | null;
   speed: number | null;
   viewers: number;
   error: string | null;
@@ -55,8 +61,11 @@ export interface BrainThought {
   throttle: number;
 }
 
+export type Species = "prey" | "predator";
+
 export interface OrganismDetail {
   id: number;
+  species: Species;
   alive: boolean;
   parent_id: number | null;
   founder_id: number;
@@ -70,6 +79,8 @@ export interface OrganismDetail {
   y: number;
   heading: number;
   food_eaten: number;
+  /** Predators: prey caught. */
+  prey_eaten: number;
   offspring_count: number;
   children: number[];
   genome: Record<string, number>;
@@ -107,9 +118,14 @@ export interface HistoryColumns {
   food_count: number[];
   lineages: number[];
   mean_energy: (number | null)[];
+  /** Predators alive; null in a world without predators. */
+  predators: (number | null)[];
   births: number[];
   deaths: number[];
   food_eaten: number[];
+  /** Predator strikes, and those that caught their prey (0 without predators). */
+  attempts: number[];
+  captures: number[];
   toward_food: (number | null)[];
   mean_turn: (number | null)[];
   mean_throttle: (number | null)[];
@@ -179,15 +195,24 @@ export interface LastTick {
   lineages: number;
 }
 
-/** One column per organism field, all of length `population`, in organism-ID order. */
+/** One column per organism field, all the same length, in organism-ID order. */
 export interface OrganismColumns {
   id: number[];
   x: number[];
   y: number[];
   heading: number[];
   energy: number[];
+  /** Energy as a share of the organism's reproduction threshold, 0-1: how full it's drawn. */
+  fullness: number[];
   generation: number[];
   founder: number[];
+}
+
+/** Where a predator caught a prey (its position as it ate). */
+export interface Capture {
+  tick: number;
+  x: number;
+  y: number;
 }
 
 export interface Snapshot {
@@ -201,7 +226,12 @@ export interface Snapshot {
   population: number;
   last_tick: LastTick | null;
   food: { x: number[]; y: number[] };
+  /** The prey (every organism in a world without predators). */
   organisms: OrganismColumns;
+  /** Null in a world without predators. */
+  predators: OrganismColumns | null;
+  /** The latest captures, oldest first (a bounded number; none without predators). */
+  captures: Capture[];
 }
 
 export interface GoneMessage {

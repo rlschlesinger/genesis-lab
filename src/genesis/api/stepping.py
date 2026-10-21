@@ -43,7 +43,13 @@ def step_once(run: LiveRun) -> None:
         run.error = f"{type(exc).__name__} at tick {run.sim.tick}: {exc}"
         run.move_to(RunState.FAILED)
         return
-    run.history.append(run.last_summary, run.sim.last_decision)
+    sim = run.sim
+    run.history.append(run.last_summary, sim.last_decision, sim.predator_summary)
+    # Where this tick's captures happened (the predator's position as it ate), for the plate.
+    tick = run.last_summary.tick
+    for event in sim.predator_events_this_tick:
+        if event.kind == "meal" and event.tick == tick:
+            run.recent_captures.append((tick, event.x, event.y))
     if run.sim.finished:
         run.move_to(RunState.COMPLETED)
 

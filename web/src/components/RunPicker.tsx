@@ -2,6 +2,7 @@ import { type FormEvent, useState } from "react";
 
 import { ApiError, api } from "../api/client";
 import type { ConfigSummary } from "../api/types";
+import { PREDATOR_KINDS } from "../data/species";
 import { useServerLists } from "../hooks/useServerLists";
 import { useLabStore } from "../store/labStore";
 import styles from "./RunPicker.module.css";
@@ -9,7 +10,10 @@ import styles from "./RunPicker.module.css";
 function describe(c: ConfigSummary): string {
   const brains = c.has_brains ? "neural brains" : c.controller.replaceAll("_", " ");
   const evolving = c.mutation_enabled ? "evolving" : "no mutation";
-  return `${c.initial_count} founders, ${brains}, ${evolving}, ${c.max_ticks.toLocaleString("en")} ticks`;
+  const hunters = c.has_predators
+    ? `, with ${c.initial_predators ?? 0} ${PREDATOR_KINDS[c.predator_controller ?? ""] ?? "predators"}`
+    : "";
+  return `${c.initial_count} founders, ${brains}, ${evolving}${hunters}, ${c.max_ticks.toLocaleString("en")} ticks`;
 }
 
 /** Start a run, or watch one the server already holds. Shown in place of the plate. */

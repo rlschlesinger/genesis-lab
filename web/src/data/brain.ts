@@ -11,7 +11,8 @@ export function signal(weight: number, input: number): number {
   return weight * input;
 }
 
-/** Readable names for the seven inputs (brain_inputs.py's INPUT_NAMES, in order). */
+/** Readable names for the inputs (brain_inputs.py's INPUT_NAMES, then PREY_INPUT_NAMES' three
+ *  predator inputs, in order). */
 export const INPUT_LABELS: Record<string, string> = {
   food_seen: "food seen",
   food_ahead: "food ahead",
@@ -20,7 +21,17 @@ export const INPUT_LABELS: Record<string, string> = {
   energy: "energy",
   wall_ahead: "wall ahead",
   noise: "noise",
+  predator_seen: "predator seen",
+  predator_left: "predator left",
+  predator_closeness: "predator close",
 };
+
+/** An input's label for this organism. A predator senses prey through the same inputs a prey
+ *  uses for food (D-059), so for a predator "food" reads "prey". */
+export function inputLabel(name: string, species: "prey" | "predator"): string {
+  const label = INPUT_LABELS[name] ?? name;
+  return species === "predator" ? label.replace("food", "prey") : label;
+}
 
 export function turnPhrase(radians: number): string {
   const degrees = Math.abs((radians * 180) / Math.PI);

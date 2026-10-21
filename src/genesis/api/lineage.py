@@ -29,7 +29,10 @@ def _node(org: Organism) -> dict:
 def lineage(sim: Simulation, organism_id: int, depth: int = 3, breadth: int = 12) -> dict:
     # Sorted by ID, which is birth order: the living list comes first and the dead list second,
     # so without sorting, living children would be listed before older, dead siblings.
-    everyone = {o.id: o for o in sorted((*sim.organisms, *sim.dead), key=lambda o: o.id)}
+    # A predator's family is predators; a prey's, prey (each species has its own list).
+    hunters = (*sim.predators, *sim.dead_predators)
+    group = hunters if any(o.id == organism_id for o in hunters) else (*sim.organisms, *sim.dead)
+    everyone = {o.id: o for o in sorted(group, key=lambda o: o.id)}
     if organism_id not in everyone:
         raise KeyError(f"no organism {organism_id} in this run (yet)")
     children: dict[int, list[int]] = defaultdict(list)

@@ -4,7 +4,8 @@
 export type TokenName =
   | "--violet" | "--violet-deep" | "--safranin" | "--iodine" | "--stain-ink"
   | "--stain-ink-soft" | "--graticule" | "--graticule-strong" | "--field" | "--font"
-  | "--size-small" | "--chart-height" | "--chart-axis";
+  | "--size-small" | "--chart-height" | "--chart-axis" | "--prey" | "--predator"
+  | "--selected";
 
 export function token(name: TokenName, element: Element = document.documentElement): string {
   return getComputedStyle(element).getPropertyValue(name).trim();

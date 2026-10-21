@@ -1,0 +1,39 @@
+{
+  "age": 120,
+  "alive": true,
+  "birth_tick": 0,
+  "brain_weights": null,
+  "children": [
+    42
+  ],
+  "death_cause": null,
+  "death_tick": null,
+  "energy": 95.35197824753169,
+  "food_eaten": 0,
+  "founder_id": 31,
+  "generation": 0,
+  "genome": {
+    "max_turn": 0.4,
+    "metabolic_rate": 0.3,
+    "neutral_marker": 0.5,
+    "reproduction_threshold": 160.0,
+    "sense_range": 25.0,
+    "speed": 1.8
+  },
+  "heading": -0.7280135433737476,
+  "id": 31,
+  "offspring_count": 1,
+  "parent_id": null,
+  "prey_eaten": 4,
+  "species": "predator",
+  "thought": null,
+  "traits": {
+    "max_turn": 0.4,
+    "metabolic_rate": 0.3,
+    "reproduction_threshold": 160.0,
+    "sense_range": 25.0,
+    "speed": 1.8
+  },
+  "x": 86.13244810297665,
+  "y": 0.0
+}

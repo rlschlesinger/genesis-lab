@@ -21,6 +21,13 @@ Automated tests cover the API (Python, including a real-server WebSocket test), 
 - [ ] **Trails** on: faint violet paths; off: gone. *(on checked; off not yet checked by hand)*
 - [ ] Selecting and inspecting never changes the run (also tested: tests/api/test_details.py).
 
+## Two species (6.5)
+
+- [ ] Start `predators`, seed 3, at 8 ticks/s: pink predators (larger, a notch at the front) and violet prey (ovals with a tail); under the plate "N prey, M predators", the predator count in pink.
+- [ ] A capture: a thin pink ring appears where it happened and fades in about a second (with reduce motion: appears and disappears without fading).
+- [ ] Select a predator: the panel says "Predator N" and "Prey caught"; a prey in the same world says "Prey N". A neural world without predators still says "Organism N".
+- [ ] Analytics: "Prey and predators", "Strikes and captures" (strikes dashed), and the phase plot from the open circle (start) to the filled one (now).
+
 ## The specimen panel
 
 - [ ] Status, energy, meals, generation, founder; a parent or child number selects that organism.

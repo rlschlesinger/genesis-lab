@@ -1,5 +1,5 @@
-import type { BrainThought } from "../api/types";
-import { INPUT_LABELS, shade, signal, turnPhrase } from "../data/brain";
+import type { BrainThought, Species } from "../api/types";
+import { inputLabel, shade, signal, turnPhrase } from "../data/brain";
 import styles from "./BrainDiagram.module.css";
 
 const W = 300;
@@ -17,10 +17,19 @@ function weight(weights: Record<string, number>, name: string): number {
   return weights[name] ?? 0;
 }
 
-/** The network on its latest decision: 7 inputs, 6 hidden units, 2 outputs. Nodes are shaded
+/** The network on its latest decision: 7 inputs (10 for prey that sense predators), 6 hidden
+ *  units, 2 outputs. Nodes are shaded
  *  by their value (violet positive, safranin negative); each line by what it carried into the
  *  next unit (weight x the value feeding it). The same numbers are written out below it. */
-export function BrainDiagram({ thought, weights }: { thought: BrainThought; weights: Record<string, number> }) {
+export function BrainDiagram({
+  thought,
+  weights,
+  species,
+}: {
+  thought: BrainThought;
+  weights: Record<string, number>;
+  species: Species;
+}) {
   const inY = rows(thought.inputs.length);
   const hidY = rows(thought.hidden.length);
   const outY = [H / 2 - 40, H / 2 + 40];
@@ -68,7 +77,7 @@ export function BrainDiagram({ thought, weights }: { thought: BrainThought; weig
         {thought.input_names.map((name, i) => (
           <g key={name}>
             <text x={COLUMN.input - R - 6} y={inY[i]! + 4} className={styles.label} textAnchor="end">
-              {INPUT_LABELS[name] ?? name}
+              {inputLabel(name, species)}
             </text>
             {node(name, COLUMN.input, inY[i]!, thought.inputs[i]!)}
           </g>
@@ -84,7 +93,7 @@ export function BrainDiagram({ thought, weights }: { thought: BrainThought; weig
         <dl className={styles.values}>
           {thought.input_names.map((name, i) => (
             <div key={name}>
-              <dt>{INPUT_LABELS[name] ?? name}</dt>
+              <dt>{inputLabel(name, species)}</dt>
               <dd className="num">{thought.inputs[i]!.toFixed(2)}</dd>
             </div>
           ))}
