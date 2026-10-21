@@ -24,6 +24,12 @@ Worlds with predators (a `predators:` config section) also get (D-060):
     predator_brains.csv  one row per predator with a brain: its 62 weights
     strikes.csv          every strike, caught or not
 
+Two-food worlds (a `resources:` section) also get (D-064):
+
+    diets.csv            one row per organism that ever lived: its diet, meals of each kind
+    diet_ticks.csv       one row per recorded tick: food and meals by kind, the diet's
+                         mean, spread, shares near each end, and a 10-bin histogram
+
 Retention policy (spec section 9): every tick, every organism and every mutation is recorded;
 full genomes are sampled (default every 50 ticks). Measured for a 20,000-tick evolution run
 (seed 42): gene_stats.csv 10 MB (120,000 rows), genomes.csv 3.8 MB, all files ~16 MB.
@@ -41,6 +47,8 @@ from pathlib import Path
 
 from genesis.analytics.behaviour import BEHAVIOUR_FIELDS
 from genesis.analytics.metrics import (
+    DIET_FIELDS,
+    DIET_TICK_FIELDS,
     MUTATION_FIELDS,
     ORGANISM_FIELDS,
     PREDATOR_BRAIN_FIELDS,
@@ -50,6 +58,7 @@ from genesis.analytics.metrics import (
     TICK_FIELDS,
     brain_fields,
     brain_rows,
+    diet_rows,
     mutation_rows,
     organism_rows,
     predator_brain_rows,
@@ -73,13 +82,16 @@ EVENTS_FILE = "events.csv"
 BEHAVIOUR_FILE, BRAINS_FILE = "behaviour.csv", "brains.csv"
 PREDATOR_TICKS_FILE, PREDATORS_FILE = "predator_ticks.csv", "predators.csv"
 PREDATOR_BRAINS_FILE, STRIKES_FILE = "predator_brains.csv", "strikes.csv"
+DIETS_FILE, DIET_TICKS_FILE = "diets.csv", "diet_ticks.csv"
 
 # Version of the run-folder format (docs/schema.md). 1: Milestone 1 (E001). 2: Milestone 2
 # (gene files, condition only in the folder name). 3: condition, config_hash, sampling
 # settings in run.json, and events.csv. 4: behaviour.csv and brains.csv (Milestone 4); every
 # earlier file unchanged. 5: predator worlds' four files and run.json predator counts
-# (Milestone 6, D-060); worlds without predators write exactly the version 4 files.
-SCHEMA_VERSION = 5
+# (Milestone 6, D-060); worlds without predators write exactly the version 4 files. 6:
+# two-food worlds' diets.csv and diet_ticks.csv (06B, D-064); other worlds write exactly what
+# version 5 wrote.
+SCHEMA_VERSION = 6
 
 # run.json fields that legitimately differ between two otherwise identical runs.
 VOLATILE_FIELDS = {"run_id", "started_at", "finished_at", "duration_seconds"}
@@ -183,6 +195,9 @@ def execute_run(
         write_csv(out_dir / PREDATORS_FILE, PREDATOR_FIELDS, predator_rows(sim))
         write_csv(out_dir / PREDATOR_BRAINS_FILE, PREDATOR_BRAIN_FIELDS, predator_brain_rows(sim))
         write_csv(out_dir / STRIKES_FILE, STRIKE_FIELDS, recorder.strikes)
+    if config.resources is not None:
+        write_csv(out_dir / DIETS_FILE, DIET_FIELDS, diet_rows(sim))
+        write_csv(out_dir / DIET_TICKS_FILE, DIET_TICK_FIELDS, recorder.diet_ticks)
 
     # Extinction: nobody left at all. Prey gone while predators lived on to max_ticks is a run
     # that reached max_ticks (without predators the two rules are the same).

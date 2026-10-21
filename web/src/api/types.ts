@@ -3,7 +3,7 @@
 // scripts/build_api_fixtures.py and checked by tests on both sides).
 
 export const API_VERSION = 1;
-export const SNAPSHOT_VERSION = 2; // 2 (6.5): fullness, predators, captures
+export const SNAPSHOT_VERSION = 3; // 2 (6.5): fullness, predators, captures; 3 (6.9): food kinds, diets
 
 export type RunState = "idle" | "running" | "paused" | "completed" | "failed";
 
@@ -23,6 +23,7 @@ export interface ConfigSummary {
   has_predators: boolean;
   predator_controller: string | null;
   initial_predators: number | null;
+  has_two_foods: boolean;
 }
 
 export interface RunCreate {
@@ -81,6 +82,10 @@ export interface OrganismDetail {
   food_eaten: number;
   /** Predators: prey caught. */
   prey_eaten: number;
+  /** Two foods: the diet gene, 0 (eats A) to 1 (eats B); null with one food. */
+  diet: number | null;
+  /** Two foods: meals of B (food_eaten counts both). */
+  meals_b: number;
   offspring_count: number;
   children: number[];
   genome: Record<string, number>;
@@ -120,6 +125,13 @@ export interface HistoryColumns {
   mean_energy: (number | null)[];
   /** Predators alive; null in a world without predators. */
   predators: (number | null)[];
+  /** Two foods: food of each kind on the plate, the diet's spread, and the shares of
+   *  organisms near each end (diet below 0.2, above 0.8); null with one food. */
+  food_a: (number | null)[];
+  food_b: (number | null)[];
+  diet_sd: (number | null)[];
+  diet_low: (number | null)[];
+  diet_high: (number | null)[];
   births: number[];
   deaths: number[];
   food_eaten: number[];
@@ -225,7 +237,10 @@ export interface Snapshot {
   error: string | null;
   population: number;
   last_tick: LastTick | null;
-  food: { x: number[]; y: number[] };
+  /** Food positions; ``kind`` (0 = A, 1 = B) per item with two foods, null with one. */
+  food: { x: number[]; y: number[]; kind: number[] | null };
+  /** Two foods: each organism's diet, in the organisms' order; null with one food. */
+  diets: number[] | null;
   /** The prey (every organism in a world without predators). */
   organisms: OrganismColumns;
   /** Null in a world without predators. */

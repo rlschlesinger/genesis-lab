@@ -542,6 +542,6 @@ Scope: [roadmap/06B](roadmap/06B_ONE_ADVANCED_EXTENSION.md), extension A (two re
 | # | Increment | Key test | Status |
 |---|---|---|---|
 | 6.8 | Mechanics: an optional `resources:` section; food kinds A and B (own stream); a heritable diet gene; meal energy from kind and diet, the rest through the ledger; the `diet_seeker` controller | Old configs byte-identical; energy as specified; diet inherits, mutates and reflects like genes; choice by energy per distance | done |
-| 6.9 | Recording (run-folder version 6: diets and meals per kind), lake tables, report section; the lab draws the two foods and shades organisms by diet | Schema compatibility; lake validation; contract fixtures | |
+| 6.9 | Recording (run-folder version 6: diets and meals per kind), lake tables, report section; the lab draws the two foods and shades organisms by diet | Schema compatibility; lake validation; contract fixtures | done |
 | 6.10 | Labelled pilots for `V`; E009 defined and committed before running | Spec and definition committed first | |
 | 6.11 | Run E009; effect sizes, alternatives; `docs/RESEARCH_ROADMAP.md`; release checklist; summary of all six milestones | Verdicts from the pre-registered analysis | |

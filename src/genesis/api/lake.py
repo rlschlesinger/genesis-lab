@@ -112,13 +112,19 @@ class LakeReader:
             """
             WITH t AS (SELECT * FROM ticks WHERE run_id = $r),
                  b AS (SELECT * FROM behaviour WHERE run_id = $r),
-                 p AS (SELECT * FROM predator_ticks WHERE run_id = $r)
+                 p AS (SELECT * FROM predator_ticks WHERE run_id = $r),
+                 d AS (SELECT * FROM diet_ticks WHERE run_id = $r)
             SELECT max(t.tick)                                   AS tick,
                    arg_max(t.population, t.tick)                 AS population,
                    arg_max(t.food_count, t.tick)                 AS food_count,
                    arg_max(t.lineages, t.tick)                   AS lineages,
                    arg_max(t.mean_energy, t.tick)                AS mean_energy,
                    arg_max(p.population, t.tick)                 AS predators,
+                   arg_max(d.food_a, t.tick)                     AS food_a,
+                   arg_max(d.food_b, t.tick)                     AS food_b,
+                   arg_max(d.diet_sd, t.tick)                    AS diet_sd,
+                   arg_max(d.diet_low, t.tick)                   AS diet_low,
+                   arg_max(d.diet_high, t.tick)                  AS diet_high,
                    sum(t.births)                                 AS births,
                    sum(t.deaths)                                 AS deaths,
                    sum(t.food_eaten)                             AS food_eaten,
@@ -128,14 +134,16 @@ class LakeReader:
                    avg(b.mean_turn)                              AS mean_turn,
                    avg(b.mean_throttle)                          AS mean_throttle
             FROM t LEFT JOIN b USING (run_id, tick) LEFT JOIN p USING (run_id, tick)
+                   LEFT JOIN d USING (run_id, tick)
             GROUP BY t.tick // $every
             ORDER BY tick
             """,
             {"r": run_id, "every": every},
         )
         names = ("tick", "population", "food_count", "lineages", "mean_energy", "predators",
-                 "births", "deaths", "food_eaten", "attempts", "captures", "toward_food",
-                 "mean_turn", "mean_throttle")  # fmt: skip
+                 "food_a", "food_b", "diet_sd", "diet_low", "diet_high", "births", "deaths",
+                 "food_eaten", "attempts", "captures", "toward_food", "mean_turn",
+                 "mean_throttle")  # fmt: skip
         columns = {name: [_clean(row[name]) for row in rows] for name in names}
         return every, columns
 

@@ -9,7 +9,7 @@ Views and macros (docs/schema.md):
 
     runs, ticks, gene_stats, genomes, organisms, mutations, events,
     behaviour, brains, predator_ticks, predators, predator_brains,
-    strikes                                                           one per lake table
+    strikes, diets, diet_ticks                                        one per lake table
     experiments          built from docs/experiments/*.md
     completed_runs       runs WHERE status = 'completed' (start analyses here)
     run_params           common config values as plain columns
@@ -63,7 +63,10 @@ SELECT
     (config ->> '$.brain.mutation_size')::DOUBLE                  AS brain_mutation_size,
     (config -> '$.predators') IS NOT NULL                         AS has_predators,
     (config ->> '$.predators.initial_count')::INTEGER             AS initial_predators,
-    config ->> '$.predators.controller'                           AS predator_controller
+    config ->> '$.predators.controller'                           AS predator_controller,
+    (config -> '$.resources') IS NOT NULL                         AS has_two_foods,
+    (config ->> '$.resources.exponent')::DOUBLE                   AS diet_exponent,
+    (config ->> '$.resources.diet.neutral')::BOOLEAN              AS diet_neutral
 FROM runs;
 
 CREATE OR REPLACE VIEW species_counts AS

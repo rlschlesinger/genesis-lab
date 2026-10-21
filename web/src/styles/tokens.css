@@ -16,7 +16,8 @@
   --violet: #56399a; /* crystal violet: organisms, primary actions */
   --violet-deep: #3f2878;
   --safranin: #be3768; /* counter-stain: the selected organism, deaths, errors */
-  --iodine: #a9741a; /* food */
+  --iodine: #a9741a; /* food (food A, with two foods) */
+  --malachite: #2e7d5b; /* food B (6.9): malachite green, the spore stain */
   --focus: #be3768;
 
   /* Two species (6.5), as in a Gram stain: one kind of cell keeps the crystal violet, the
@@ -25,6 +26,10 @@
   --prey: var(--violet);
   --predator: var(--safranin);
   --selected: var(--stain-ink);
+  /* Two foods (6.9): each kind its stain; an organism is tinted between them by its diet,
+     the colour of what it digests. */
+  --food-a: var(--iodine);
+  --food-b: var(--malachite);
 
   /* Type: one variable family. Sans for the interface; the same letters with the mono axis
      on for numbers that change (ticks, energies), so digits don't jitter. */

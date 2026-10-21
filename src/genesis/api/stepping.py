@@ -23,6 +23,7 @@ import asyncio
 import math
 import time
 
+from genesis.analytics.metrics import diet_tick_row
 from genesis.api.runs import LiveRun, RunConflict
 from genesis.api.schemas import RunState
 
@@ -44,7 +45,9 @@ def step_once(run: LiveRun) -> None:
         run.move_to(RunState.FAILED)
         return
     sim = run.sim
-    run.history.append(run.last_summary, sim.last_decision, sim.predator_summary)
+    # Two foods: the same numbers diet_ticks.csv records for this tick.
+    diet = diet_tick_row(sim, run.last_summary) if sim.config.resources is not None else None
+    run.history.append(run.last_summary, sim.last_decision, sim.predator_summary, diet)
     # Where this tick's captures happened (the predator's position as it ate), for the plate.
     tick = run.last_summary.tick
     for event in sim.predator_events_this_tick:

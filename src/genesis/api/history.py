@@ -26,7 +26,10 @@ from genesis.core.simulation import Decision, PredatorSummary, TickSummary
 
 # predators: predators alive (NaN, so null, in a world without them); attempts and captures:
 # their strikes, summed like the other flows (6.5).
-STOCKS = ("population", "food_count", "lineages", "mean_energy", "predators")
+# Two foods (6.9): food of each kind on the plate, and the diet's spread and the shares of
+# organisms near each end (null with one food).
+DIET_COLUMNS = ("food_a", "food_b", "diet_sd", "diet_low", "diet_high")
+STOCKS = ("population", "food_count", "lineages", "mean_energy", "predators", *DIET_COLUMNS)
 FLOWS = ("births", "deaths", "food_eaten", "attempts", "captures")
 SHARES = ("toward_food", "mean_turn", "mean_throttle")
 COLUMNS = ("tick", *STOCKS, *FLOWS, *SHARES)
@@ -34,12 +37,11 @@ PREDATOR_COLUMNS = ("predators", "attempts", "captures")
 
 
 class RunHistory:
-    def __init__(self, predators: bool = False) -> None:
-        # Predator columns are stored only in a world with predators; elsewhere they would
-        # always be null or 0, so they're answered without being kept (8 bytes a tick each).
-        self._kept = (
-            COLUMNS if predators else tuple(c for c in COLUMNS if c not in PREDATOR_COLUMNS)
-        )
+    def __init__(self, predators: bool = False, two_foods: bool = False) -> None:
+        # Predator and diet columns are stored only in worlds that have them; elsewhere they
+        # would always be null or 0, so they're answered without being kept (8 bytes a tick).
+        absent = (() if predators else PREDATOR_COLUMNS) + (() if two_foods else DIET_COLUMNS)
+        self._kept = tuple(c for c in COLUMNS if c not in absent)
         self._data = {name: array("d") for name in self._kept}
 
     def __len__(self) -> int:
@@ -50,6 +52,7 @@ class RunHistory:
         summary: TickSummary,
         decision: Decision | None,
         predators: PredatorSummary | None = None,
+        diet: dict | None = None,
     ) -> None:
         measures = decision_measures(decision)
         row = {
@@ -64,6 +67,7 @@ class RunHistory:
             "predators": math.nan if predators is None else predators.population,
             "attempts": 0 if predators is None else predators.attempts,
             "captures": 0 if predators is None else predators.captures,
+            **{name: math.nan if diet is None else diet[name] for name in DIET_COLUMNS},
             **{name: measures[name] for name in SHARES},
         }
         for name in self._kept:
@@ -85,7 +89,8 @@ class RunHistory:
         if rows == 0:
             return {name: [] for name in COLUMNS}
         start, stop = first * every, complete * every
-        absent = {"predators": math.nan, "attempts": 0.0, "captures": 0.0}
+        absent = {"predators": math.nan, "attempts": 0.0, "captures": 0.0,
+                  **dict.fromkeys(DIET_COLUMNS, math.nan)}  # fmt: skip
         cols = {
             name: np.frombuffer(self._data[name], dtype=np.float64)[start:stop]
             if name in self._data

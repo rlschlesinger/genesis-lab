@@ -46,6 +46,32 @@ export const PREDATOR_CHARTS: ChartSpec[] = [
   },
 ];
 
+/** Charts only a two-food world has (6.9), shown after the population chart. */
+export const DIET_CHARTS: ChartSpec[] = [
+  {
+    id: "specialists",
+    title: "Specialists",
+    describe: () =>
+      "Shares from 0 to 1 of the organisms alive: diet below 0.2 eats mostly A, above 0.8 mostly B. Both rising together would be the population splitting; one alone, one kind taking over.",
+    series: [
+      { column: "diet_low", label: "eats A", colour: "--food-a" },
+      { column: "diet_high", label: "eats B", colour: "--food-b" },
+      { column: "diet_sd", label: "diet spread (sd)", colour: "--stain-ink-soft", dashed: true },
+    ],
+    range: [0, 1],
+  },
+  {
+    id: "foods",
+    title: "Food by kind",
+    describe: (every) =>
+      `Food items of each kind on the plate, at the end of each ${every === 1 ? "tick" : `${every.toLocaleString("en")}-tick interval`}. The kind organisms eat less of piles up.`,
+    series: [
+      { column: "food_a", label: "A", colour: "--food-a" },
+      { column: "food_b", label: "B", colour: "--food-b" },
+    ],
+  },
+];
+
 export const CHARTS: ChartSpec[] = [
   {
     id: "population",

@@ -513,5 +513,10 @@ What has been covered, where it appears in the code, and what comes next.
 - **Adding to a model without changing it:** a new random stream and an optional value keep every older world byte-identical (checked again).
 - **A control that starts identical:** the neutral diet gives everyone the founders' gains, so `tradeoff` and `neutral` differ only in whether diet matters.
 
+### 6.9 · Seeing a distribution change
+- **Histograms over time:** ten counts per row are enough to watch a distribution move or split, far smaller than a row per organism.
+- **Colour that carries the question:** organisms tinted by the food they digest, so a split would show as two colours.
+- **One run is a story, not a result:** the first full run drifted all the way to A-specialists; whether that is typical, or whether populations ever split, is E009's job.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.

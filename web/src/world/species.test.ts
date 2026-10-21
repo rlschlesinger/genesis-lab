@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BODIES, MARK_MS, interiorAlpha, markLook, newCaptures } from "./species";
+import { BODIES, MARK_MS, interiorAlpha, markLook, mixColour, newCaptures } from "./species";
 
 describe("drawing rules for two species", () => {
   it("draws predators larger than prey, and both smaller than their reach", () => {
@@ -40,5 +40,16 @@ describe("drawing rules for two species", () => {
     expect(newCaptures(captures, 0)).toHaveLength(3);
     expect(newCaptures(captures, 10)).toEqual(captures.slice(1));
     expect(newCaptures(captures, 12)).toEqual([]);
+  });
+});
+
+describe("tinting by diet", () => {
+  it("runs from one food's stain to the other's", () => {
+    const iodine = 0xa9741a;
+    const malachite = 0x2e7d5b;
+    expect(mixColour(iodine, malachite, 0)).toBe(iodine);
+    expect(mixColour(iodine, malachite, 1)).toBe(malachite);
+    expect(mixColour(0x000000, 0xffffff, 0.5)).toBe(0x808080);
+    expect(mixColour(iodine, malachite, -1)).toBe(iodine);
   });
 });

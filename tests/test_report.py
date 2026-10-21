@@ -153,3 +153,13 @@ def test_predator_worlds_get_their_own_section_and_others_do_not(run_dir, tmp_pa
     assert first == page  # still deterministic
     plain = write_report(run_dir).read_text()
     assert "Predators and prey" not in plain and 'id="phase"' not in plain
+
+
+def test_two_food_worlds_get_their_own_section_and_others_do_not(run_dir, tmp_path):
+    # 6.9 (D-064): section 07 and the diet heatmap only where two foods were recorded.
+    fed = tmp_path / "fed"
+    execute_run(config("diets.yaml", **{"run.seed": 1}), fed)
+    page = write_report(fed).read_text()
+    assert "Two foods" in page and 'id="diets"' in page and "<code>diet_ticks.csv</code>" in page
+    plain = write_report(run_dir).read_text()
+    assert "Two foods" not in plain and 'id="diets"' not in plain

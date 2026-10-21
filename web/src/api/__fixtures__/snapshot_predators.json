@@ -156,8 +156,10 @@
       "y": 54.09
     }
   ],
+  "diets": null,
   "error": null,
   "food": {
+    "kind": null,
     "x": [
       20.07,
       157.62,
@@ -1438,5 +1440,5 @@
   "state": "paused",
   "tick": 120,
   "type": "snapshot",
-  "version": 2
+  "version": 3
 }

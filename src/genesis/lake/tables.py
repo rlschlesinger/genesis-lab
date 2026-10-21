@@ -44,6 +44,7 @@ class Table:
     since_version: int  # first run-folder schema version that has this table
     renames: tuple[tuple[str, str], ...] = ()  # CSV column -> table column
     predators_only: bool = False  # written only by worlds with predators (D-060)
+    resources_only: bool = False  # written only by worlds with two foods (D-064)
 
 
 def _schema(*columns: tuple[str, pa.DataType]) -> pa.Schema:
@@ -292,6 +293,34 @@ STRIKES = Table(
     predators_only=True,
 )
 
+# --- Two-food worlds (6.9, D-064) -----------------------------------------------------------
+
+DIETS = Table(
+    "diets",
+    _schema(
+        ("run_id", TEXT), ("organism_id", INT), ("diet", FLOAT), ("meals_a", INT),
+        ("meals_b", INT),
+    ),
+    ("run_id", "organism_id"),
+    "diets.csv",
+    6,
+    renames=(("id", "organism_id"),),
+    resources_only=True,
+)  # fmt: skip
+
+DIET_TICKS = Table(
+    "diet_ticks",
+    _schema(
+        ("run_id", TEXT), ("tick", INT), ("food_a", INT), ("food_b", INT), ("meals_a", INT),
+        ("meals_b", INT), ("n", INT), ("diet_mean", FLOAT), ("diet_sd", FLOAT),
+        ("diet_low", FLOAT), ("diet_high", FLOAT), *[(f"bin_{k}", INT) for k in range(10)],
+    ),
+    ("run_id", "tick"),
+    "diet_ticks.csv",
+    6,
+    resources_only=True,
+)  # fmt: skip
+
 DATA_TABLES = [TICKS, GENE_STATS, GENOMES, ORGANISMS, MUTATIONS, EVENTS, BEHAVIOUR, BRAINS,
-               PREDATOR_TICKS, PREDATORS, PREDATOR_BRAINS, STRIKES]  # fmt: skip
+               PREDATOR_TICKS, PREDATORS, PREDATOR_BRAINS, STRIKES, DIETS, DIET_TICKS]  # fmt: skip
 ALL_TABLES = [RUNS, *DATA_TABLES]

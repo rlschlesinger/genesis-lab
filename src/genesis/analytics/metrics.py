@@ -7,7 +7,10 @@ into Parquet / pandas in Milestone 3.
 
 from __future__ import annotations
 
+import math
 from dataclasses import asdict, fields
+
+import numpy as np
 
 from genesis.core.organism import Organism, Traits
 from genesis.core.simulation import (
@@ -99,6 +102,51 @@ def predator_brain_rows(sim: Simulation) -> list[dict]:
         for o in everyone
         if o.brain is not None
     ]
+
+
+# --- Two-food worlds (6.9, D-064): written only when the config has a resources section ------
+
+DIET_FIELDS: list[str] = ["id", "diet", "meals_a", "meals_b"]
+DIET_BINS = 10  # histogram bins of the diet, 0.1 wide
+# diet_ticks.csv: food on the plate by kind, meals by kind (flows), and the living
+# population's diet: mean, spread, the share near each end, and a 10-bin histogram.
+DIET_TICK_FIELDS: list[str] = [
+    "tick", "food_a", "food_b", "meals_a", "meals_b", "n", "diet_mean", "diet_sd",
+    "diet_low", "diet_high", *[f"bin_{k}" for k in range(DIET_BINS)],
+]  # fmt: skip
+SPECIALIST = 0.2  # diet below 0.2 counts as an A-specialist, above 0.8 as a B-specialist
+
+
+def diet_rows(sim: Simulation) -> list[dict]:
+    """One row per organism that ever lived, in ascending ID order."""
+    everyone = sorted([*sim.organisms, *sim.dead], key=lambda o: o.id)
+    return [
+        {"id": o.id, "diet": o.diet, "meals_a": o.food_eaten - o.meals_b, "meals_b": o.meals_b}
+        for o in everyone
+    ]
+
+
+def diet_tick_row(sim: Simulation, summary: TickSummary) -> dict:
+    """This tick's two-food stocks (the recorder adds meals by kind, summed since the last
+    row). Spread is the population standard deviation (ddof 0),
+    as gene_stats; an empty population gets n = 0 and empty statistics."""
+    kinds = sim.world.food.kinds
+    diets = np.array([o.diet for o in sim.organisms], dtype=np.float64)
+    n = len(diets)
+    bins = (
+        np.histogram(diets, bins=DIET_BINS, range=(0.0, 1.0))[0].tolist() if n else [0] * DIET_BINS
+    )
+    return {
+        "tick": summary.tick,
+        "food_a": int((kinds == 0).sum()),
+        "food_b": int((kinds == 1).sum()),
+        "n": n,
+        "diet_mean": float(diets.mean()) if n else math.nan,
+        "diet_sd": float(diets.std()) if n else math.nan,
+        "diet_low": float((diets < SPECIALIST).mean()) if n else math.nan,
+        "diet_high": float((diets > 1 - SPECIALIST).mean()) if n else math.nan,
+        **{f"bin_{k}": v for k, v in enumerate(bins)},
+    }
 
 
 def brain_fields(sim: Simulation) -> list[str]:

@@ -1,7 +1,9 @@
 {
   "captures": [],
+  "diets": null,
   "error": null,
   "food": {
+    "kind": null,
     "x": [
       95.15,
       49.02,
@@ -783,5 +785,5 @@
   "state": "paused",
   "tick": 50,
   "type": "snapshot",
-  "version": 2
+  "version": 3
 }

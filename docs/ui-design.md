@@ -79,6 +79,13 @@ Tick 1,501 of 100,000   106 alive                       running
 - **Counts under the plate** in one item ("4 prey, 18 predators"), the predator count in its stain, so the line never wraps.
 - **Analytics:** "Prey and predators" and "Strikes and captures" after the population chart (strikes dashed), and the phase plot last: prey across, predators up, joined in time order, an open circle at the start and a filled one now, drawn in SVG in the time charts' manner.
 
+## Two foods (6.9)
+
+- **Food A in iodine, food B in malachite green** (`--food-a`, `--food-b`): malachite is the spore stain, another stain from the same bench.
+- **Organisms the colour of what they digest:** each is tinted along the line from iodine to malachite by its diet, so a population splitting into specialists would show as two colours on the plate. (Prey in predator worlds keep their violet: the two worlds are separate.)
+- **Specimen panel:** "Diet 0.12 (eats A)" and meals of each kind.
+- **Analytics:** "Specialists" (shares below 0.2 and above 0.8, the spread dashed) and "Food by kind", after the population chart.
+
 ## Analytics (5.8)
 
 - **A column of small multiples** sharing one tick axis: captions on the left (title, unit, what a point covers), charts on the right; only the bottom chart numbers the axis.

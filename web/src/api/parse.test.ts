@@ -11,7 +11,7 @@ describe("parseServerMessage refuses what the lab can't trust", () => {
     ["not JSON", "{oops", "isn't JSON"],
     ["no type", text({ version: 1 }), "has no type"],
     ["an unknown type", text({ type: "surprise" }), 'unknown message type "surprise"'],
-    ["another protocol version", text({ ...snapshot, version: 1 }), "snapshot version 1"],
+    ["another protocol version", text({ ...snapshot, version: 2 }), "snapshot version 2"],
     [
       "a column with the wrong length",
       text({ ...snapshot, organisms: { ...snapshot.organisms, x: [1] } }),
@@ -24,6 +24,12 @@ describe("parseServerMessage refuses what the lab can't trust", () => {
       'predator column "fullness"',
     ],
     ["no captures list", text({ ...snapshot, captures: undefined }), "captures"],
+    [
+      "food kinds that don't pair with positions",
+      text({ ...snapshot, food: { ...snapshot.food, kind: [0] } }),
+      "food kinds",
+    ],
+    ["diets that don't match the organisms", text({ ...snapshot, diets: [0.5] }), "diets"],
   ])("%s", (_case, message, reason) => {
     expect(() => parseServerMessage(message)).toThrow(ProtocolError);
     expect(() => parseServerMessage(message)).toThrow(reason);

@@ -18,6 +18,10 @@ ACCENT = "#d9a441"  # amber: highlights, the population line
 # already means "cost" and "warning" here.
 PREY = ACCENT
 PREDATOR = "#e07a5f"
+# Two foods (6.9): A in the lichen green, B in heather, so a diet heatmap reads from one to
+# the other.
+FOOD_A = "#a9b665"
+FOOD_B = "#9c8fd0"
 
 SERIF = '"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif'
 MONO = 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace'

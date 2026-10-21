@@ -53,6 +53,7 @@ class ConfigSummary(BaseModel):
     has_predators: bool = False  # a predators: section (6.5)
     predator_controller: str | None = None
     initial_predators: int | None = None
+    has_two_foods: bool = False  # a resources: section (6.9)
 
 
 class RunCreate(_Strict):
@@ -139,6 +140,8 @@ class OrganismDetail(BaseModel):
     heading: float
     food_eaten: int
     prey_eaten: int = 0  # predators: prey caught
+    diet: float | None = None  # two foods: the diet gene (0 = eats A, 1 = eats B)
+    meals_b: int = 0  # two foods: meals of B (food_eaten counts both)
     offspring_count: int
     children: list[int]  # IDs of its offspring, in birth order
     genome: dict[str, float]

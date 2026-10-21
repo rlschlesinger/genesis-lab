@@ -58,6 +58,8 @@ def validate_run(meta: dict, tables: dict[str, pa.Table]) -> None:
     check_ranges(meta, tables)
     if "predators" in tables:
         check_predators(run, meta, tables)
+    if "diets" in tables:
+        check_diets(run, meta, tables)
 
 
 def check_primary_keys(tables: dict[str, pa.Table]) -> None:
@@ -229,6 +231,39 @@ def check_predators(run: dict, meta: dict, tables: dict[str, pa.Table]) -> None:
     if brain:
         _check_weights(tables["predator_brains"], BASE_BRAIN_COLUMNS, brain["weight_limit"],
                        "predator_brains")  # fmt: skip
+
+
+def check_diets(run: dict, meta: dict, tables: dict[str, pa.Table]) -> None:
+    """Two-food worlds (D-064): one diet per organism, within the gene's bounds, whose meals of
+    each kind add up to its food_eaten; one diet_ticks row per ticks row, whose meals by kind
+    add up to ticks.food_eaten and whose histogram counts every living organism."""
+    diets, organisms = tables["diets"], tables["organisms"]
+    _expect_rows(diets, run["organisms_ever"], "diets", "organisms_ever")
+    if diets["organism_id"].to_pylist() != organisms["organism_id"].to_pylist():
+        raise ValidationError(
+            "foreign key", "diets must list exactly the run's organisms, in order"
+        )
+    gene = meta["config"]["resources"]["diet"]
+    if diets.num_rows:
+        low, high = pc.min(diets["diet"]).as_py(), pc.max(diets["diet"]).as_py()
+        if low < gene["min"] or high > gene["max"]:
+            raise ValidationError("ranges", f"diets.diet leaves [{gene['min']}, {gene['max']}]")
+    meals = pc.add(diets["meals_a"], diets["meals_b"])
+    if not pc.all(pc.equal(meals, organisms["food_eaten"])).as_py() and diets.num_rows:
+        raise ValidationError("row counts", "diets: meals of A and B don't add up to food_eaten")
+    ticks, diet_ticks = tables["ticks"], tables["diet_ticks"]
+    if diet_ticks["tick"].to_pylist() != ticks["tick"].to_pylist():
+        raise ValidationError("row counts", "diet_ticks needs one row per ticks row")
+    by_kind = pc.add(diet_ticks["meals_a"], diet_ticks["meals_b"])
+    if not pc.all(pc.equal(by_kind, ticks["food_eaten"])).as_py():
+        raise ValidationError("row counts", "diet_ticks: meals by kind don't add up to food_eaten")
+    binned = pc.add(diet_ticks["bin_0"], diet_ticks["bin_1"])
+    for k in range(2, 10):
+        binned = pc.add(binned, diet_ticks[f"bin_{k}"])
+    if not pc.all(pc.equal(binned, diet_ticks["n"])).as_py():
+        raise ValidationError("row counts", "diet_ticks: the histogram doesn't count everyone")
+    if not pc.all(pc.equal(diet_ticks["n"], ticks["population"])).as_py():
+        raise ValidationError("row counts", "diet_ticks.n disagrees with ticks.population")
 
 
 def _check_weights(table: pa.Table, columns: list[str], limit: float, name: str) -> None:

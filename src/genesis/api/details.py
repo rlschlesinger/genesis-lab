@@ -106,6 +106,8 @@ def organism_detail(run: LiveRun, organism_id: int) -> OrganismDetail:
         heading=org.heading,
         food_eaten=org.food_eaten,
         prey_eaten=org.prey_eaten,
+        diet=org.diet,
+        meals_b=org.meals_b,
         offspring_count=org.offspring_count,
         children=children,
         genome=org.genome.as_dict(),

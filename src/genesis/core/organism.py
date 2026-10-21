@@ -88,6 +88,7 @@ class Organism:
     energy_invested: float = 0.0  # given to offspring plus reproduction overhead
     food_eaten: int = 0
     prey_eaten: int = 0  # predators only: prey caught (not a column of organisms.csv)
+    meals_b: int = 0  # two foods only: meals of kind B (food_eaten counts both; diets.csv)
     offspring_count: int = 0
 
     def spend(self, amount: float) -> float:

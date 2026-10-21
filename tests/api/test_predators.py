@@ -35,7 +35,7 @@ def test_the_snapshot_carries_both_species_and_where_captures_happened(client):
     rid = stepped(client)
     run = client.app.state.manager.get(rid)
     snap = stream.build_snapshot(run)
-    assert snap["version"] == stream.SNAPSHOT_VERSION == 2
+    assert snap["version"] == stream.SNAPSHOT_VERSION >= 2  # predators arrived in version 2
     sim = run.sim
     hunters = snap["predators"]
     assert hunters["id"] == [o.id for o in sim.predators]

@@ -313,6 +313,55 @@ def phase_figure(run: RunData) -> go.Figure | None:
     return fig
 
 
+def diet_figure(run: RunData) -> go.Figure | None:
+    """Two foods (6.9): the diet's distribution over time as a heatmap (share of organisms in
+    each 0.1-wide band of the diet), and below it the shares near each end and food on the
+    plate by kind. One band splitting into two is specialists emerging."""
+    if not run.has_two_foods:
+        return None
+    rows = downsample(run.diet_ticks)
+    ticks = [r["tick"] for r in rows]
+    shares = [[r[f"bin_{k}"] / r["n"] if r["n"] else None for r in rows] for k in range(10)]
+    fig = make_subplots(
+        rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.08, row_heights=[0.5, 0.25, 0.25],
+        subplot_titles=["diet of the organisms alive (share in each band)",
+                        "specialists: diet below 0.2 (eats A) and above 0.8 (eats B)",
+                        "food on the plate, by kind"],
+    )  # fmt: skip
+    fig.add_trace(
+        go.Heatmap(
+            x=ticks, y=[k / 10 + 0.05 for k in range(10)], z=shares, zmin=0, zmax=1,
+            colorscale=[[0, theme.PANEL], [1, theme.BONE]], showscale=False,
+            hovertemplate="tick %{x}<br>diet %{y:.2f}<br>share %{z:.2f}<extra></extra>",
+        ),
+        row=1, col=1,
+    )  # fmt: skip
+    lines = [
+        (2, "eats A", [r["diet_low"] for r in rows], theme.FOOD_A),
+        (2, "eats B", [r["diet_high"] for r in rows], theme.FOOD_B),
+        (3, "A", [r["food_a"] for r in rows], theme.FOOD_A),
+        (3, "B", [r["food_b"] for r in rows], theme.FOOD_B),
+    ]
+    for row, label, values, color in lines:
+        fig.add_trace(
+            go.Scatter(x=ticks, y=values, name=label, line=dict(color=color, width=1.4)),
+            row=row, col=1,
+        )  # fmt: skip
+    fig.update_layout(**theme.base_layout(height=560))
+    fig.update_yaxes(range=[0, 1], row=1, col=1, title_text="diet")
+    fig.update_yaxes(range=[0, 1.05], row=2, col=1)
+    fig.update_xaxes(title_text="tick", row=3, col=1)
+    theme.style_axes(fig)  # before the labels: it treats annotations as subplot titles
+    for row, label, values, color in lines:
+        last = next((v for v in reversed(values) if v is not None), None)
+        if last is not None:
+            fig.add_annotation(
+                x=ticks[-1], y=last, text=label, showarrow=False, xanchor="right",
+                yanchor="bottom", font=dict(color=color, size=11), row=row, col=1,
+            )  # fmt: skip
+    return fig
+
+
 def mutation_summary(run: RunData) -> list[dict]:
     """Per gene: number of mutations, and mean absolute step as a fraction of the gene's range."""
     summary = []

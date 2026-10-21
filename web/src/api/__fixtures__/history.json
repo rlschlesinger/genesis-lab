@@ -28,6 +28,41 @@
       0,
       0
     ],
+    "diet_high": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "diet_low": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "diet_sd": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "food_a": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "food_b": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
     "food_count": [
       163,
       185,

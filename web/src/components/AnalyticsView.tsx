@@ -1,4 +1,4 @@
-import { CHARTS, type ChartSpec, PREDATOR_CHARTS } from "../data/charts";
+import { CHARTS, type ChartSpec, DIET_CHARTS, PREDATOR_CHARTS } from "../data/charts";
 import { useRunHistory } from "../hooks/useRunHistory";
 import { useLabStore } from "../store/labStore";
 import styles from "./AnalyticsView.module.css";
@@ -18,7 +18,10 @@ export function AnalyticsView() {
   const points = series?.columns.tick.length ?? 0;
   // A world with predators gets their charts after the population chart, and the phase plot.
   const hunted = series?.columns.predators.some((v) => v !== null) ?? false;
-  const charts: ChartSpec[] = hunted ? [CHARTS[0]!, ...PREDATOR_CHARTS, ...CHARTS.slice(1)] : CHARTS;
+  // A world with two foods gets the diet charts there too (6.9).
+  const twoFoods = series?.columns.diet_sd.some((v) => v !== null) ?? false;
+  const extra = [...(hunted ? PREDATOR_CHARTS : []), ...(twoFoods ? DIET_CHARTS : [])];
+  const charts: ChartSpec[] = [CHARTS[0]!, ...extra, ...CHARTS.slice(1)];
   return (
     <div className={styles.analytics}>
       <header className={styles.header}>

@@ -28,6 +28,11 @@ Automated tests cover the API (Python, including a real-server WebSocket test), 
 - [ ] Select a predator: the panel says "Predator N" and "Prey caught"; a prey in the same world says "Prey N". A neural world without predators still says "Organism N".
 - [ ] Analytics: "Prey and predators", "Strikes and captures" (strikes dashed), and the phase plot from the open circle (start) to the filled one (now).
 
+## Two foods (6.9)
+
+- [ ] Start `diets`, seed 1: brown (A) and green (B) food; organisms olive (a 50:50 diet). After a few thousand ticks at speed, select one: "Diet 0.xx", "Meals A, B".
+- [ ] Analytics: "Specialists" and "Food by kind" after the population chart.
+
 ## The specimen panel
 
 - [ ] Status, energy, meals, generation, founder; a parent or child number selects that organism.

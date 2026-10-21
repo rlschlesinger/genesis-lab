@@ -292,6 +292,7 @@ class Simulation:
         self.predator_events_this_tick: list[Event] = []
         self.predator_mutation_log: list[MutationEvent] = []
         self.strikes_this_tick: list[Strike] = []  # every strike, in predator order
+        self.meals_b_this_tick = 0  # two foods: meals of kind B this tick (A = food_eaten - B)
         # The predators' latest decision, as last_decision is the prey's (None until tick 0).
         self.last_predator_decision: Decision | None = None
         if hunters is not None:
@@ -548,11 +549,13 @@ class Simulation:
             kinds = self.world.food.kinds[meals.foods].tolist()
             gains, undigested = [], []
             for i, kind in zip(meals.eaters.tolist(), kinds, strict=True):
+                living[i].meals_b += kind  # kind is 0 (A) or 1 (B)
                 worth = self._digests(living[i])[kind]
                 gain = food_value * worth
                 gains.append(gain)
                 undigested.append(food_value - gain)
             self.ledger.undigested += math.fsum(undigested)
+            self.meals_b_this_tick = sum(kinds)
         else:
             gains = [food_value] * len(meals)
         for i, gain in zip(meals.eaters.tolist(), gains, strict=True):

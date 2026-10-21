@@ -90,7 +90,10 @@ class LiveRun:
     )
 
     def __post_init__(self) -> None:
-        self.history = RunHistory(predators=self.config.predators is not None)
+        self.history = RunHistory(
+            predators=self.config.predators is not None,
+            two_foods=self.config.resources is not None,
+        )
 
     def info(self) -> RunInfo:
         return RunInfo(
@@ -151,6 +154,7 @@ class RunManager:
                     has_predators=c.predators is not None,
                     predator_controller=None if c.predators is None else c.predators.controller,
                     initial_predators=None if c.predators is None else c.predators.initial_count,
+                    has_two_foods=c.resources is not None,
                 )
             )
         return summaries

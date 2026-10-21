@@ -35,10 +35,15 @@ class RunData:
     bounds: dict[str, GeneBounds]  # gene -> limits, from the run's own recorded config
     behaviour: list[dict] | None = None  # behaviour.csv; None for runs recorded before v4
     predator_ticks: list[dict] | None = None  # predator_ticks.csv; None without predators
+    diet_ticks: list[dict] | None = None  # diet_ticks.csv; None with one food
 
     @property
     def has_brains(self) -> bool:
         return self.meta["config"].get("brain") is not None
+
+    @property
+    def has_two_foods(self) -> bool:
+        return self.diet_ticks is not None
 
     @property
     def has_predators(self) -> bool:
@@ -81,6 +86,9 @@ def load_run(run_dir: str | Path) -> RunData:
         else None,
         predator_ticks=_read(run_dir / "predator_ticks.csv")
         if (run_dir / "predator_ticks.csv").exists()
+        else None,
+        diet_ticks=_read(run_dir / "diet_ticks.csv")
+        if (run_dir / "diet_ticks.csv").exists()
         else None,
     )
 

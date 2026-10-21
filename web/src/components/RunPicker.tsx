@@ -13,7 +13,8 @@ function describe(c: ConfigSummary): string {
   const hunters = c.has_predators
     ? `, with ${c.initial_predators ?? 0} ${PREDATOR_KINDS[c.predator_controller ?? ""] ?? "predators"}`
     : "";
-  return `${c.initial_count} founders, ${brains}, ${evolving}${hunters}, ${c.max_ticks.toLocaleString("en")} ticks`;
+  const foods = c.has_two_foods ? ", two foods and a diet gene" : "";
+  return `${c.initial_count} founders, ${brains}, ${evolving}${hunters}${foods}, ${c.max_ticks.toLocaleString("en")} ticks`;
 }
 
 /** Start a run, or watch one the server already holds. Shown in place of the plate. */

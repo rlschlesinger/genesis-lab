@@ -69,6 +69,24 @@ def capture() -> dict[str, object]:
             fixtures["snapshot_predators"] = ws.receive_json()
         client.delete(f"/api/runs/{hunted}")
 
+        # A world with two foods (6.9): diets have spread a little by tick 300.
+        fed = client.post(
+            "/api/runs", json={"config": "diets", "seed": 1, "max_ticks": 1000}
+        ).json()["run_id"]
+        client.post(f"/api/runs/{fed}/step", json={"ticks": 300})
+        fsim = client.app.state.manager.get(fed).sim
+        eater = max(fsim.organisms, key=lambda o: (abs(o.diet - 0.5), -o.id))
+        fixtures["organism_detail_diet"] = client.get(
+            f"/api/runs/{fed}/organisms/{eater.id}"
+        ).json()
+        fixtures["history_diets"] = client.get(
+            f"/api/runs/{fed}/history", params={"every": 50}
+        ).json()
+        with client.websocket_connect(f"/api/runs/{fed}/stream?fps=30") as ws:
+            ws.receive_json()  # hello
+            fixtures["snapshot_diets"] = ws.receive_json()
+        client.delete(f"/api/runs/{fed}")
+
         # Lineage: a run old enough to have grandchildren; the deepest organism, lowest ID.
         grown = client.post("/api/runs", json={"config": "neural", "seed": 1, "max_ticks": 2000})
         gid = grown.json()["run_id"]
@@ -103,7 +121,7 @@ def capture() -> dict[str, object]:
 
     text = json.dumps(fixtures)
     text = text.replace(rid, "fixture-run").replace(new_id, "fixture-run-reset")
-    text = text.replace(hunted, "fixture-run-predators")
+    text = text.replace(hunted, "fixture-run-predators").replace(fed, "fixture-run-diets")
     return json.loads(text)
 
 

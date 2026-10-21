@@ -16,6 +16,8 @@ Collected per run:
     predator_ticks  worlds with predators only (D-060): one PredatorSummary row per
                  recorded tick, sampled like ticks
     strikes      worlds with predators only: every strike, caught or not
+    diet_ticks   two-food worlds only (D-064): food and meals by kind, and the diet's
+                 distribution, one row per recorded tick, sampled like ticks
 
 With ``ticks_every`` > 1, ticks, gene_stats and behaviour keep every n-th tick (plus the final
 one).
@@ -38,6 +40,7 @@ from genesis.analytics.metrics import (
     GENE_FIELDS,
     PREDATOR_FLOW_FIELDS,
     STRIKE_FIELDS,
+    diet_tick_row,
     predator_tick_row,
     tick_row,
 )
@@ -127,6 +130,8 @@ class RunRecorder:
         self.predator_ticks: list[dict] = []
         self.strikes: list[dict] = []
         self._predator_pending = dict.fromkeys(PREDATOR_FLOW_FIELDS, 0)
+        self.diet_ticks: list[dict] = []
+        self._diet_pending = {"meals_a": 0, "meals_b": 0}
 
     def observe(self, sim: Simulation, summary: TickSummary) -> None:
         """Call once after every ``sim.step()``. Reads the simulation; never changes it."""
@@ -135,6 +140,10 @@ class RunRecorder:
         hunted = sim.predator_summary is not None
         if hunted:
             self._record_predators(sim)
+        two_foods = sim.config.resources is not None
+        if two_foods:  # meals by kind are flows: summed every tick, recorded with the row
+            self._diet_pending["meals_b"] += sim.meals_b_this_tick
+            self._diet_pending["meals_a"] += summary.food_eaten - sim.meals_b_this_tick
 
         # Flows (things that happened during a tick) are summed between recorded rows, so a
         # sampled ticks.csv still gives true totals. Stocks (population, food count, mean
@@ -152,6 +161,9 @@ class RunRecorder:
                 predator_tick_row(sim.predator_summary) | self._predator_pending
             )
             self._predator_pending = dict.fromkeys(PREDATOR_FLOW_FIELDS, 0)
+        if two_foods:
+            self.diet_ticks.append(diet_tick_row(sim, summary) | self._diet_pending)
+            self._diet_pending = {"meals_a": 0, "meals_b": 0}
 
         living = sim.organisms
         if self._founder_brains is None:

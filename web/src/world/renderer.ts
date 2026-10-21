@@ -30,7 +30,7 @@ import {
 } from "./camera";
 import { nearestOrganism } from "./hitTest";
 import { SNAP_DISTANCE, blend, progress, type Pose } from "./interpolate";
-import { BODIES, type SpeciesName, interiorAlpha, markLook, newCaptures } from "./species";
+import { BODIES, type SpeciesName, interiorAlpha, markLook, mixColour, newCaptures } from "./species";
 import { TrailBook } from "./trails";
 
 /** The grid's spacing in world units: a founder's sight range (see Plate.tsx). */
@@ -38,11 +38,13 @@ const GRATICULE_UNITS = 20;
 const TEXTURE_RADIUS = 32; // pixels of a body's radius in the generated textures
 const FOOD_UNITS = 0.8;
 const PICK_PX = 10; // a click this close (screen pixels) to an organism selects it
+const WHITE = 0xffffff; // textures are white; sprites are tinted (tint x white = the tint)
 
 export interface Palette {
   prey: number;
   predator: number;
   food: number;
+  foodB: number;
   selected: number;
   graticule: number;
 }
@@ -61,7 +63,8 @@ export function paletteFromCss(element: Element = document.documentElement): Pal
   return {
     prey: colour("--prey"),
     predator: colour("--predator"),
-    food: colour("--iodine"),
+    food: colour("--food-a"),
+    foodB: colour("--food-b"),
     selected: colour("--selected"),
     graticule: colour("--graticule"),
   };
@@ -79,6 +82,8 @@ interface Group {
   from: Map<number, Pose>;
   shown: Map<number, Pose>;
   fullness: Map<number, number>;
+  /** Two foods: each organism's tint, from its diet (empty: the species' own stain). */
+  tints: Map<number, number>;
   interiors: Container;
   membranes: Container;
   interior: Stamp;
@@ -123,7 +128,9 @@ export class PlateRenderer {
     this.view = { width: app.screen.width, height: app.screen.height };
     this.camera = wholeWorld(world);
     this.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    this.foodTexture = this.stamp(new Graphics().circle(0, 0, TEXTURE_RADIUS).fill(palette.food)).texture;
+    // Textures are white and every sprite is tinted, so one texture serves every colour: food
+    // by its kind, an organism by its species or, with two foods, by its diet.
+    this.foodTexture = this.stamp(new Graphics().circle(0, 0, TEXTURE_RADIUS).fill(WHITE)).texture;
     this.groups = {
       prey: this.group("prey", this.preyShape(false), this.preyShape(true)),
       predator: this.group("predator", this.predatorShape(false), this.predatorShape(true)),
@@ -174,6 +181,14 @@ export class PlateRenderer {
     for (const group of Object.values(this.groups)) {
       group.from = group.shown; // glide from wherever things are drawn right now
       group.fullness = fullnessById(this.columns(snapshot, group.name));
+      group.tints = new Map();
+    }
+    if (snapshot.diets) {
+      const ids = snapshot.organisms.id;
+      const { food, foodB } = this.palette;
+      for (let i = 0; i < ids.length; i++) {
+        this.groups.prey.tints.set(ids[i]!, mixColour(food, foodB, snapshot.diets[i]!));
+      }
     }
     this.target = snapshot;
     this.arrivedAt = now;
@@ -287,26 +302,30 @@ export class PlateRenderer {
     const interiors = this.pool(group.interiors, n, group.interior);
     const membranes = this.pool(group.membranes, n, group.membrane);
     const scale = this.radius(group.name) / TEXTURE_RADIUS;
+    const stain = group.name === "prey" ? this.palette.prey : this.palette.predator;
     let i = 0;
     for (const [id, pose] of group.shown) {
       const inside = interiors[i]!;
       const outline = membranes[i++]!;
+      const tint = group.tints.get(id) ?? stain;
       for (const sprite of [inside, outline]) {
         sprite.position.set(pose.x, pose.y);
         sprite.rotation = pose.heading;
         sprite.scale.set(scale);
+        sprite.tint = tint;
       }
       inside.alpha = interiorAlpha(group.fullness.get(id) ?? 1);
     }
   }
 
   private drawFood(snapshot: Snapshot): void {
-    const { x, y } = snapshot.food;
+    const { x, y, kind } = snapshot.food;
     const sprites = this.pool(this.foodLayer, x.length, { texture: this.foodTexture, anchor: { x: 0.5, y: 0.5 } });
     const scale = FOOD_UNITS / TEXTURE_RADIUS;
     for (let i = 0; i < x.length; i++) {
       sprites[i]!.position.set(x[i]!, y[i]!);
       sprites[i]!.scale.set(scale);
+      sprites[i]!.tint = kind && kind[i] === 1 ? this.palette.foodB : this.palette.food;
     }
   }
 
@@ -382,6 +401,7 @@ export class PlateRenderer {
       from: new Map(),
       shown: new Map(),
       fullness: new Map(),
+      tints: new Map(),
       interiors: new Container(),
       membranes: new Container(),
       interior: this.stamp(interior),
@@ -402,7 +422,7 @@ export class PlateRenderer {
   /** Prey: an oval pointing along +x (its heading), with a short tail trailing behind. */
   private preyShape(membrane: boolean): Graphics {
     const r = TEXTURE_RADIUS;
-    const colour = this.palette.prey;
+    const colour = WHITE; // tinted per sprite
     const g = new Graphics().ellipse(0, 0, r, r * 0.68);
     if (!membrane) return g.fill(colour);
     g.stroke({ width: r * 0.16, color: colour });
@@ -414,7 +434,7 @@ export class PlateRenderer {
    *  a circle whose radius dips smoothly where it faces (angle 0, the heading). */
   private predatorShape(membrane: boolean): Graphics {
     const r = TEXTURE_RADIUS;
-    const colour = this.palette.predator;
+    const colour = WHITE; // tinted per sprite
     const points: number[] = [];
     const steps = 72;
     for (let i = 0; i < steps; i++) {

@@ -60,6 +60,13 @@ function checkSnapshot(data: Record<string, unknown>): void {
   if (!Array.isArray(food.x) || !Array.isArray(food.y) || food.x.length !== food.y.length) {
     throw new ProtocolError("food positions are incomplete");
   }
+  // Two foods (version 3): a kind per food item and a diet per organism, or null for each.
+  if (food.kind !== null && (!Array.isArray(food.kind) || food.kind.length !== food.x.length)) {
+    throw new ProtocolError("food kinds don't have one value per food item");
+  }
+  if (data.diets !== null && (!Array.isArray(data.diets) || data.diets.length !== data.population)) {
+    throw new ProtocolError("diets don't have one value per organism");
+  }
 }
 
 function checkColumns(columns: Record<string, unknown>, length: number, what: string): void {

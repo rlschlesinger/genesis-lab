@@ -13,6 +13,12 @@ const GENE_LABELS: Record<string, string> = {
   neutral_marker: "neutral marker",
 };
 
+/** A diet in words beside its number: which food it digests well (6.9). */
+function dietWords(diet: number): string {
+  const kind = diet < 0.2 ? "eats A" : diet > 0.8 ? "eats B" : "both";
+  return `${diet.toFixed(2)} (${kind})`;
+}
+
 function number(value: number, digits = 3): string {
   return Number(value.toPrecision(digits)).toLocaleString("en");
 }
@@ -64,6 +70,20 @@ function Specimen({ detail: d }: { detail: OrganismDetail }) {
           <dt>{d.species === "predator" ? "Prey caught" : "Meals"}</dt>
           <dd className="num">{d.species === "predator" ? d.prey_eaten : d.food_eaten}</dd>
         </div>
+        {d.diet !== null && (
+          <div>
+            <dt>Diet</dt>
+            <dd className="num">{dietWords(d.diet)}</dd>
+          </div>
+        )}
+        {d.diet !== null && (
+          <div>
+            <dt>Meals A, B</dt>
+            <dd className="num">
+              {d.food_eaten - d.meals_b}, {d.meals_b}
+            </dd>
+          </div>
+        )}
         <div>
           <dt>Generation</dt>
           <dd className="num">{d.generation}</dd>

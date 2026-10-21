@@ -187,7 +187,7 @@ def test_mutations_csv_is_header_only_when_mutation_is_off(config, tmp_path):
 def test_run_json_records_schema_version_condition_and_config_hash(config, tmp_path):
     execute_run(config, tmp_path, experiment_id="E999", condition="control")
     meta = json.loads((tmp_path / "run.json").read_text())
-    assert meta["schema_version"] == 5
+    assert meta["schema_version"] == 6
     assert meta["condition"] == "control"
     assert meta["config_hash"] == config_hash(config) and len(meta["config_hash"]) == 64
     assert meta["ticks_every"] == 1 and meta["events_recorded"] == ""

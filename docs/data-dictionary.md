@@ -239,6 +239,39 @@ Every strike, caught or not. Source: `strikes.csv`.
 | `prey_energy` | DOUBLE | EU | | never | What the prey held when struck, this tick's meal included |
 | `predator_gain` | DOUBLE | EU | | never | What the predator gained: `capture_efficiency` × `prey_energy`, or 0 if the prey escaped |
 
+## Two-food worlds (new in 6.9)
+
+Two tables written only by runs whose config has a `resources:` section (D-064).
+
+### `diets`
+
+One row per organism that ever lived. Source: `diets.csv`.
+
+| Column | Type | Unit | Key | Null when | Meaning |
+|---|---|---|---|---|---|
+| `run_id` | VARCHAR | — | PK, FK → runs | never | |
+| `organism_id` | INTEGER | — | PK, FK → organisms | never | |
+| `diet` | DOUBLE | — | | never | The diet gene: 0 digests A best, 1 digests B best |
+| `meals_a` | INTEGER | — | | never | Meals of A eaten (with `meals_b`, adds up to `organisms.food_eaten`) |
+| `meals_b` | INTEGER | — | | never | Meals of B eaten |
+
+### `diet_ticks`
+
+One row per `ticks` row, sampled the same way. Source: `diet_ticks.csv`.
+
+| Column | Type | Unit | Key | Null when | Meaning |
+|---|---|---|---|---|---|
+| `run_id` | VARCHAR | — | PK, FK → runs | never | |
+| `tick` | INTEGER | tick | PK | never | As in `ticks` |
+| `food_a`, `food_b` | INTEGER | — | | never | Food items of each kind on the plate at the end of the tick |
+| `meals_a`, `meals_b` | INTEGER | — | | never | Meals of each kind since the previous row (flows; they add up to `ticks.food_eaten`) |
+| `n` | INTEGER | — | | never | Organisms alive (= `ticks.population`) |
+| `diet_mean`, `diet_sd` | DOUBLE | — | | nobody alive | Mean and population standard deviation (ddof 0) of the diet |
+| `diet_low`, `diet_high` | DOUBLE | — | | nobody alive | Shares of organisms with diet below 0.2 and above 0.8 |
+| `bin_0` … `bin_9` | INTEGER | — | | never | Organisms with diet in [0, 0.1), [0.1, 0.2) … [0.9, 1.0] |
+
+`run_params` adds `has_two_foods`, `diet_exponent` and `diet_neutral`.
+
 The view **`species_counts`** joins `ticks` and `predator_ticks` per run and tick: `prey`, `predators`, `attempts`, `captures`, `prey_deaths`. `run_params` adds `has_predators`, `initial_predators` and `predator_controller`.
 
 ## Checks the ETL performs (3.2)

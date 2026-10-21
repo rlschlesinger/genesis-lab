@@ -24,6 +24,9 @@ import snapshot from "./__fixtures__/snapshot.json";
 import predatorDetail from "./__fixtures__/organism_detail_predator.json";
 import predatorHistory from "./__fixtures__/history_predators.json";
 import huntedSnapshot from "./__fixtures__/snapshot_predators.json";
+import dietDetail from "./__fixtures__/organism_detail_diet.json";
+import dietHistory from "./__fixtures__/history_diets.json";
+import dietSnapshot from "./__fixtures__/snapshot_diets.json";
 import { parseServerMessage } from "./parse";
 import type {
   BrainThought,
@@ -67,7 +70,8 @@ describe("the TypeScript types match the server's real responses", () => {
   it("ConfigSummary", () => {
     expect(sortedKeys(configs[0]!)).toEqual(
       allKeys<ConfigSummary>()("name", "controller", "max_ticks", "initial_count", "has_brains",
-        "mutation_enabled", "has_predators", "predator_controller", "initial_predators"),
+        "mutation_enabled", "has_predators", "predator_controller", "initial_predators",
+        "has_two_foods"),
     );
   });
 
@@ -75,9 +79,12 @@ describe("the TypeScript types match the server's real responses", () => {
     expect(sortedKeys(organism)).toEqual(
       allKeys<OrganismDetail>()("id", "species", "alive", "parent_id", "founder_id", "generation",
         "birth_tick", "death_tick", "death_cause", "age", "energy", "x", "y", "heading",
-        "food_eaten", "prey_eaten", "offspring_count", "children", "genome", "traits",
-        "brain_weights", "thought"),
+        "food_eaten", "prey_eaten", "diet", "meals_b", "offspring_count", "children", "genome",
+        "traits", "brain_weights", "thought"),
     );
+    expect(sortedKeys(dietDetail)).toEqual(sortedKeys(organism));
+    expect(typeof dietDetail.diet).toBe("number");
+    expect(organism.diet).toBeNull();
     expect(sortedKeys(predatorDetail)).toEqual(sortedKeys(organism));
     expect(predatorDetail.species).toBe("predator");
     expect(predatorDetail.prey_eaten).toBeGreaterThan(0);
@@ -95,9 +102,12 @@ describe("the TypeScript types match the server's real responses", () => {
     expect(sortedKeys(history)).toEqual(allKeys<History>()("run_id", "every", "columns"));
     expect(sortedKeys(history.columns)).toEqual(
       allKeys<HistoryColumns>()("tick", "population", "food_count", "lineages", "mean_energy",
-        "predators", "births", "deaths", "food_eaten", "attempts", "captures", "toward_food",
-        "mean_turn", "mean_throttle"),
+        "predators", "food_a", "food_b", "diet_sd", "diet_low", "diet_high", "births", "deaths",
+        "food_eaten", "attempts", "captures", "toward_food", "mean_turn", "mean_throttle"),
     );
+    expect(sortedKeys(dietHistory.columns)).toEqual(sortedKeys(history.columns));
+    expect(history.columns.diet_sd.every((v) => v === null)).toBe(true);
+    expect(dietHistory.columns.diet_sd.every((v) => typeof v === "number")).toBe(true);
     expect(sortedKeys(predatorHistory.columns)).toEqual(sortedKeys(history.columns));
     expect(history.columns.predators.every((v) => v === null)).toBe(true);
     expect(predatorHistory.columns.predators.every((v) => typeof v === "number")).toBe(true);
@@ -135,8 +145,12 @@ describe("the TypeScript types match the server's real responses", () => {
     expect(sortedKeys(hello)).toEqual(allKeys<HelloMessage>()("type", "version", "run", "world"));
     expect(sortedKeys(snapshot)).toEqual(
       allKeys<Snapshot>()("type", "version", "run_id", "tick", "state", "speed", "error",
-        "population", "last_tick", "food", "organisms", "predators", "captures"),
+        "population", "last_tick", "food", "diets", "organisms", "predators", "captures"),
     );
+    expect(snapshot.food.kind).toBeNull();
+    expect(snapshot.diets).toBeNull();
+    expect(dietSnapshot.food.kind).toHaveLength(dietSnapshot.food.x.length);
+    expect(dietSnapshot.diets).toHaveLength(dietSnapshot.population);
     const columns = allKeys<OrganismColumns>()("id", "x", "y", "heading", "energy", "fullness",
       "generation", "founder");
     expect(sortedKeys(snapshot.organisms)).toEqual(columns);
@@ -150,7 +164,7 @@ describe("the TypeScript types match the server's real responses", () => {
   });
 
   it("every fixture message passes the runtime checks", () => {
-    for (const message of [hello, snapshot, huntedSnapshot, gone]) {
+    for (const message of [hello, snapshot, huntedSnapshot, dietSnapshot, gone]) {
       expect(parseServerMessage(JSON.stringify(message)).type).toBe(message.type);
     }
   });

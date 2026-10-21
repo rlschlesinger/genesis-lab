@@ -33,7 +33,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 from genesis.api.runs import LiveRun, RunManager
 
-SNAPSHOT_VERSION = 2  # 2 (6.5): fullness, predators, captures
+SNAPSHOT_VERSION = 3  # 2 (6.5): fullness, predators, captures; 3 (6.9): food kinds, diets
 MAX_FPS = 30
 DEFAULT_FPS = 15
 POSITION_DECIMALS = 2  # 0.01 world units: far below a pixel at any sensible zoom
@@ -73,6 +73,7 @@ def build_snapshot(run: LiveRun) -> dict:
         }
 
     hunted = run.config.predators is not None
+    two_foods = run.config.resources is not None
 
     return {
         "type": "snapshot",
@@ -95,7 +96,11 @@ def build_snapshot(run: LiveRun) -> dict:
         "food": {
             "x": column(food[:, 0], POSITION_DECIMALS),
             "y": column(food[:, 1], POSITION_DECIMALS),
+            # Two foods (6.9): 0 = A, 1 = B for each item; null with one food.
+            "kind": sim.world.food.kinds.tolist() if two_foods else None,
         },
+        # Two foods: each organism's diet, in the organisms' order; null with one food.
+        "diets": column([o.diet for o in living], 3) if two_foods else None,
         "organisms": bodies(living),
         # Worlds with predators (6.5): the predators, and where the latest captures happened
         # (newest last; a viewer draws the ones newer than its last picture's).

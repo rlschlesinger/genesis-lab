@@ -83,7 +83,7 @@ def test_every_predator_table_reproduces_its_csv(run_dir, tmp_path):
                     assert value == float(text), (spec.name, column)
                 else:
                     assert str(value) == text, (spec.name, column)
-    for spec in ALL_TABLES:
+    for spec in [t for t in ALL_TABLES if not t.resources_only]:  # one food: no diet files
         schema = pq.read_schema(tmp_path / spec.name / "hunted.parquet").remove_metadata()
         assert schema == spec.schema, spec.name
 

@@ -51,3 +51,15 @@ export function markLook(ageMs: number, reducedMotion: boolean): MarkLook | null
 export function newCaptures(captures: readonly Capture[], seenUpTo: number): Capture[] {
   return captures.filter((c) => c.tick > seenUpTo);
 }
+
+/** A colour ``t`` (0-1) of the way from ``a`` to ``b``, each channel mixed in sRGB and
+ *  rounded. Two foods (6.9): an organism's diet places it between the two foods' stains. */
+export function mixColour(a: number, b: number, t: number): number {
+  const s = Math.min(1, Math.max(0, t));
+  const channel = (shift: number) => {
+    const x = (a >> shift) & 0xff;
+    const y = (b >> shift) & 0xff;
+    return Math.round(x + (y - x) * s) << shift;
+  };
+  return (channel(16) | channel(8) | channel(0)) >>> 0;
+}

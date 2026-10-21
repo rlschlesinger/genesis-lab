@@ -47,10 +47,15 @@ def render(run: RunData) -> str:
         behaviour_figure=_behaviour_html(run),
         mutation_table=_mutation_table(run),
         predators_section=_predators_section(run),
+        diets_section=_diets_section(run),
         run_dir=html.escape(run.run_dir.name),
         files=", ".join(
             f"<code>{name}</code>"
-            for name in [*REQUIRED_FILES, *(["predator_ticks.csv"] if run.has_predators else [])]
+            for name in [
+                *REQUIRED_FILES,
+                *(["predator_ticks.csv"] if run.has_predators else []),
+                *(["diet_ticks.csv"] if run.has_two_foods else []),
+            ]
         ),
         max_points=MAX_POINTS,
         stride_note=_stride_note(run),
@@ -62,6 +67,31 @@ def _behaviour_html(run: RunData) -> str:
     if figure is None:
         return "<p class='caveat'>This run was recorded before behaviour was measured.</p>"
     return chart_html(figure, "behaviour")
+
+
+def _diets_section(run: RunData) -> str:
+    """Section 07, only for worlds with two foods (6.9); nothing at all otherwise."""
+    if not run.has_two_foods:
+        return ""
+    cfg = run.meta["config"]["resources"]
+    last = run.diet_ticks[-1]
+    neutral = " The diet was neutral here: everyone digested as a generalist." if cfg["diet"].get(
+        "neutral") else ""  # fmt: skip
+    sd = "none alive" if last["n"] == 0 else f"{last['diet_sd']:.3f}"
+    return f"""
+  <section>
+    <div class="rail"><span class="num">07</span><h2>Two foods</h2></div>
+    <div class="body">
+      <p>Food came in two kinds, A and B. Each organism's diet gene <i>d</i> set how much of a
+      meal it kept: (1 &minus; <i>d</i>)<sup>{cfg["exponent"]:g}</sup> of an A,
+      <i>d</i><sup>{cfg["exponent"]:g}</sup> of a B.{neutral} At the end the diet's spread (standard
+      deviation) was {sd}; {last["diet_low"] or 0:.0%} of organisms ate mostly A (diet below
+      0.2) and {last["diet_high"] or 0:.0%} mostly B (above 0.8). In the heatmap, one band
+      splitting into two would be specialists emerging; a single band that wanders, drift.</p>
+      {chart_html(figures.diet_figure(run), "diets")}
+    </div>
+  </section>
+"""
 
 
 def _predators_section(run: RunData) -> str:

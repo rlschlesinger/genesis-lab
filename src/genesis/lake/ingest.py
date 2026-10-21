@@ -83,12 +83,15 @@ def schema_version(run_dir: Path, meta: dict) -> int:
 def extract_transform(run_dir: Path, meta: dict) -> dict[str, pa.Table]:
     version = schema_version(run_dir, meta)
     hunted = (meta.get("config") or {}).get("predators") is not None
+    two_foods = (meta.get("config") or {}).get("resources") is not None
     tables = {"runs": runs_row(run_dir, meta, version)}
     if meta["status"] != "completed":
         return tables  # failed or unfinished: a runs row, but no data to load
     for spec in DATA_TABLES:
         if spec.predators_only and not hunted:
             continue  # a world without predators has no predator files
+        if spec.resources_only and not two_foods:
+            continue  # a world with one food has no diet files
         if version >= spec.since_version:
             tables[spec.name] = read_table(run_dir / spec.csv_file, spec, meta["run_id"])
     return tables
