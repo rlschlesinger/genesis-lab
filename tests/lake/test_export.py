@@ -215,3 +215,24 @@ def test_export_and_verify_commands(lake, tmp_path, capsys):
         main(["lake", "export", "--experiment", "E777", "--out", str(out), "--lake", str(lake)])
         == 2
     )
+
+
+def test_readme_finds_the_grouped_predator_and_diet_tables_and_nothing_else():
+    # The dictionary documents the Milestone 6 tables as level-3 headings under "Worlds with
+    # predators" and "Two-food worlds". An E009 export's README lost them (no brains table
+    # to hang off), and an E008 export's README carried every section after `brains`.
+    import re
+
+    from genesis.lake.export import readme
+
+    def headings(text: str) -> list[str]:
+        return re.findall(r"^## (.*)$", text, re.M)
+
+    diets = headings(readme("E009", ["runs", "ticks", "organisms", "diets", "diet_ticks"]))
+    assert diets == ["Conventions", "`runs`", "`ticks`", "`organisms`", "`diets`", "`diet_ticks`"]
+    hunted = headings(readme("E008", ["runs", "ticks", "brains", "predator_ticks", "strikes"]))
+    # One section per exported table, at one heading level, in the dictionary's order; no
+    # group heading, no "Checks the ETL performs", and no table that wasn't exported.
+    assert hunted == [
+        "Conventions", "`runs`", "`ticks`", "`brains` (new in 4.5)", "`predator_ticks`", "`strikes`"
+    ]  # fmt: skip
