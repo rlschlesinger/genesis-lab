@@ -25,14 +25,28 @@ class World:
         self._upper = np.array([width, height], dtype=np.float64)
 
     @classmethod
-    def from_config(cls, config: SimulationConfig, rng: np.random.Generator) -> World:
+    def from_config(
+        cls,
+        config: SimulationConfig,
+        rng: np.random.Generator,
+        kind_rng: np.random.Generator | None = None,
+    ) -> World:
         """Build the starting world described by ``config``, including initial food.
 
         ``rng`` should be the run's *food* stream (it is wired up that way in increment 1.5),
-        so initial food placement and later regrowth share one independent sequence.
+        so initial food placement and later regrowth share one independent sequence. With two
+        kinds of food (``config.resources``), ``kind_rng`` (the resources stream) decides each
+        item's kind.
         """
         width, height = config.world.width, config.world.height
-        food = FoodSupply(width, height, config.food.max_count, config.food.regrowth_per_tick)
+        kinds = None
+        if config.resources is not None:
+            if kind_rng is None:
+                raise ValueError("two kinds of food need a generator for their kinds")
+            kinds = (config.resources.share_b, kind_rng)
+        food = FoodSupply(
+            width, height, config.food.max_count, config.food.regrowth_per_tick, kinds
+        )
         food.spawn(config.food.initial_count, rng)
         return cls(width, height, food)
 

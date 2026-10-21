@@ -101,10 +101,17 @@ def test_eat_adds_energy_and_counts_food():
     assert org.food_eaten == 2
 
 
-@pytest.mark.parametrize("bad", [0.0, -5.0])
-def test_eating_non_positive_energy_rejected(bad):
+def test_eating_negative_energy_rejected():
     with pytest.raises(ValueError):
-        make_organism().eat(bad)
+        make_organism().eat(-5.0)
+
+
+def test_a_meal_worth_nothing_still_counts_as_a_meal():
+    # Two foods (06B, D-063): a specialist eating the other kind keeps none of its energy.
+    org = make_organism()
+    before = org.energy
+    org.eat(0.0)
+    assert org.energy == before and org.food_eaten == 1
 
 
 def test_energy_bookkeeping_balances():

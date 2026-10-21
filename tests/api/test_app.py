@@ -21,7 +21,14 @@ def test_health_reports_the_api_version(client):
 
 def test_configs_are_listed_and_readable(client):
     names = {c["name"]: c for c in client.get("/api/configs").json()}
-    assert set(names) == {"default", "evolution", "neural", "predators", "predators-neural"}
+    assert set(names) == {
+        "default",
+        "evolution",
+        "neural",
+        "predators",
+        "predators-neural",
+        "diets",
+    }
     assert names["predators"]["has_predators"] and not names["neural"]["has_predators"]
     assert names["predators"]["predator_controller"] == "nearest_prey_seeker"
     assert names["neural"]["has_brains"] and names["neural"]["controller"] == "neural"

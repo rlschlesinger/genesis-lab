@@ -180,6 +180,13 @@ move(positions, headings, actions, speeds, max_turns, world)   -> new positions,
 - **The brain size follows the config, not the population:** a `predators:` section with `initial_count: 0` gives prey the same 10-input brains, drawn identically on the same seed, with the predator inputs always 0. That world is E008's matched control.
 - `sim.last_predator_decision` holds the predators' observations, actions and (neural) thought, as `sim.last_decision` does for prey.
 
+## Two foods (6.8, D-063)
+
+- **Kinds:** with a `resources:` section, each food item is A or B (`share_b` of new items are B), drawn from the resources stream; positions are unchanged.
+- **Diet:** each prey's `diet` in [0, 1], founders at the gene's initial value, inherited and mutated like genes (`mutate_value`).
+- **A meal's worth:** `energy_value × (1 − d)^k` for A, `× d^k` for B; the rest leaves through the ledger (`undigested`). A neutral diet gene digests as its initial value for everyone.
+- **Choosing:** `diet_seeker` heads for the kind with the higher worth ÷ distance; worthless food is ignored.
+
 ## Capture (predators, 6.2, D-058)
 
 - **When:** right after the prey eat (step 5), before anyone pays costs, using everyone's post-move positions.
@@ -295,7 +302,7 @@ Founders pay exactly the Milestone 1 movement price at any exponent. Defaults re
 
 ## Randomness
 
-One integer seed per run → `numpy.random.SeedSequence` → `.spawn(8)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`, `mutation` (added in 2.2), `brain` (added in 4.3: founders' weights and brain mutation; unused when there are no brains), `predators` (added in 6.1, D-057: unused without predators; split with `Generator.spawn` into the predators' own setup, controller, reproduction, mutation, capture (6.2) and brain (6.3) streams, so predator draws never shift the prey's, and a world with predators starts with the same prey and food as one without). Tests check that each addition left the earlier streams unchanged. New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
+One integer seed per run → `numpy.random.SeedSequence` → `.spawn(9)` → one independent `Generator` per subsystem, in this fixed order: `setup` (founders), `food`, `controller`, `reproduction`, `tiebreak`, `mutation` (added in 2.2), `brain` (added in 4.3: founders' weights and brain mutation; unused when there are no brains), `predators` (added in 6.1, D-057: unused without predators; split with `Generator.spawn` into the predators' own setup, controller, reproduction, mutation, capture (6.2) and brain (6.3) streams, so predator draws never shift the prey's, and a world with predators starts with the same prey and food as one without). Then `resources` (added in 6.8, D-063: which kind each new food item is, and diet mutation; unused with one food). Tests check that each addition left the earlier streams unchanged. New streams are appended at the end only (D-012). Adding a random draw in one subsystem does not shift the sequence in another, so paired-seed comparisons stay valid as the code grows.
 
 ## Milestone 1 plan
 
@@ -527,3 +534,14 @@ Scope: [roadmap/06A](roadmap/06A_PREDATOR_PREY.md). After trying the lab, the us
 | Tests: no double consumption; energy transferred as specified; no prey acts after death; deterministic contested captures; no crash when either species is extinct; saved-run schema compatibility; reproducible replay | `tests/core/test_predation.py` (each one), `tests/core/test_predators.py`, `tests/lake/test_predators.py` (schema, old and new files in one lake), `tests/api/test_predators.py` |
 | Learning: ecological feedback, selection pressure, coevolution, designed fleeing vs evolved avoidance | [curriculum.md](curriculum.md) 6.1–6.7; E008's H17 |
 | Works with prior headless and UI commands | `genesis run/report/lake/sql`, the lab (D-061); every earlier config byte-identical (checked at each increment) |
+
+## Milestone 6 plan, chunk 06B (approved 2026-10-21)
+
+Scope: [roadmap/06B](roadmap/06B_ONE_ADVANCED_EXTENSION.md), extension A (two resource types), as in the user-approved [proposal](roadmap/06B-proposal.md) with its three recommendations: rule-based organisms with a diet gene, three conditions (`tradeoff`, `neutral`, `linear`), and lab support.
+
+| # | Increment | Key test | Status |
+|---|---|---|---|
+| 6.8 | Mechanics: an optional `resources:` section; food kinds A and B (own stream); a heritable diet gene; meal energy from kind and diet, the rest through the ledger; the `diet_seeker` controller | Old configs byte-identical; energy as specified; diet inherits, mutates and reflects like genes; choice by energy per distance | done |
+| 6.9 | Recording (run-folder version 6: diets and meals per kind), lake tables, report section; the lab draws the two foods and shades organisms by diet | Schema compatibility; lake validation; contract fixtures | |
+| 6.10 | Labelled pilots for `V`; E009 defined and committed before running | Spec and definition committed first | |
+| 6.11 | Run E009; effect sizes, alternatives; `docs/RESEARCH_ROADMAP.md`; release checklist; summary of all six milestones | Verdicts from the pre-registered analysis | |

@@ -117,6 +117,42 @@ class FleeSeeker:
 
 
 @dataclass(frozen=True, slots=True)
+class DietSeeker:
+    """Two foods (06B, D-063): head for the kind of food worth the most energy per unit of
+    distance, given the organism's own diet; otherwise wander like the food seeker.
+
+    For each kind in sight, the score is (fraction of the item's energy this organism keeps)
+    / (distance to the nearest item of that kind). The higher score wins; a kind worth
+    nothing scores nothing, so a specialist ignores the other food rather than walking to it.
+    Exact ties go to the nearer item, then to A. Full speed always, and the seeker's random
+    draws every tick, as the other rule-based controllers.
+
+    The choice is designed, not evolved: it follows the diet gene, which is what evolves.
+    """
+
+    turn_sd: float = 0.3
+
+    def decide(
+        self, obs: Observations, rng: np.random.Generator, brains: BrainStack | None = None
+    ) -> Actions:
+        n = len(obs)
+        wander = rng.normal(0.0, self.turn_sd, size=n)
+        k = obs.kinds
+        if k is None:
+            raise ValueError("the diet seeker needs Observations.kinds (two foods)")
+        with np.errstate(divide="ignore"):
+            score_a = np.where(
+                k.found_a & (k.worth_a > 0), k.worth_a / np.maximum(k.distance_a, 1e-9), -np.inf
+            )
+            score_b = np.where(k.found_b & (k.worth_b > 0),
+                               k.worth_b / np.maximum(k.distance_b, 1e-9), -np.inf)  # fmt: skip
+        pick_b = (score_b > score_a) | ((score_b == score_a) & (k.distance_b < k.distance_a))
+        target = np.isfinite(np.maximum(score_a, score_b))
+        bearing = np.where(pick_b, k.bearing_b, k.bearing_a)
+        return Actions(turn=np.where(target, bearing, wander), throttle=np.ones(n))
+
+
+@dataclass(frozen=True, slots=True)
 class Thought:
     """One tick of neural decision-making, kept whole so it can be inspected (4.6)."""
 
@@ -171,12 +207,18 @@ class NeuralController:
 
 
 CONTROLLERS: dict[
-    str, type[RandomWalk] | type[NearestFoodSeeker] | type[FleeSeeker] | type[NeuralController]
+    str,
+    type[RandomWalk]
+    | type[NearestFoodSeeker]
+    | type[FleeSeeker]
+    | type[DietSeeker]
+    | type[NeuralController],
 ] = {
     "random_walk": RandomWalk,
     "nearest_food_seeker": NearestFoodSeeker,
     "neural": NeuralController,
     "flee_seeker": FleeSeeker,  # prey: designed evasion (E008)
+    "diet_seeker": DietSeeker,  # two foods: the kind worth most per distance (06B)
     # A predator's "food" is prey: its observations hold the nearest prey where a prey's hold
     # the nearest food, so chasing prey is the food seeker's rule, unchanged (D-059).
     "nearest_prey_seeker": NearestFoodSeeker,

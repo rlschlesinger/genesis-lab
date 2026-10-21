@@ -33,7 +33,10 @@ BRAIN_PARAMETERS = 62
 PREY_BRAIN_PARAMETERS = 80
 
 # flee_seeker (E008, D-062): turn away from a predator in sight, otherwise seek food.
-ControllerName = Literal["random_walk", "nearest_food_seeker", "neural", "flee_seeker"]
+# diet_seeker (06B, D-063): head for the food kind worth most per unit of distance.
+ControllerName = Literal[
+    "random_walk", "nearest_food_seeker", "neural", "flee_seeker", "diet_seeker"
+]
 # Predators can't use the food seeker (they don't eat food); they chase prey instead (D-059).
 PredatorControllerName = Literal["random_walk", "nearest_prey_seeker", "neural"]
 EventKind = Literal["birth", "death", "meal"]
@@ -236,6 +239,33 @@ class PredatorConfig(OrganismConfig):
         return self
 
 
+class ResourcesConfig(_Strict):
+    """Two kinds of food and a heritable diet (Milestone 6, chunk 06B; D-063). Optional: a
+    config without this section has one kind of food, and runs exactly as before.
+
+    Each food item is kind A or B (B with probability ``share_b``), drawn from its own random
+    stream. Every organism carries a diet gene ``d`` in [0, 1], inherited and mutated like
+    the genome's genes (the shared ``mutation`` section). A meal of A gives
+    ``food.energy_value * (1 - d) ** exponent``; of B, ``food.energy_value * d ** exponent``;
+    the rest of the item's energy leaves the system (the ledger's ``undigested`` flow).
+    ``diet.neutral: true`` makes the gene a drift-only control: everyone digests as if ``d``
+    were its initial value, whatever their own.
+    """
+
+    share_b: float = Field(default=0.5, ge=0, le=1, description="Share of new food that is B.")
+    exponent: PositiveFloat = Field(
+        description="The trade-off's shape k: 2 makes generalists worse at both foods than "
+        "specialists are at one; 1 is a straight-line trade-off."
+    )
+    diet: GeneConfig
+
+    @model_validator(mode="after")
+    def _diet_in_unit_range(self) -> Self:
+        if self.diet.min < 0 or self.diet.max > 1:
+            raise ValueError("resources.diet must stay within [0, 1]")
+        return self
+
+
 class MutationConfig(_Strict):
     """How offspring genomes differ from their parent's (genesis.evolution.mutation)."""
 
@@ -331,6 +361,8 @@ class SimulationConfig(_Strict):
     brain: BrainConfig | None = None
     # None: no predators (every config before Milestone 6). Present: a second species (D-057).
     predators: PredatorConfig | None = None
+    # None: one kind of food. Present: two kinds and a heritable diet (06B, D-063).
+    resources: ResourcesConfig | None = None
 
     @model_serializer(mode="wrap")
     def _omit_absent_sections(self, handler):  # noqa: ANN001, ANN202 (pydantic's own signature)
@@ -343,7 +375,7 @@ class SimulationConfig(_Strict):
         byte-identical.
         """
         data = handler(self)
-        for name in ("brain", "predators"):
+        for name in ("brain", "predators", "resources"):
             if getattr(self, name) is None:
                 data.pop(name, None)
         # births (D-062) defaults to true, and every config before it had births: leaving the
@@ -371,6 +403,12 @@ class SimulationConfig(_Strict):
                     f"brain.founder_weights has {given} brains for {needed} founders "
                     "(organisms.initial_count)"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def _diet_seeker_needs_two_foods(self) -> Self:
+        if self.organisms.controller == "diet_seeker" and self.resources is None:
+            raise ValueError("controller 'diet_seeker' needs a resources: section (two foods)")
         return self
 
     @model_validator(mode="after")

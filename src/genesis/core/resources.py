@@ -22,7 +22,14 @@ class FoodSupply:
     every random draw traceable to the run's seed (see docs/decision-log.md, D-006).
     """
 
-    def __init__(self, width: float, height: float, max_count: int, regrowth_per_tick: float):
+    def __init__(
+        self,
+        width: float,
+        height: float,
+        max_count: int,
+        regrowth_per_tick: float,
+        kinds: tuple[float, np.random.Generator] | None = None,
+    ):
         # The config already validates these, but FoodSupply can be built directly (in tests,
         # or later by other code), so it guards its own assumptions too.
         if width <= 0 or height <= 0:
@@ -38,10 +45,22 @@ class FoodSupply:
         # Shape (0, 2): zero rows, two columns. Starting with the right shape means stacking
         # new rows onto it works the same whether the supply is empty or not.
         self._positions: FloatArray = np.empty((0, 2), dtype=np.float64)
+        # Two kinds of food (06B, D-063): each item is A (0) or B (1), parallel to positions.
+        # ``kinds`` = (share of B, the generator that decides); None: every item is A, and
+        # nothing extra is drawn, so a one-food world is exactly what it was.
+        self._kinds_from = kinds
+        self._kinds: NDArray[np.int8] = np.empty(0, dtype=np.int8)
 
     @property
     def count(self) -> int:
         return len(self._positions)
+
+    @property
+    def kinds(self) -> NDArray[np.int8]:
+        """A read-only view of each item's kind: 0 = A, 1 = B (all 0 with one food)."""
+        view = self._kinds.view()
+        view.flags.writeable = False
+        return view
 
     @property
     def positions(self) -> FloatArray:
@@ -69,6 +88,14 @@ class FoodSupply:
         # [0, height). One call draws all k points at once.
         new = rng.uniform(0.0, self._upper, size=(k, 2))
         self._positions = np.concatenate([self._positions, new])
+        if self._kinds_from is None:
+            kinds = np.zeros(k, dtype=np.int8)
+        else:
+            # Drawn from the resources stream, never the food stream, so where food appears
+            # is exactly as in a one-food world on the same seed.
+            share_b, kind_rng = self._kinds_from
+            kinds = (kind_rng.random(k) < share_b).astype(np.int8)
+        self._kinds = np.concatenate([self._kinds, kinds])
         return k
 
     def regrow(self, rng: np.random.Generator) -> int:
@@ -106,3 +133,4 @@ class FoodSupply:
         keep = np.ones(self.count, dtype=bool)
         keep[idx] = False
         self._positions = self._positions[keep]
+        self._kinds = self._kinds[keep]

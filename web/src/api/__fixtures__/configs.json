@@ -11,6 +11,17 @@
     "predator_controller": null
   },
   {
+    "controller": "diet_seeker",
+    "has_brains": false,
+    "has_predators": false,
+    "initial_count": 100,
+    "initial_predators": null,
+    "max_ticks": 20000,
+    "mutation_enabled": true,
+    "name": "diets",
+    "predator_controller": null
+  },
+  {
     "controller": "nearest_food_seeker",
     "has_brains": false,
     "has_predators": false,

@@ -1,0 +1,71 @@
+# Genesis Lab two-food configuration (Milestone 6, chunk 06B; D-063).
+# Identical to evolution.yaml except for the settings marked DIETS below
+# (tests/core/test_two_foods.py::test_diets_config_differs_from_evolution_only_where_intended).
+# Two kinds of food, A and B, and a heritable diet gene d: a meal of A gives
+# energy_value x (1 - d)^k, of B energy_value x d^k. Organisms head for the kind worth most to
+# them per unit of distance (diet_seeker). Every other expressed gene is frozen, so only the
+# diet evolves. energy_value is a placeholder until the 6.10 pilots.
+# Units: distance = world units, time = ticks, energy = EU (abstract), angle = radians.
+# Values are provisional starting points; they get tuned and recorded in increment 1.9.
+
+run:
+  seed: 42
+  max_ticks: 20000          # EVOLUTION: 4x the default run, for more generations
+  stop_on_extinction: true
+
+world:
+  width: 200.0
+  height: 200.0
+
+food:
+  initial_count: 150
+  max_count: 300
+  regrowth_per_tick: 2.0     # expected new items per tick while below max_count
+  energy_value: 80.0         # DIETS: a generalist (d = 0.5, k = 2) keeps a quarter: 20, as before
+  eat_radius: 2.0
+
+organisms:
+  initial_count: 100          # DIETS: as predators.yaml, past the early dip of a young population
+  max_population: 500
+  initial_energy: 50.0
+  max_age: null              # null = no age limit
+  move_cost_per_distance: 0.1
+  speed_cost_exponent: 1.0    # EVOLUTION: drag on; cost/tick at full speed ~ speed squared
+  sense_cost_per_unit: 0.004  # EVOLUTION: sensory upkeep; founders pay 20 x 0.004 = 0.08/tick
+  offspring_energy: 40.0     # transferred parent -> child
+  reproduction_overhead: 10.0  # lost by parent on top of the transfer
+  controller: diet_seeker   # DIETS: head for the food kind worth most per unit of distance
+
+# Heritable genes. `initial` is every founder's value. Mutation (when enabled) can move a
+# gene anywhere in [min, max], so each whole range must be physically sensible.
+# Units: speed = world units/tick; sense_range = world units; max_turn = radians/tick;
+# metabolic_rate = EU/tick; reproduction_threshold = EU; neutral_marker = none (no effect).
+genome:
+  speed:                  {initial: 1.5,  min: 0.25, max: 4.0, mutable: false}   # DIETS: frozen
+  sense_range:            {initial: 20.0, min: 1.0,  max: 60.0, mutable: false}  # DIETS: frozen
+  # EVOLUTION: frozen. Turning has no cost, so it would be a second free lunch (D-021).
+  max_turn:               {initial: 0.5,  min: 0.05, max: 1.5, mutable: false}
+  metabolic_rate:         {initial: 0.2,  min: 0.02, max: 0.5, mutable: false}   # DIETS: frozen
+  # min must exceed offspring_energy + reproduction_overhead (50)
+  reproduction_threshold: {initial: 80.0, min: 55.0, max: 250.0, mutable: false}  # DIETS: frozen
+  neutral_marker:         {initial: 0.5,  min: 0.0,  max: 1.0}
+
+# How offspring genomes differ from their parent's.
+mutation:
+  enabled: true   # EVOLUTION
+  rate: 0.1     # probability that each gene mutates at a birth
+  size: 0.05    # standard deviation of a change, as a fraction of the gene's (max - min)
+
+# What a recorded run saves (never changes results, only what is kept).
+recording:
+  genome_snapshot_every: 50   # ticks between full-genome snapshots (genomes.csv)
+  ticks_every: 1              # ticks between rows of ticks.csv and gene_stats.csv
+  events: []                  # log any of: birth, death, meal (events.csv)
+
+# DIETS: two kinds of food and the diet gene (06B, D-063).
+resources:
+  share_b: 0.5        # half of new food is B, placed uniformly like A (no habitats)
+  exponent: 2.0       # k: generalists keep (1/2)^2 = 1/4 of either food; specialists all of one
+  # Every founder a generalist. Mutation as the genes' (rate 0.1, size 0.05 of the range).
+  # neutral: true makes the diet a drift-only control (everyone digests as d = 0.5).
+  diet: {initial: 0.5, min: 0.0, max: 1.0}

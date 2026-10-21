@@ -45,6 +45,22 @@ class ThreatSenses:
 
 
 @dataclass(frozen=True, slots=True)
+class KindSenses:
+    """Two foods (06B, D-063): the nearest item of each kind within sense range, and what a
+    meal of each kind is worth to this organism (the fraction of the item's energy its diet
+    lets it keep). Filled in only for the diet seeker, in a world with two foods."""
+
+    found_a: NDArray[np.bool_]
+    distance_a: FloatArray
+    bearing_a: FloatArray
+    found_b: NDArray[np.bool_]
+    distance_b: FloatArray
+    bearing_b: FloatArray
+    worth_a: FloatArray  # (1 - d) ** k
+    worth_b: FloatArray  # d ** k
+
+
+@dataclass(frozen=True, slots=True)
 class Observations:
     """What every organism senses this tick. Each array has one entry per organism (row i is
     organism i, in the same order as the inputs to ``sense_food``).
@@ -56,6 +72,7 @@ class Observations:
     energy: FloatArray  # own current energy (unused by Milestone 1 controllers; for later)
     body: BodySenses | None = None  # only for neural controllers (Milestone 4)
     threat: ThreatSenses | None = None  # only for neural prey in predator worlds (Milestone 6)
+    kinds: KindSenses | None = None  # only for the diet seeker with two foods (06B)
 
     def __len__(self) -> int:
         return len(self.energy)

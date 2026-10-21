@@ -507,5 +507,11 @@ What has been covered, where it appears in the code, and what comes next.
 
 ## Milestone 6, chunk 06A complete
 
+### 6.8 · Two foods and a diet
+- **Trade-offs have shapes:** with k = 2 a generalist keeps a quarter of either food, a specialist all of one; with k = 1 the two are even on average. The shape decides whether specialising pays.
+- **Frequency dependence:** if most organisms specialise on A, B is left uneaten and plentiful, so rarity becomes an advantage; that is what can keep two groups coexisting.
+- **Adding to a model without changing it:** a new random stream and an optional value keep every older world byte-identical (checked again).
+- **A control that starts identical:** the neutral diet gives everyone the founders' gains, so `tradeoff` and `neutral` differ only in whether diet matters.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.

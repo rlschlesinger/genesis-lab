@@ -19,7 +19,7 @@ from dataclasses import dataclass, replace
 
 import numpy as np
 
-from genesis.core.config import GenomeConfig, MutationConfig
+from genesis.core.config import GeneConfig, GenomeConfig, MutationConfig
 from genesis.evolution.genome import Genome, gene_names
 
 
@@ -89,3 +89,23 @@ def mutate(
 
     # dataclasses.replace builds a new frozen Genome with only the changed fields swapped.
     return (replace(genome, **updates) if updates else genome), changes
+
+
+def mutate_value(
+    value: float, gene: GeneConfig, mutation_config: MutationConfig, rng: np.random.Generator
+) -> float:
+    """``mutate`` for one value outside the genome: the diet gene (06B, D-063).
+
+    The same rule, step for step: one uniform draw (does it mutate?) and one normal draw (the
+    step, ``size * (max - min)``), both made at every birth, then reflection into the bounds.
+    Its draws come from the caller's stream (the resources stream for the diet), so adding a
+    diet shifts no other gene's mutations.
+    """
+    if not mutation_config.enabled:
+        return value
+    hit = rng.random() < mutation_config.rate
+    unit_step = float(rng.normal(0.0, 1.0))
+    if not (hit and gene.mutable):
+        return value
+    step = unit_step * mutation_config.size * (gene.max - gene.min)
+    return reflect(value + step, gene.min, gene.max)

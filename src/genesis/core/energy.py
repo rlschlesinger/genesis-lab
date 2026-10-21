@@ -33,6 +33,7 @@ class EnergyLedger:
     lost_at_death: float = 0.0
     reproduction_overhead: float = 0.0
     predation: float = 0.0  # caught prey's energy not passed on to the predator (D-058)
+    undigested: float = 0.0  # two foods: the part of a meal an eater's diet can't use (D-063)
 
     @property
     def inflow(self) -> float:
@@ -50,6 +51,7 @@ class EnergyLedger:
                 self.reproduction_overhead,
                 # 0.0 without predators, and fsum is exact: the total is what it was.
                 self.predation,
+                self.undigested,  # 0.0 with one food
             ]
         )
 

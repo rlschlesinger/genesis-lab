@@ -66,6 +66,9 @@ class Organism:
     # Neural brain, inherited like the genome (Milestone 4); None in rule-based runs. kw_only
     # lets this defaulted field sit with the identity fields it belongs to.
     brain: Brain | None = None
+    # Diet gene d in [0, 1] (06B, D-063): inherited and mutated like a gene; None with one
+    # kind of food. Which food this organism digests well: 0 = A, 1 = B, 0.5 = both a little.
+    diet: float | None = None
 
     # Physical state: changed by the simulation each tick.
     x: float
@@ -108,8 +111,9 @@ class Organism:
     def eat(self, energy_value: float) -> None:
         """Consume one food item worth ``energy_value`` EU."""
         self._require_alive("eat")
-        if energy_value <= 0:
-            raise ValueError(f"food must have positive energy, got {energy_value}")
+        # 0 is allowed: with two foods (06B), a specialist eating the other kind keeps nothing.
+        if energy_value < 0:
+            raise ValueError(f"a meal can't take energy away, got {energy_value}")
         self.energy += energy_value
         self.energy_gained += energy_value
         self.food_eaten += 1

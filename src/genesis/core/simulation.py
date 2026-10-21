@@ -43,12 +43,18 @@ from genesis.core.predation import resolve_strikes
 from genesis.core.world import World
 from genesis.evolution.brain import founder_brains, mutate_brain
 from genesis.evolution.genome import Genome, express
-from genesis.evolution.mutation import mutate
+from genesis.evolution.mutation import mutate, mutate_value
 from genesis.evolution.reproduction import place_offspring, select_parents
 from genesis.intelligence.brain_inputs import PREY_INPUT_NAMES, wall_distance_ahead
 from genesis.intelligence.controllers import Actions, Thought, make_controller
 from genesis.intelligence.neural import N_HIDDEN, N_INPUTS, N_OUTPUTS, Brain, BrainStack
-from genesis.intelligence.sensors import BodySenses, Observations, sense_food, sense_threats
+from genesis.intelligence.sensors import (
+    BodySenses,
+    KindSenses,
+    Observations,
+    sense_food,
+    sense_threats,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +77,9 @@ class RngStreams:
     # one without, on the same seed, start with the same prey and the same food (E008's
     # matched pairs).
     predators: np.random.Generator
+    # Two foods (06B, at the end): which kind each new food item is, and diet mutation.
+    # Unused with one food; food positions come from the food stream either way.
+    resources: np.random.Generator
 
     @classmethod
     def from_seed(cls, seed: int) -> RngStreams:
@@ -254,7 +263,10 @@ class Simulation:
     def __init__(self, config: SimulationConfig):
         self.config = config
         self.rng = RngStreams.from_seed(config.run.seed)
-        self.world = World.from_config(config, self.rng.food)
+        self._two_foods = config.resources is not None
+        self.world = World.from_config(
+            config, self.rng.food, self.rng.resources if self._two_foods else None
+        )
         self.controller = make_controller(config.organisms.controller)
         self._neural = config.organisms.controller == "neural"
         # Prey brains have 10 inputs in a world with predators (even none), 7 otherwise (D-059).
@@ -341,6 +353,8 @@ class Simulation:
                     genome=genome,
                     traits=traits,
                     brain=brain,
+                    # Two foods: every founder starts with the configured diet, as genes do.
+                    diet=self.config.resources.diet.initial if self._two_foods else None,
                     x=float(x),
                     y=float(y),
                     heading=float(h),
@@ -348,6 +362,17 @@ class Simulation:
                 )
             )
         return founders
+
+    def _digests(self, org: Organism) -> tuple[float, float]:
+        """Two foods: the share of a meal of A, and of B, this organism keeps (D-063).
+
+        ``(1 - d) ** k`` and ``d ** k``, Python's ``**`` on plain floats. With a neutral diet
+        gene everyone digests as the founders do, whatever their own ``d``.
+        """
+        resources = self.config.resources
+        d = resources.diet.initial if resources.diet.neutral else org.diet
+        k = resources.exponent
+        return (1.0 - d) ** k, d**k
 
     def _make_predator_founders(self) -> list[Organism]:
         """Predator founders, placed like prey founders but from the predators' own stream.
@@ -456,6 +481,8 @@ class Simulation:
             thought = None
             if threat is not None:
                 observations = replace(observations, threat=threat)
+            if cfg.controller == "diet_seeker":
+                observations = replace(observations, kinds=self._sense_kinds(prey, living))
             actions = self.controller.decide(observations, self.rng.controller)
         self.last_decision = Decision(observations, actions, max_turns, thought)
 
@@ -515,15 +542,29 @@ class Simulation:
             moved.positions, self.world.food.positions, self.config.food.eat_radius,
             self.rng.tiebreak,
         )  # fmt: skip
-        for i in meals.eaters:
+        if self._two_foods:
+            # Two foods (06B, D-063): what a meal gives depends on its kind and the eater's
+            # diet; the rest of the item's energy leaves through the ledger.
+            kinds = self.world.food.kinds[meals.foods].tolist()
+            gains, undigested = [], []
+            for i, kind in zip(meals.eaters.tolist(), kinds, strict=True):
+                worth = self._digests(living[i])[kind]
+                gain = food_value * worth
+                gains.append(gain)
+                undigested.append(food_value - gain)
+            self.ledger.undigested += math.fsum(undigested)
+        else:
+            gains = [food_value] * len(meals)
+        for i, gain in zip(meals.eaters.tolist(), gains, strict=True):
             eater = living[i]
-            eater.eat(food_value)
-            events.append(
-                Event(self.tick, "meal", eater.id, None, food_value, eater.x, eater.y, None)
-            )
+            eater.eat(gain)
+            events.append(Event(self.tick, "meal", eater.id, None, gain, eater.x, eater.y, None))
         self.world.food.remove(meals.foods)
         # The working copy gets the same meals: the same addition, so the same value.
-        energies[meals.eaters] += food_value
+        if self._two_foods:
+            energies[meals.eaters] += np.array(gains, dtype=np.float64)
+        else:
+            energies[meals.eaters] += food_value
 
         # 5a, predators. Capture (6.2, D-058; core/predation.py). After the prey have eaten,
         #     so a prey that reached food this tick is caught with that meal inside it. A caught
@@ -783,6 +824,13 @@ class Simulation:
             brain = parent.brain
             if brain is not None and self.config.mutation.enabled:
                 brain, _ = mutate_brain(brain, species.brain, species.brain_rng)
+            # The diet (two foods, D-063): the same mutation rule as genes, from the
+            # resources stream. Predators have none.
+            diet = parent.diet
+            if diet is not None:
+                diet = mutate_value(
+                    diet, self.config.resources.diet, self.config.mutation, self.rng.resources
+                )
             child_id = self._new_id()
             for change in changes:
                 log.append(
@@ -800,6 +848,7 @@ class Simulation:
                     genome=genome,
                     traits=traits,
                     brain=brain,
+                    diet=diet,
                     x=float(x),
                     y=float(y),
                     heading=float(heading),
@@ -836,6 +885,8 @@ class Simulation:
         h = hashlib.sha256()
         h.update(np.int64(self.tick).tobytes())
         h.update(np.ascontiguousarray(self.world.food.positions).tobytes())
+        if self._two_foods:  # with one food, kinds are all A and add nothing
+            h.update(np.ascontiguousarray(self.world.food.kinds).tobytes())
         # Predators come after the prey (and add nothing when there are none).
         everyone = [*self.organisms, *self.dead, *self.predators, *self.dead_predators]
         for org in everyone:
@@ -848,4 +899,21 @@ class Simulation:
             )
             if org.brain is not None:
                 h.update(org.brain.to_vector().tobytes())
+            if org.diet is not None:
+                h.update(np.float64(org.diet).tobytes())
         return h.hexdigest()
+
+    def _sense_kinds(self, prey: Bodies, living: list[Organism]) -> KindSenses:
+        """Two foods: each organism's nearest item of each kind, found by the same code as
+        the nearest food, and what each kind is worth to it (D-063)."""
+        food = self.world.food
+        a = sense_food(prey.positions, prey.headings, prey.sense_ranges, prey.energies,
+                       food.positions[food.kinds == 0])  # fmt: skip
+        b = sense_food(prey.positions, prey.headings, prey.sense_ranges, prey.energies,
+                       food.positions[food.kinds == 1])  # fmt: skip
+        worth = np.array([self._digests(o) for o in living], dtype=np.float64).reshape(-1, 2)
+        return KindSenses(
+            a.food_found, a.food_distance, a.food_bearing,
+            b.food_found, b.food_distance, b.food_bearing,
+            worth[:, 0], worth[:, 1],
+        )  # fmt: skip
