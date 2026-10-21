@@ -13,7 +13,7 @@ Approval still works the same way: **no milestone starts without the user's expl
 | [04B Neuroevolution comparison](04B_NEUROEVOLUTION_COMPARISON.md) | Milestone 4, second half (experiment E007) | Done ([E007](../experiments/E007-neuroevolution.md)); PyTorch check deferred (D-046) |
 | [05A API and streaming](05A_API_STREAMING.md) | Milestone 5, backend | Done ([API.md](../API.md); scope check in [architecture.md](../architecture.md)) |
 | [05B Browser lab](05B_BROWSER_LAB.md) | Milestone 5, frontend | Done ([lab.md](../lab.md); scope check in [architecture.md](../architecture.md)) |
-| [06A Predator and prey](06A_PREDATOR_PREY.md) | Milestone 6, first half | Not started |
+| [06A Predator and prey](06A_PREDATOR_PREY.md) | Milestone 6, first half (experiment E008) | Done ([E008](../experiments/E008-evasion.md); scope check in [architecture.md](../architecture.md)); predators follow a rule in E008, since neural predators couldn't survive (D-062) |
 | [06B One advanced extension](06B_ONE_ADVANCED_EXTENSION.md) | Milestone 6, second half | Not started |
 
 ## Translations that apply to every chunk

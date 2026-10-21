@@ -513,4 +513,17 @@ Scope: [roadmap/06A](roadmap/06A_PREDATOR_PREY.md). After trying the lab, the us
 | 6.4 | Recording: counts per species, capture attempts and successes, extinctions, traits per species; schema version; lake tables; report sections | Saved-run schema compatibility; lake validation | done |
 | 6.5 | The lab redrawn: cell bodies, species, energy, capture marks; predator/prey charts and phase plot; species in the specimen panel | Snapshot contract (fixtures) and drawing rules unit-tested; checked in Chrome | done |
 | 6.6 | E008 pre-registered (after labelled tuning pilots): prey evolved with vs without predators, plus a designed fleeing rule, tested against the same frozen predators | Spec and definition committed before running | done |
-| 6.7 | Run E008; effect sizes and uncertainty; honest limits of a toy model; 06A scope check; docs | Verdicts from the pre-registered analysis | |
+| 6.7 | Run E008; effect sizes and uncertainty; honest limits of a toy model; 06A scope check; docs | Verdicts from the pre-registered analysis | done |
+
+### Chunk 06A scope check (2026-10-21)
+
+| 06A requirement | Evidence |
+|---|---|
+| A predator agent type with hunger/energy, movement, sensing, prey contact and capture, energy transfer, reproduction and mortality; how it fits the tick sequence, collisions and costs; a record of new phases | `predators:` config (D-057); capture right after eating, meal rule reused (D-058); senses (D-059); [Capture](#capture-predators-62-d-058) and [Senses](#senses-with-predators-63-d-059) above; D-057 to D-062 |
+| Prey have a meaningful sensory signal or behavioural option for evasion, with costs and trade-offs; no arms race built in | Three predator inputs for neural prey (D-059); fleeing costs foraging time (E008 H18: −7.2% meals); predators follow a fixed rule in E008, so no arms race is possible, let alone built in |
+| Predator and prey counts, capture attempts and successes, extinction, trait distributions in persistence and charts, versioned | Run-folder version 5: `predator_ticks.csv`, `predators.csv` (genes and traits), `predator_brains.csv`, `strikes.csv` (every attempt), `final_predators`/`predators_ever`; lake tables and `species_counts` (D-060); report section 06 with a phase plot; the lab's charts and phase plot (D-061) |
+| A preregistered experiment: predator-present vs predator-absent, matched configurations and seeds, a predeclared survival metric, 10–20 runs per condition | [E008](experiments/E008-evasion.md): `hunted` vs `safe`, identical except the predator count, seeds 8000–8019 (20 per condition), captures per prey-tick in a common arena, committed at `74350f4` before any run; tuning pilots disclosed |
+| Graphs and an honest explanation of differences, with effect sizes, uncertainty, and that the toy model isn't real ecology | E008 results: H15 supported (−73%), H16 not supported (−5.2%, CI [−0.00047, +0.00010]), H17 designed rule far better, H18 −7.2% meals; exploratory findings labelled; limitations stated in advance |
+| Tests: no double consumption; energy transferred as specified; no prey acts after death; deterministic contested captures; no crash when either species is extinct; saved-run schema compatibility; reproducible replay | `tests/core/test_predation.py` (each one), `tests/core/test_predators.py`, `tests/lake/test_predators.py` (schema, old and new files in one lake), `tests/api/test_predators.py` |
+| Learning: ecological feedback, selection pressure, coevolution, designed fleeing vs evolved avoidance | [curriculum.md](curriculum.md) 6.1–6.7; E008's H17 |
+| Works with prior headless and UI commands | `genesis run/report/lake/sql`, the lab (D-061); every earlier config byte-identical (checked at each increment) |

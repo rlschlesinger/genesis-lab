@@ -4,7 +4,7 @@ A local-first artificial life laboratory. Digital organisms live in a 2D world: 
 
 Built as a learning project: the [curriculum](docs/curriculum.md) tracks the concepts covered so far.
 
-**Status:** Milestones 1 (The Petri Dish), 2 (Genetics and Evolution), 3 (The Science Lab), 4 (Evolving Neural Brains) and 5 (an API and a browser lab) complete. Next: Milestone 6 (predators and prey, then one research extension), not yet started.
+**Status:** Milestones 1 (The Petri Dish), 2 (Genetics and Evolution), 3 (The Science Lab), 4 (Evolving Neural Brains) and 5 (an API and a browser lab) complete. Milestone 6, first half (predators and prey, experiment E008) complete; the second half (one research extension) is next, once approved.
 
 ## What it does
 
@@ -94,6 +94,7 @@ Runs are described by YAML files in `configs/`:
 - [`default.yaml`](configs/default.yaml): the Milestone 1 ecosystem, with mutation and trade-off costs off. Every field is documented with its unit.
 - [`evolution.yaml`](configs/evolution.yaml): the same, plus mutation, trade-off costs (drag and sensing upkeep), a frozen turning gene and 20,000 ticks. A test keeps the two files from differing anywhere else.
 - [`neural.yaml`](configs/neural.yaml): `evolution.yaml` with each organism's own evolving neural brain as the controller and every expressed gene frozen, so only brains evolve ([how the brain works](docs/neural-networks.md)).
+- [`predators.yaml`](configs/predators.yaml): `neural.yaml` with 100 founding prey and a second species, 4 predators that chase the nearest prey (settings from the E008 tuning pilots); prey brains get three inputs about the nearest predator. [`predators-neural.yaml`](configs/predators-neural.yaml): the same with evolving predator brains (which starve: worth watching in the lab).
 
 Invalid configs are rejected before anything runs, with an error naming the field.
 
@@ -110,6 +111,7 @@ Each experiment is defined (question, hypotheses, seeds, analysis) and committed
 | [E005](docs/experiments/E005-mutation-diversity.md) | Does more mutation maintain more diversity? | Yes: ρ = 0.88, p ≈ 0.00005, meaningful; roughly √(rate) |
 | [E006](docs/experiments/E006-founders-extinction.md) | Do fewer founders mean more extinction? | No monotonic effect (p = 0.42); an exploratory U-shape to test next |
 | [E007](docs/experiments/E007-neuroevolution.md) | Do evolved brains forage as well as the hand-written rule? | Selection works (evolved beat random brains in 24/24 worlds) and generalises to new worlds (equivalent). Against the seeker: +3.6% meals, −6.2% energy per meal; whether +3.6% reaches the 5% that would matter is inconclusive |
+| [E008](docs/experiments/E008-evasion.md) | Do prey evolve to escape predators? | Evasion is possible (a designed flee rule was caught 73% less, 20/20 worlds), but prey evolved with predators were not caught detectably less than prey evolved without (−5.2%, CI includes 0); they ate 7.2% less |
 
 ```bash
 uv run genesis experiment status experiments/specs/E002.yaml          # which runs exist / are stale

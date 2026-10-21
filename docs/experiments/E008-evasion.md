@@ -86,4 +86,42 @@ No multiple-comparison correction across H15–H18: H15 is a gate, H16 is the si
 
 ## Results
 
-*(Appended after the runs, in 6.7.)*
+### Run
+
+Commit `74350f4` (clean; all 120 runs `git_dirty: false`). 40 training and 80 arena runs, all completed (84 s on this Mac's 14 cores). Analysis: `uv run python experiments/e008_evasion.py --analyse-only`, which reproduces every number below exactly.
+
+### Training
+
+**20 of 20 worlds succeeded in both conditions** (every run ended with at least 30 prey), so all 20 entered the arena. Predators lasted the whole 20,000 ticks in **12 of 20** `hunted` worlds; in the other 8 they died out on ticks 900, 1,500, 11,990, 13,850, 14,510, 15,470, 16,210 and 19,540. Two worlds (8005, 8015) therefore had predators for under 8% of training, more than the pilots suggested (none before tick 15,780 in 12 pilot seeds).
+
+### Arena (20 worlds)
+
+Mean (sd across worlds) per group:
+
+| Group | Captures per prey-tick | Meals per prey-tick | Survivors of 30 at tick 1,000 | Strike success |
+|---|---|---|---|---|
+| food seeker | 0.00366 (0.00073) | 0.0913 (0.0114) | 0.6 | 0.180 |
+| **flee rule** | **0.00100 (0.00022)** | 0.0760 (0.0067) | 10.1 | 0.167 |
+| from_safe | 0.00366 (0.00057) | 0.0914 (0.0100) | 0.6 | 0.173 |
+| from_hunted | 0.00347 (0.00070) | 0.0848 (0.0117) | 0.7 | 0.176 |
+
+- **H15 (positive control): SUPPORTED.** Flee − seeker = **−0.00266** captures per prey-tick (**−73%**); lower in **20 of 20** worlds; one-sided p = 0.00002. Evasion works in this arena, so H16 can be interpreted.
+- **H16 (primary): NOT SUPPORTED.** From_hunted − from_safe = **−0.00019**, 95% CI [−0.00047, +0.00010] (**−5.2%** of from_safe); lower in 13 of 20 worlds; one-sided p = 0.106. Prey evolved with predators were not caught detectably less often than prey evolved without them.
+- **H17 (estimate): the designed rule was caught far less.** From_hunted − flee = **+0.00246**, 95% CI [+0.00218, +0.00274], about 3.5 times the flee rule's rate; whole interval above +SESOI (±0.00010) → **designed caught less**.
+- **H18 (secondary): evolved-with-predators prey ate less.** From_hunted − from_safe = **−0.0065** meals per prey-tick, 95% CI [−0.0128, −0.0005] (**−7.2%**); two-sided p = 0.057.
+
+### Interpretation
+
+The arena could show evasion (the designed flee rule cut capture rates by 73% in every world), but 20,000 ticks of selection by chasing predators did not produce prey that are measurably harder to catch: at most a few percent, and the interval includes no effect. A person's one-line rule ("turn away from what's chasing you") outperformed evolution here by a wide margin. The evolved-with-predators prey also found somewhat less food; whether that is a cost of evasion, or of something else that differed in their training (more births and more predation deaths, so a different history), these data can't say.
+
+What this does **not** show: that prey *can't* evolve evasion in this model. It shows that they didn't, with these settings, this training length, these senses (no "ahead" input) and these predators.
+
+### Exploratory (post hoc, not tested; `experiments/e008_exploratory.py`)
+
+Written after the verdicts, to look for reasons. None of it is evidence; each point is something a new, pre-registered experiment could test.
+
+- **Predation was strong selection.** In `hunted` training, predators caused 74,868 of 125,248 prey deaths (60%); `safe` prey all starved (92,024). So the pressure existed; it did not produce detectable evasion.
+- **Weights on the predator inputs grew, but not specially.** Among survivors, mean |weight| on the three predator inputs was 0.627 (hunted) vs 0.562 (safe; there those inputs are always 0, so the weights only drift). But weights on the *other* inputs grew just as much (0.653 vs 0.568, larger in 18 of 20 worlds). Hunted lineages had more births (124,862 vs 91,849), so more mutation steps: more drift everywhere, not selection on the predator inputs in particular.
+- **Where predators lasted, a hint.** In the 12 worlds where predators survived all of training, from_hunted was caught 9.8% less than from_safe (9 of 12 worlds lower); in the 8 where they died out, +2.3% (4 of 8 lower). Small and post hoc; consistent with "longer exposure, a little evasion".
+- **Behaviour in the arena.** Share of prey-ticks seeing a predator where, after its turn, the predator is in the prey's rear half: flee rule 0.969, from_safe 0.732, from_hunted 0.779 (higher in 13 of 20 worlds). Even predator-naive prey usually have the predator behind them (chasers approach from behind); evolved-with-predators prey, slightly more often. A first version of this measure counted turns that widened the angle to the predator; it scored a prey already fleeing straight away as a failure (that angle can't widen), and was replaced before its numbers were interpreted.
+- **Candidate reasons, untested:** too little time with too weak a signal (a 0.18 capture chance makes most strikes miss anyway, so fleeing pays rarely); the blind spot (a predator ahead and one behind look alike); prey and predators have equal speed, so turning away delays rather than prevents a capture unless the prey keeps fleeing; and fleeing costs foraging time, which selection also weighs.

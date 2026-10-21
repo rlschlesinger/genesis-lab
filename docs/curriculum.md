@@ -498,5 +498,14 @@ What has been covered, where it appears in the code, and what comes next.
 - **Smoke runs earn their keep:** three real bugs (an empty-table check, colliding labels, births refilling the arena) were found before a single real run.
 - **Changing an approved plan openly:** neural predators couldn't survive; the change went to the user with the evidence, and the definition says so.
 
+### 6.7 · E008: evasion
+- **A positive control that passed makes a null result informative:** evasion clearly works in the arena (the flee rule, −73%), so "evolved prey weren't caught less" is a finding about evolution here, not a broken test.
+- **Not supported is not "disproved":** a −5.2% difference whose interval includes zero; with these settings, this training length and these senses, evolution did not produce detectable evasion.
+- **Designed versus evolved:** a one-line rule beat 20,000 ticks of selection by a wide margin.
+- **Check a measure on a known case first:** the flee rule must score near 1 on a "turning away" measure; the first version scored it 0.57 because it counted a prey already fleeing straight away as a failure. Fixed before interpreting.
+- **Confounds in post hoc looks:** bigger weights on predator inputs looked like selection, until the other inputs turned out to have grown just as much (more births, more drift).
+
+## Milestone 6, chunk 06A complete
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.
