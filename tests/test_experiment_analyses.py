@@ -28,6 +28,7 @@ e005 = load("e005_mutation_diversity")
 e006 = load("e006_founders_extinction")
 e007 = load("e007_neuroevolution")
 e008 = load("e008_evasion")
+e009 = load("e009_specialisation")
 
 
 @pytest.mark.parametrize("power", [1.0, 0.5, 1.3])
@@ -261,3 +262,43 @@ def test_e008_arena_predators_neither_starve_nor_breed_and_prey_are_never_born(e
         assert {o.id for o in sim.predators} == ids  # none died, none born
     assert all(o.parent_id is None for o in [*sim.organisms, *sim.dead])  # no prey births
     assert len(sim.organisms) < 30  # captures happened, and nobody refilled the room
+
+
+def test_e009_conditions_differ_only_in_how_the_diet_matters():
+    configs = load_spec(EXPERIMENTS / "specs" / "E009.yaml").configs()
+    base = configs[("tradeoff", 10000)].model_dump()
+    for label in ("neutral", "linear"):
+        other = configs[(label, 10000)].model_dump()
+        assert other["resources"] != base["resources"]
+        raw = {**other, "resources": base["resources"]}
+        assert raw == base, label  # everything outside resources is the same
+    assert configs[("neutral", 10000)].resources.diet.neutral
+    assert configs[("linear", 10000)].resources.exponent == 1.0
+    assert configs[("tradeoff", 10000)].food.energy_value == 80.0  # V, from the pilots
+
+
+@pytest.fixture(scope="module")
+def e009_ran(tmp_path_factory):
+    from genesis.analytics.batch import run_experiment
+
+    out = tmp_path_factory.mktemp("e009")
+    spec = load_spec(EXPERIMENTS / "specs" / "E009.yaml").smoke_copy([9100], 600)
+    spec = spec.model_copy(update={"output": str(out / "runs")})
+    run_experiment(spec, workers=1, lake=out / "lake")
+    return spec, out / "lake", out / "runs"
+
+
+def test_e009_measures_the_survivors_diets_as_defined(e009_ran):
+    spec, lake, runs = e009_ran
+    metrics = e009.run_metrics(spec, lake)
+    for row in metrics.itertuples():
+        folder = runs / f"{row.condition}-s{row.seed}"
+        diets = pd.read_csv(folder / "diets.csv").set_index("id")
+        alive = pd.read_csv(folder / "organisms.csv").set_index("id")["alive"]
+        d = diets.loc[alive[alive].index, "diet"].to_numpy()
+        assert row.survivors == len(d)
+        assert row.diet_sd == pytest.approx(d.std(), abs=1e-12)  # population sd, ddof 0
+        assert row.specialisation == pytest.approx(np.abs(d - 0.5).mean(), abs=1e-12)
+        assert row.share_a == pytest.approx((d < 0.2).mean())
+        assert row.share_b == pytest.approx((d > 0.8).mean())
+        assert row.split == (row.share_a >= 0.1 and row.share_b >= 0.1)

@@ -41,6 +41,7 @@ uv run genesis lake export --experiment E00N --out data/exports/E00N   # + READM
 uv run python experiments/e007_neuroevolution.py --analyse-only --report   # E007 verdicts + results page
 uv run python experiments/e008_evasion.py [--smoke | --analyse-only]   # E008: train, arena, analyse
 uv run python experiments/pilots/e008_tuning.py --round 4   # E008 tuning pilots (labelled tuning)
+uv run python experiments/e009_specialisation.py [--smoke | --analyse-only]   # E009: run, analyse
 ```
 
 ## Simulation invariants (do not break)

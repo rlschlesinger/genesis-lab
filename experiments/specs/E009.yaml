@@ -1,0 +1,16 @@
+# E009 · Specialisation. Definition: docs/experiments/E009-specialisation.md
+# One world (configs/diets.yaml: two foods, a diet gene, the diet seeker, every other expressed
+# gene frozen, V = 80) in three conditions that differ only in how the diet matters.
+experiment_id: E009
+title: Does a population split into specialists on two foods?
+definition: docs/experiments/E009-specialisation.md
+base_config: configs/diets.yaml
+base_changes:
+  run.max_ticks: 20000
+  recording.ticks_every: 10            # nothing analysed needs every tick
+  recording.genome_snapshot_every: 1000
+seeds: {first: 10000, count: 20}
+conditions:
+  - {label: tradeoff}                                      # k = 2, as configured
+  - {label: neutral, changes: {resources.diet.neutral: true}}  # the diet has no effect
+  - {label: linear, changes: {resources.exponent: 1.0}}    # k = 1

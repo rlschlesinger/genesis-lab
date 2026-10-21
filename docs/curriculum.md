@@ -518,5 +518,10 @@ What has been covered, where it appears in the code, and what comes next.
 - **Colour that carries the question:** organisms tinted by the food they digest, so a split would show as two colours.
 - **One run is a story, not a result:** the first full run drifted all the way to A-specialists; whether that is typical, or whether populations ever split, is E009's job.
 
+### 6.10 · E009 pre-registered
+- **Pilots that can't peek:** they report survival and population only, never the diet, so they can't steer the result.
+- **Disclose what you've seen:** one full run was looked at before the definition; it is named, and the hypothesis it prompted is labelled secondary.
+- **Confounders can run either way:** neutral worlds are smaller and drift more; stating that drift works *against* the hypothesis makes a positive result more convincing.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.
