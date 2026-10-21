@@ -59,10 +59,13 @@ def ingest_run(run_dir: str | Path, lake: Path = DEFAULT_LAKE) -> IngestResult:
     """Extract, transform, validate and load one run folder."""
     run_dir = Path(run_dir)
     try:
-        meta = json.loads((run_dir / "run.json").read_text())
+        meta = read_meta(run_dir)
         tables = extract_transform(run_dir, meta)
         validate_run(meta, tables)
-    except (ValidationError, ValueError, KeyError, OSError, pa.ArrowException) as exc:
+    except KeyError as exc:  # a run.json field every run record has (status, run_id, ...)
+        reason = f"run.json is missing {exc.args[0]!r}" if exc.args else str(exc)
+        return IngestResult(run_dir, _run_id_or_none(run_dir), False, reason=reason)
+    except (ValidationError, ValueError, OSError, pa.ArrowException) as exc:
         return IngestResult(run_dir, _run_id_or_none(run_dir), False, reason=str(exc))
     _write_all(tables, meta["run_id"], Path(lake))
     return IngestResult(
@@ -71,6 +74,23 @@ def ingest_run(run_dir: str | Path, lake: Path = DEFAULT_LAKE) -> IngestResult:
 
 
 # --- Extract and transform ----------------------------------------------------------------
+
+
+def read_meta(run_dir: Path) -> dict:
+    """run.json as a dict. A file that parses but isn't a run record (a list, a string, a
+    config that isn't a mapping) is refused here with a reason, so one damaged folder can't
+    stop ``ingest_paths`` with an AttributeError half-way through a lake."""
+    meta = json.loads((run_dir / "run.json").read_text())
+    if not isinstance(meta, dict):
+        raise ValueError(f"run.json is not a run record: expected a mapping, got {_kind(meta)}")
+    config = meta.get("config")
+    if config is not None and not isinstance(config, dict):
+        raise ValueError(f"run.json: config should be a mapping, got {_kind(config)}")
+    return meta
+
+
+def _kind(value: object) -> str:
+    return "null" if value is None else type(value).__name__
 
 
 def schema_version(run_dir: Path, meta: dict) -> int:
@@ -207,5 +227,5 @@ def _timestamp(value: str | None) -> datetime | None:
 def _run_id_or_none(run_dir: Path) -> str | None:
     try:
         return json.loads((run_dir / "run.json").read_text())["run_id"]
-    except (OSError, ValueError, KeyError):
+    except (OSError, ValueError, KeyError, TypeError):  # TypeError: not a mapping at all
         return None
