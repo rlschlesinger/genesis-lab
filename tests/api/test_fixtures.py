@@ -13,15 +13,27 @@ from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
 REL_TOL = 1e-9
+# The share of organisms turning toward seen food counts only those whose bearing to it is
+# not exactly 0.0 (analytics/behaviour.py). A rule-based organism that has turned to face its
+# food heads straight at it on the next tick with a bearing of exactly 0.0 on one platform and
+# a few ulps on another (arctan2's last bit, D-027), so it is counted on one and left out on
+# the other. The fixtures were captured on a Mac; on Linux x86_64 that moved the diets run's
+# toward_food in the fourth decimal while every count stayed identical. The measure itself is
+# recorded in behaviour.csv and can't change (CLAUDE.md: CSV output stays byte-identical), so
+# this comparison alone is loosened for it. A real change in what toward_food means (0.5 for a
+# random walker, 1.0 for the seeker) is far larger than this tolerance.
+PLATFORM_SENSITIVE = {"toward_food": 1e-2}
 
 
 def differences(committed, current, path="") -> list[str]:
     """Where two JSON values differ, as paths; floats within REL_TOL count as equal."""
     if isinstance(committed, float) or isinstance(current, float):
+        column = path.rsplit(".", 1)[-1].split("[", 1)[0]
+        abs_tol = PLATFORM_SENSITIVE.get(column, 1e-12)
         if not (
             isinstance(committed, int | float)
             and isinstance(current, int | float)
-            and math.isclose(committed, current, rel_tol=REL_TOL, abs_tol=1e-12)
+            and math.isclose(committed, current, rel_tol=REL_TOL, abs_tol=abs_tol)
         ):
             return [f"{path}: {committed!r} != {current!r}"]
         return []
@@ -74,3 +86,14 @@ def test_the_comparison_notices_real_changes():
     assert differences({"a": [1]}, {"a": [1, 2]}) == [".a: 1 items != 2 items"]
     assert differences({"a": 1}, {"b": 1}) == [".a: only on one side", ".b: only on one side"]
     assert differences({"a": "x"}, {"a": "y"}) == [".a: 'x' != 'y'"]
+
+
+def test_only_toward_food_may_differ_by_a_platforms_rounding():
+    near = {"columns": {"toward_food": [0.9996969696969696], "population": [158.0]}}
+    far = {"columns": {"toward_food": [0.9996923076923077], "population": [158.0]}}
+    assert differences(near, far) == []
+    # Still a real difference when it is one: the seeker (1.0) against a random walker (0.5).
+    assert differences({"columns": {"toward_food": [1.0]}}, {"columns": {"toward_food": [0.5]}})
+    # Counts never get the allowance, nor does a float column of another name.
+    assert differences(near, {"columns": {**near["columns"], "population": [158.001]}})
+    assert differences({"mean_energy": [1.0]}, {"mean_energy": [1.001]})
