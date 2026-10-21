@@ -4,7 +4,7 @@ A local-first artificial life laboratory. Digital organisms live in a 2D world: 
 
 Built as a learning project: the [curriculum](docs/curriculum.md) tracks the concepts covered so far.
 
-**Status:** Milestones 1 (The Petri Dish), 2 (Genetics and Evolution), 3 (The Science Lab), 4 (Evolving Neural Brains) and 5 (an API and a browser lab) complete. Milestone 6, first half (predators and prey, experiment E008) complete; the second half (one research extension) is next, once approved.
+**Status:** Milestones 1 (The Petri Dish), 2 (Genetics and Evolution), 3 (The Science Lab), 4 (Evolving Neural Brains) and 5 (an API and a browser lab) complete. Milestone 6 (predators and prey, E008; two foods and specialists, E009) complete: **all six milestones are done** ([summary](docs/summary.md)).
 
 ## What it does
 
@@ -95,6 +95,7 @@ Runs are described by YAML files in `configs/`:
 - [`evolution.yaml`](configs/evolution.yaml): the same, plus mutation, trade-off costs (drag and sensing upkeep), a frozen turning gene and 20,000 ticks. A test keeps the two files from differing anywhere else.
 - [`neural.yaml`](configs/neural.yaml): `evolution.yaml` with each organism's own evolving neural brain as the controller and every expressed gene frozen, so only brains evolve ([how the brain works](docs/neural-networks.md)).
 - [`predators.yaml`](configs/predators.yaml): `neural.yaml` with 100 founding prey and a second species, 4 predators that chase the nearest prey (settings from the E008 tuning pilots); prey brains get three inputs about the nearest predator. [`predators-neural.yaml`](configs/predators-neural.yaml): the same with evolving predator brains (which starve: worth watching in the lab).
+- [`diets.yaml`](configs/diets.yaml): `evolution.yaml` with two kinds of food and a heritable diet gene (only the diet evolves); organisms head for the food worth most to them. E009's world.
 
 Invalid configs are rejected before anything runs, with an error naming the field.
 
@@ -112,6 +113,7 @@ Each experiment is defined (question, hypotheses, seeds, analysis) and committed
 | [E006](docs/experiments/E006-founders-extinction.md) | Do fewer founders mean more extinction? | No monotonic effect (p = 0.42); an exploratory U-shape to test next |
 | [E007](docs/experiments/E007-neuroevolution.md) | Do evolved brains forage as well as the hand-written rule? | Selection works (evolved beat random brains in 24/24 worlds) and generalises to new worlds (equivalent). Against the seeker: +3.6% meals, −6.2% energy per meal; whether +3.6% reaches the 5% that would matter is inconclusive |
 | [E008](docs/experiments/E008-evasion.md) | Do prey evolve to escape predators? | Evasion is possible (a designed flee rule was caught 73% less, 20/20 worlds), but prey evolved with predators were not caught detectably less than prey evolved without (−5.2%, CI includes 0); they ate 7.2% less |
+| [E009](docs/experiments/E009-specialisation.md) | Does a population split into specialists on two foods? | With a curved trade-off, specialists emerged in 20/20 worlds; 9 split into two coexisting groups, 11 went one way; a straight-line trade-off did nothing |
 
 ```bash
 uv run genesis experiment status experiments/specs/E002.yaml          # which runs exist / are stale
@@ -156,6 +158,9 @@ data/                      generated run output (ignored by Git)
 - [Architecture](docs/architecture.md): how the pieces fit together, tick order, data formats
 - [Decision log](docs/decision-log.md): each design decision, why, and the alternatives
 - [Experiment design](docs/experiment-design.md): methodology and statistical rules
+- [Summary of the six milestones](docs/summary.md): what was built, found and learned
+- [Research roadmap](docs/RESEARCH_ROADMAP.md): two ideas for what could come next
+- [Release checklist](docs/release-checklist.md): showing the project cleanly from a fresh clone
 - [Curriculum](docs/curriculum.md): concepts covered, milestone by milestone
 - [Database schema](docs/schema.md) and [data dictionary](docs/data-dictionary.md): tables, keys, every column
 - [SQL examples](docs/sql-examples.md) and [SQL exercises](docs/sql-exercises.md)

@@ -523,5 +523,13 @@ What has been covered, where it appears in the code, and what comes next.
 - **Disclose what you've seen:** one full run was looked at before the definition; it is named, and the hypothesis it prompted is labelled secondary.
 - **Confounders can run either way:** neutral worlds are smaller and drift more; stating that drift works *against* the hypothesis makes a positive result more convincing.
 
+### 6.11 · E009: specialists
+- **A primary measure can be right and still miss half the story:** spread caught the splits (9 of 20) but scored the one-sided worlds as *less* varied than the control; specialisation (secondary, disclosed) showed every world specialised.
+- **Curvature matters:** a curved trade-off (k = 2) made specialists everywhere; a straight one (k = 1) did nothing.
+- **Coexistence by rarity:** in 9 worlds two groups held on to the end, each protected by the other's food being left uneaten.
+- **Writing the end:** a research roadmap of ideas (not plans), a release checklist, and a summary that ties the six milestones together.
+
+## Milestone 6 complete
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.

@@ -113,6 +113,7 @@ E005                       40        0
 E006                      250      162
 E007                      144        0
 E008                      120        0
+E009                       60        0
 ```
 
 Only E006 has extinctions (162 of 250 runs), by design: its harsh world (no starting food, regrowth 0.1) was chosen by pilots so that extinction happens. Every other experiment kept all its runs.

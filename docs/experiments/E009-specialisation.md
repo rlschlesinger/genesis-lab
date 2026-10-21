@@ -60,4 +60,38 @@ No multiple-comparison correction: H19 is the single primary test; H20 and H21 a
 
 ## Results
 
-*(Appended after the runs, in 6.11.)*
+### Run
+
+Commit `d71ceb1` (clean; all 60 runs `git_dirty: false`). 60 runs, all completed (53 s on this Mac's 14 cores); every run counted (at least 30 alive at the end), so all 20 worlds enter every comparison. Analysis: `uv run python experiments/e009_specialisation.py --analyse-only`, which reproduces every number below exactly.
+
+### Survivors' diets at tick 20,000 (20 worlds per condition)
+
+Mean (sd across worlds):
+
+| Condition | Survivors | Diet spread (sd) | Specialisation, mean \|d − 0.5\| | Below 0.2 (eat A) | Above 0.8 (eat B) | Meals of the favoured kind |
+|---|---|---|---|---|---|---|
+| **tradeoff** | 159 (16) | **0.225 (0.203)** | **0.459 (0.013)** | 0.50 (0.39) | 0.50 (0.38) | 0.66 (0.05) |
+| neutral | 88 (6) | 0.092 (0.045) | 0.113 (0.056) | 0.02 (0.08) | 0.03 (0.12) | 0.50 (0.02) |
+| linear | 170 (9) | 0.100 (0.039) | 0.092 (0.032) | 0.01 (0.04) | 0.01 (0.02) | 0.52 (0.02) |
+
+- **H19 (primary): SUPPORTED.** Tradeoff − neutral diet spread = **+0.133**, 95% CI [+0.043, +0.225] (**+144%** of neutral); one-sided p = 0.007. But higher in only **10 of 20** worlds: see H20 and H22.
+- **H20 (counts): splits happened only with the trade-off.** Split worlds (≥ 10% of survivors below 0.2 *and* ≥ 10% above 0.8): **tradeoff 9 of 20**, neutral 0 of 20, linear 0 of 20.
+- **H21 (estimate): the shape matters.** Tradeoff − linear diet spread = **+0.125**, 95% CI [+0.034, +0.219] (+124%), two-sided p = 0.020. A straight-line trade-off produced no more specialisation than none at all (0.092 vs 0.113).
+- **H22 (secondary): SUPPORTED, in every world.** Tradeoff − neutral specialisation = **+0.347**, 95% CI [+0.320, +0.370]; higher in **20 of 20** worlds; one-sided p = 0.00002.
+
+### Interpretation
+
+With a trade-off that makes generalists worse at both foods (k = 2), **specialists emerged in every one of 20 worlds**: by the end, almost no survivor was a generalist (mean distance from 0.5: 0.46 of a possible 0.5). In **9 worlds the population split** into two specialist groups that coexisted to the end; in the other 11, one group took over the whole population. That is why the primary measure, spread, is higher in only half the worlds: a split world has a very large spread (two groups far apart), a taken-over world a very small one (everyone at one end), smaller even than the neutral control's drift. The two outcomes are different answers to "do specialists emerge": yes, always; and they coexist about half the time.
+
+A straight-line trade-off (k = 1), where a generalist is exactly as good on average as a specialist, produced nothing: diets stayed near 0.5, as in the neutral control. What drives specialisation here is the trade-off's *curvature*, the generalist's disadvantage, not the mere existence of two foods.
+
+Drift can't explain this: the neutral control's populations were half the size (88 vs 159), so drifted more, and still stayed generalist.
+
+What this does **not** show: that specialisation would evolve if organisms had to *learn* or *evolve* which food to prefer (here the choice follows the gene by design), or that the groups are species: reproduction is asexual, so there is no interbreeding to stop, and the groups differ in one gene only.
+
+### Exploratory (post hoc, not tested; `experiments/e009_exploratory.py`)
+
+- **Endings of the 20 tradeoff worlds:** 9 split, 6 all on A, 5 all on B, none in between. Which side won in the one-sided worlds looks like chance (6 vs 5; the foods are symmetric).
+- **The splits look stable.** In 8 of the 9 split worlds, both ends held at least 10% of the population in every recorded tick of the last 5,000; in the ninth (seed 10000), in 52% of them, so that split may have formed late or may not last.
+- **Specialisation takes about half the run.** The first recorded tick at which more than half the population were specialists: median 9,910, range 4,710–14,720. A shorter experiment would have missed it, and some one-sided worlds may yet split (or splits collapse) beyond 20,000 ticks.
+- **Candidate question for a new experiment:** what decides split versus takeover? Plausibly how early and how evenly the first specialists of each kind appear (once one kind dominates, the rare other specialists start from too few to grow). Untested.

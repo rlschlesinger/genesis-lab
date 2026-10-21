@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Milestones 1–5 complete** (2026-10-20). **Milestone 6 approved 2026-10-20** for chunk 06A (predator and prey; plan below); chunk 06B (one research extension) needs its own go-ahead. Scope in [roadmap/](roadmap/README.md). Schema in [schema.md](schema.md), columns in [data-dictionary.md](data-dictionary.md).
+Status: **Milestones 1–6 complete** (2026-10-21): 06A predator and prey (E008), 06B two foods (E009). No new features without the user's authorisation; [summary.md](summary.md). Scope in [roadmap/](roadmap/README.md). Schema in [schema.md](schema.md), columns in [data-dictionary.md](data-dictionary.md).
 
 ## Component map
 
@@ -544,4 +544,16 @@ Scope: [roadmap/06B](roadmap/06B_ONE_ADVANCED_EXTENSION.md), extension A (two re
 | 6.8 | Mechanics: an optional `resources:` section; food kinds A and B (own stream); a heritable diet gene; meal energy from kind and diet, the rest through the ledger; the `diet_seeker` controller | Old configs byte-identical; energy as specified; diet inherits, mutates and reflects like genes; choice by energy per distance | done |
 | 6.9 | Recording (run-folder version 6: diets and meals per kind), lake tables, report section; the lab draws the two foods and shades organisms by diet | Schema compatibility; lake validation; contract fixtures | done |
 | 6.10 | Labelled pilots for `V`; E009 defined and committed before running | Spec and definition committed first | done |
-| 6.11 | Run E009; effect sizes, alternatives; `docs/RESEARCH_ROADMAP.md`; release checklist; summary of all six milestones | Verdicts from the pre-registered analysis | |
+| 6.11 | Run E009; effect sizes, alternatives; `docs/RESEARCH_ROADMAP.md`; release checklist; summary of all six milestones | Verdicts from the pre-registered analysis | done |
+
+### Chunk 06B scope check (2026-10-21)
+
+| 06B requirement | Evidence |
+|---|---|
+| Exactly one extension, chosen after discussing the user's priorities | Extension A (two resources), the user's choice, 2026-10-21; [proposal](roadmap/06B-proposal.md) approved with its three recommendations |
+| Before code, a one-page proposal: hypothesis, independent variable, control, mechanism, metrics, confounders, fixed settings, run counts | [roadmap/06B-proposal.md](roadmap/06B-proposal.md), committed `1114e5e` before any code |
+| Minimal mechanics behind documented interfaces, tests for new invariants, schema version changes | `resources:` section, food kinds, diet, `diet_seeker` (D-063); run-folder version 6, lake tables, validation (D-064); `tests/core/test_two_foods.py`, `tests/lake/test_two_foods.py`, `tests/api/test_two_foods.py`; every older config byte-identical |
+| 10–20 independent replicates per condition; actual counts and reproducibility metadata | E009: 20 worlds × 3 conditions, all 60 counted, commit `d71ceb1`, `git_dirty: false` |
+| Effect size and uncertainty; alternative explanations; no claims of "species" from visualisation | [E009 results](experiments/E009-specialisation.md): H19 +144% [+0.043, +0.225], H22 20/20; drift ruled out by the smaller neutral populations; "not species" stated |
+| `docs/RESEARCH_ROADMAP.md` with two future extensions as ideas; a release checklist | [RESEARCH_ROADMAP.md](RESEARCH_ROADMAP.md), [release-checklist.md](release-checklist.md) |
+| A newcomer can launch the app and follow the research story; stop and summarise all six milestones | README, [lab.md](lab.md) (the `diets` world), [summary.md](summary.md) |
