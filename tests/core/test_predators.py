@@ -55,9 +55,9 @@ def flatten(d: dict, prefix: str = "") -> dict:
 
 
 def test_predator_config_differs_from_neural_only_by_predators():
-    # predators.yaml is neural.yaml plus one section, so prey in a predator world are the same
-    # prey E007 studied, and E008's no-predator condition is just neural.yaml.
-    neural = load_config(CONFIGS / "neural.yaml")
+    # predators.yaml is neural.yaml with 100 founding prey (6.6 tuning) plus one section, so
+    # its prey are the prey E007 studied, only more of them at the start.
+    neural = apply_changes(load_config(CONFIGS / "neural.yaml"), {"organisms.initial_count": 100})
     predators = load_config(PREDATORS)
     assert without_predators(predators) == neural
     neural_flat, predator_flat = flatten(neural.model_dump()), flatten(predators.model_dump())
@@ -190,7 +190,7 @@ def test_prey_records_never_include_predators():
 def test_predators_reproduce_by_their_own_rules():
     # Founders start above their threshold and have no cap pressure: every one has a child on
     # tick 0, paid for by its own offspring_energy and overhead, in the ledger.
-    config = predator_config(**{"predators.initial_energy": 200.0, "predators.max_population": 100})
+    config = predator_config(**{"predators.initial_energy": 300.0, "predators.max_population": 100})
     sim = Simulation(config)
     founders = list(sim.predators)
     sim.step()
@@ -204,7 +204,13 @@ def test_predators_reproduce_by_their_own_rules():
 
 
 def test_predator_cap_limits_births():
-    config = predator_config(**{"predators.initial_energy": 200.0, "predators.max_population": 13})
+    config = predator_config(
+        **{
+            "predators.initial_count": 10,
+            "predators.initial_energy": 300.0,
+            "predators.max_population": 13,
+        }
+    )
     sim = Simulation(config)
     sim.step()
     assert len(sim.predators) == 13

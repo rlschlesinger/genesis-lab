@@ -1,10 +1,12 @@
 # Genesis Lab predator-prey configuration (Milestone 6, roadmap 06A; D-057).
-# Identical to neural.yaml except for the `predators:` section at the end
+# Identical to neural.yaml except for 100 founding prey and the `predators:` section at the end
 # (tests/core/test_predators.py::test_predator_config_differs_from_neural_only_by_predators).
 # Prey are neural.yaml's evolving brains. Predators are a second species with their own body
 # and genes that catch prey (6.2) and see them (6.3); prey brains get three inputs about the
-# nearest predator (10 inputs, 80 parameters). Its numbers are placeholders until the tuning
-# pilots (6.6). Set predators.initial_count to 0 for the same world with no predators in it.
+# nearest predator (10 inputs, 80 parameters). The settings marked TUNED come from the 6.6
+# pilots (docs/experiments/pilots/E008-tuning.md): in 12 pilot seeds the prey never died out
+# and both species usually lasted 20,000 ticks. Set predators.initial_count to 0 for the same
+# world with no predators in it. predators-neural.yaml: the same world, neural predators.
 # Units: distance = world units, time = ticks, energy = EU (abstract), angle = radians.
 
 run:
@@ -24,7 +26,7 @@ food:
   eat_radius: 2.0
 
 organisms:
-  initial_count: 30
+  initial_count: 100       # TUNED: 30 random-brained founders dip to ~20 early, too few to meet predators
   max_population: 500
   initial_energy: 50.0
   max_age: null              # null = no age limit
@@ -71,8 +73,8 @@ recording:
 # PREDATORS (6.1): a second species. Same kinds of settings as `organisms:` and `genome:`,
 # with their own values. They never eat food: they catch prey.
 predators:
-  initial_count: 10
-  max_population: 150
+  initial_count: 4          # TUNED
+  max_population: 10         # TUNED: a cap stops predator booms that eat every prey
   initial_energy: 120.0      # a bigger store than prey (50): they must last between catches
   max_age: null
   move_cost_per_distance: 0.1
@@ -87,14 +89,14 @@ predators:
   controller: nearest_prey_seeker
   # Capture (6.2, D-058): strike at prey within reach after moving; closest pairs first.
   capture_radius: 3.0        # world units (prey eat food within 2.0)
-  capture_probability: 0.5   # chance a strike catches; otherwise the prey escapes this tick
-  capture_efficiency: 0.8    # share of the prey's energy the predator gains; the rest is lost
+  capture_probability: 0.18  # TUNED: chance a strike catches; otherwise the prey escapes
+  capture_efficiency: 0.5    # TUNED: share of the prey's energy the predator gains; the rest is lost
   # Frozen like the prey's expressed genes, so behaviour can change only through brains (6.3).
   genome:
-    speed:                  {initial: 1.8,  min: 0.25, max: 4.0, mutable: false}   # prey: 1.5
+    speed:                  {initial: 1.5,  min: 0.25, max: 4.0, mutable: false}   # TUNED: as prey
     sense_range:            {initial: 25.0, min: 1.0,  max: 60.0, mutable: false}  # prey: 20
     max_turn:               {initial: 0.4,  min: 0.05, max: 1.5, mutable: false}   # prey: 0.5
     metabolic_rate:         {initial: 0.3,  min: 0.02, max: 0.5, mutable: false}   # prey: 0.2
     # min must exceed offspring_energy + reproduction_overhead (100)
-    reproduction_threshold: {initial: 160.0, min: 110.0, max: 400.0, mutable: false}
+    reproduction_threshold: {initial: 240.0, min: 110.0, max: 400.0, mutable: false}  # TUNED
     neutral_marker:         {initial: 0.5,  min: 0.0,  max: 1.0}

@@ -117,7 +117,7 @@ def test_neural_predators_need_a_brain_and_the_right_number_of_founder_brains():
     with pytest.raises(pydantic.ValidationError, match="needs a predators.brain"):
         SimulationConfig.model_validate(raw)
     raw["predators"]["brain"] = {"founder_weights": [[0.0] * 62] * 3}
-    with pytest.raises(pydantic.ValidationError, match="3 brains for 10 predator founders"):
+    with pytest.raises(pydantic.ValidationError, match="3 brains for 4 predator founders"):
         SimulationConfig.model_validate(raw)
 
 
@@ -125,7 +125,7 @@ def test_a_world_ready_for_predators_can_have_none():
     sim = Simulation(predator_config(**{"predators.initial_count": 0}))
     assert sim.predators == []
     sim.step()
-    assert sim.last_decision.thought.inputs.shape == (30, 10)
+    assert sim.last_decision.thought.inputs.shape == (sim.config.organisms.initial_count, 10)
     assert not sim.last_decision.thought.inputs[:, 7:].any()  # never a predator to see
 
 
@@ -175,7 +175,7 @@ def test_chasing_predators_catch_more_than_wandering_ones():
 
 
 def test_neural_predators_think_inherit_and_replay():
-    config = neural_predators(**{"predators.initial_energy": 200.0})
+    config = neural_predators(**{"predators.initial_energy": 300.0})
     a, b = Simulation(config), Simulation(config)
     assert all(o.brain.shape == (7, 6, 2) for o in a.predators)
     founders = {o.id: o.brain.to_vector() for o in a.predators}
@@ -186,7 +186,7 @@ def test_neural_predators_think_inherit_and_replay():
     thought = a.last_predator_decision.thought
     assert thought is not None and thought.inputs.shape == (len(a.predators), 7)
     children = [o for o in [*a.predators, *a.dead_predators] if o.parent_id is not None]
-    assert children  # 200 EU is above their threshold: every founder had a child on tick 0
+    assert children  # 300 EU is above their threshold (240): every founder had a child on tick 0
     assert all(o.brain.shape == (7, 6, 2) for o in children)
     changed = [o for o in children if o.parent_id in founders
                and not np.array_equal(o.brain.to_vector(), founders[o.parent_id])]  # fmt: skip
