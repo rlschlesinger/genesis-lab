@@ -47,7 +47,13 @@ from genesis.evolution.mutation import mutate, mutate_value
 from genesis.evolution.reproduction import place_offspring, select_parents
 from genesis.intelligence.brain_inputs import PREY_INPUT_NAMES, wall_distance_ahead
 from genesis.intelligence.controllers import Actions, Thought, make_controller
-from genesis.intelligence.neural import N_HIDDEN, N_INPUTS, N_OUTPUTS, Brain, BrainStack
+from genesis.intelligence.neural import (
+    N_HIDDEN,
+    N_INPUTS,
+    N_OUTPUTS,
+    Brain,
+    BrainStackCache,
+)
 from genesis.intelligence.sensors import (
     BodySenses,
     KindSenses,
@@ -269,6 +275,10 @@ class Simulation:
         )
         self.controller = make_controller(config.organisms.controller)
         self._neural = config.organisms.controller == "neural"
+        # The living brains stacked for the forward pass, patched tick to tick (bit-identical
+        # to stacking them afresh; see BrainStackCache).
+        self._prey_brains = BrainStackCache()
+        self._predator_brains = BrainStackCache()
         # Prey brains have 10 inputs in a world with predators (even none), 7 otherwise (D-059).
         self._prey_inputs = len(PREY_INPUT_NAMES) if config.predators is not None else N_INPUTS
         # Founders' speed: the drag cost is relative to it (core/costs.py).
@@ -474,7 +484,7 @@ class Simulation:
                     reproduction_threshold=thresholds,
                 ),
             )
-            brains = BrainStack.of([o.brain for o in living])
+            brains = self._prey_brains.of([o.id for o in living], [o.brain for o in living])
             # think() is what decide() calls; keeping its result costs nothing extra.
             thought = self.controller.think(observations, self.rng.controller, brains)
             actions = thought.actions
@@ -519,7 +529,7 @@ class Simulation:
                 )
                 pred_thought = self.predator_controller.think(
                     pred_obs, self.predator_rng.controller,
-                    BrainStack.of([o.brain for o in hunters]),
+                    self._predator_brains.of([o.id for o in hunters], [o.brain for o in hunters]),
                 )  # fmt: skip
                 pred_actions = pred_thought.actions
             else:

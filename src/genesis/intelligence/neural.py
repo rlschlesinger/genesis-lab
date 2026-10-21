@@ -35,6 +35,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from itertools import compress
 
 import numpy as np
 from numpy.typing import NDArray
@@ -227,3 +228,69 @@ def forward(stack: BrainStack, inputs: FloatArray) -> Activations:
     output_sum = (stack.w_output * hidden[:, np.newaxis, :]).sum(axis=-1) + stack.b_output
     outputs = np.column_stack([np.tanh(output_sum[:, 0]), sigmoid(output_sum[:, 1])])
     return Activations(x, hidden_sum, hidden, output_sum, outputs)
+
+
+class BrainStackCache:
+    """The living population's ``BrainStack``, kept from tick to tick and patched for births
+    and deaths instead of being stacked from scratch every tick.
+
+    Brains never change during a lifetime and the living list only ever loses members (deaths)
+    or gains them at its end (newborns, with larger IDs), so last tick's stack can be cut down
+    to the survivors and the newborns' brains appended. The arrays hold exactly the values
+    ``BrainStack.of`` would build, in the same C-contiguous layout, so the forward pass adds
+    the same numbers in the same order and every output is bit-identical (D-036; checked by
+    tests/intelligence/test_neural.py against ``BrainStack.of`` and by the golden digests).
+
+    Why: ``np.stack`` over a thousand brains was a quarter of a neural tick (docs/benchmarks.md).
+    """
+
+    def __init__(self) -> None:
+        self._ids: NDArray[np.int64] = np.empty(0, dtype=np.int64)
+        self._brains: list[Brain] = []
+        self._stack: BrainStack | None = None
+
+    def of(self, ids: Sequence[int], brains: Sequence[Brain]) -> BrainStack:
+        """The stack for organisms ``ids`` (ascending) whose brains are ``brains``."""
+        n = len(ids)
+        if n == 0 or len(brains) != n:
+            raise ValueError("cannot stack zero brains, or a brain count that differs from ids")
+        now = np.asarray(ids, dtype=np.int64)
+        stack = self._stack
+        fresh = None
+        if stack is not None and len(self._ids):
+            # Survivors: previous IDs still present. Both lists are sorted, so a binary search
+            # finds each previous ID's place in the current list.
+            at = np.searchsorted(now, self._ids)
+            kept = (at < n) & (now[np.minimum(at, n - 1)] == self._ids)
+            survivors = int(kept.sum())
+            # The survivors must be the first rows of the current list, still carrying the very
+            # brain objects stacked before (a Brain is immutable, so identity is enough). Code
+            # that swaps a living organism's brain, or a list in another order, gets a stack
+            # built afresh rather than stale rows.
+            same = all(
+                mine is theirs
+                for mine, theirs in zip(compress(self._brains, kept), brains, strict=False)
+            )
+            if same and len(self._brains) == len(kept):
+                if survivors == len(self._ids) and survivors == n:
+                    return stack  # nobody died, nobody was born
+                parts = [
+                    np.ascontiguousarray(a[kept])
+                    for a in (stack.w_hidden, stack.b_hidden, stack.w_output, stack.b_output)
+                ]
+                born = brains[survivors:]
+                if born:
+                    new = BrainStack.of(born)
+                    parts = [
+                        np.concatenate([old, add])
+                        for old, add in zip(
+                            parts,
+                            (new.w_hidden, new.b_hidden, new.w_output, new.b_output),
+                            strict=True,
+                        )
+                    ]
+                fresh = BrainStack(*parts)
+        if fresh is None:
+            fresh = BrainStack.of(brains)
+        self._ids, self._brains, self._stack = now, list(brains), fresh
+        return fresh

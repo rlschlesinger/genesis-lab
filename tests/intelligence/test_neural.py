@@ -204,3 +204,72 @@ def test_stacking_mixed_shapes_or_nothing_is_rejected():
         BrainStack.of([tiny_brain(), random_brain(np.random.default_rng(7))])
     with pytest.raises(ValueError, match="zero brains"):
         BrainStack.of([])
+
+
+# --- The brain-stack cache: the same arrays as stacking afresh, through births and deaths ----
+
+
+def _random_brain(rng: np.random.Generator, n_inputs: int = N_INPUTS) -> Brain:
+    shape = (n_inputs, N_HIDDEN, N_OUTPUTS)
+    return Brain.from_vector(rng.normal(size=parameter_count(*shape)), shape)
+
+
+@pytest.mark.parametrize("n_inputs", [N_INPUTS, 10])
+def test_the_cache_gives_bit_for_bit_what_stacking_afresh_gives(n_inputs):
+    from genesis.intelligence.neural import BrainStackCache
+
+    rng = np.random.default_rng(7)
+    cache = BrainStackCache()
+    population: list[tuple[int, Brain]] = [(i, _random_brain(rng, n_inputs)) for i in range(20)]
+    next_id = 20
+    for tick in range(300):
+        # Deaths: any subset (sometimes none, sometimes everyone but one); births: appended
+        # with larger IDs (sometimes none). The order of the living list never changes.
+        if rng.random() < 0.7 and len(population) > 1:
+            keep = rng.random(len(population)) < 0.8
+            keep[rng.integers(len(population))] = True
+            population = [p for p, k in zip(population, keep, strict=True) if k]
+        for _ in range(rng.integers(0, 4) if rng.random() < 0.6 else 0):
+            population.append((next_id, _random_brain(rng, n_inputs)))
+            next_id += 1
+        ids = [i for i, _ in population]
+        brains = [b for _, b in population]
+        fresh = BrainStack.of(brains)
+        cached = cache.of(ids, brains)
+        for name in ("w_hidden", "b_hidden", "w_output", "b_output"):
+            a, b = getattr(fresh, name), getattr(cached, name)
+            assert a.dtype == b.dtype and a.shape == b.shape and a.flags.c_contiguous
+            assert b.flags.c_contiguous, (tick, name)
+            assert np.array_equal(a, b), (tick, name)
+        x = rng.uniform(-1, 1, size=(len(brains), n_inputs))
+        one, two = forward(fresh, x), forward(cached, x)
+        for name in ("hidden_sum", "hidden", "output_sum", "outputs"):
+            assert np.array_equal(getattr(one, name), getattr(two, name)), (tick, name)
+
+
+def test_the_cache_refuses_what_the_stack_refuses():
+    from genesis.intelligence.neural import BrainStackCache
+
+    with pytest.raises(ValueError):
+        BrainStackCache().of([], [])
+    with pytest.raises(ValueError):
+        BrainStackCache().of([1, 2], [_random_brain(np.random.default_rng(0))])
+
+
+def test_a_swapped_brain_or_a_reordered_list_is_not_served_from_the_cache():
+    from genesis.intelligence.neural import BrainStackCache
+
+    rng = np.random.default_rng(3)
+    brains = [_random_brain(rng) for _ in range(5)]
+    cache = BrainStackCache()
+    cache.of(list(range(5)), brains)
+    # A living organism given another brain (tests do this): the row must follow the object.
+    swapped = [*brains[:2], _random_brain(rng), *brains[3:]]
+    assert np.array_equal(
+        cache.of(list(range(5)), swapped).w_hidden, BrainStack.of(swapped).w_hidden
+    )
+    # The same IDs with the brains in another order: still what stacking afresh gives.
+    shuffled = swapped[::-1]
+    assert np.array_equal(
+        cache.of(list(range(5)), shuffled).b_output, BrainStack.of(shuffled).b_output
+    )
