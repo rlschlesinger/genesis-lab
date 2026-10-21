@@ -1,0 +1,17 @@
+# E008 · Evasion, phase 1: training. Definition: docs/experiments/E008-evasion.md
+# Phase 2 (the test arena) is built from these runs' results by experiments/e008_evasion.py.
+# Both conditions use the tuned predator world (configs/predators.yaml, settings from the 6.6
+# pilots); "safe" is the same world with no predators in it, so its prey grow the same
+# 10-input brains, drawn identically on the same seed, and only the predators differ.
+experiment_id: E008
+title: Do prey evolve to escape predators?
+definition: docs/experiments/E008-evasion.md
+base_config: configs/predators.yaml
+base_changes:
+  run.max_ticks: 20000
+  recording.ticks_every: 10            # nothing analysed needs every tick of training
+  recording.genome_snapshot_every: 1000
+seeds: {first: 8000, count: 20}
+conditions:
+  - {label: hunted}
+  - {label: safe, changes: {predators.initial_count: 0}}

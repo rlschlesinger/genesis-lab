@@ -429,12 +429,13 @@ class Simulation:
         # 3. Decide. A neural controller also needs each organism's brain and what it knows
         #    about its own body (D-042); rule-based controllers get exactly what they always
         #    did, so their runs are unchanged.
+        # In a world with predators, prey that can use it (neural brains, and the designed
+        # flee rule) also sense the nearest predator, from the same start-of-tick snapshot
+        # (D-059, D-062). With none present it is never found. Other prey aren't told.
+        threat = None
+        if hunting and living and cfg.controller in ("neural", "flee_seeker"):
+            threat = sense_threats(positions, headings, sense_ranges, pred.positions)
         if self._neural and living:
-            # In a world with predators, neural prey also sense the nearest predator, from
-            # the same start-of-tick snapshot (D-059). With none present it is never found.
-            threat = None
-            if hunting:
-                threat = sense_threats(positions, headings, sense_ranges, pred.positions)
             observations = replace(
                 observations,
                 threat=threat,
@@ -453,6 +454,8 @@ class Simulation:
             actions = thought.actions
         else:
             thought = None
+            if threat is not None:
+                observations = replace(observations, threat=threat)
             actions = self.controller.decide(observations, self.rng.controller)
         self.last_decision = Decision(observations, actions, max_turns, thought)
 
@@ -747,6 +750,8 @@ class Simulation:
         species = self._prey if lineage is None else lineage
         log = self.mutation_log if log is None else log
         cfg = species.body
+        if not cfg.births:
+            return []  # a test arena: nobody is born (D-062); nothing is drawn
         if eligible is None:
             eligible = np.array([o.can_reproduce for o in candidates], dtype=bool)
         room = cfg.max_population - len(candidates)

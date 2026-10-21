@@ -491,5 +491,12 @@ What has been covered, where it appears in the code, and what comes next.
 - **Motion that carries meaning:** a capture mark is the only animation the user didn't cause, and it fades in real time so it's visible at any speed.
 - **Repeat-and-deduplicate:** each snapshot repeats recent captures; the viewer marks only the new ones, so nothing is lost between pictures and nothing is marked twice.
 
+### 6.6 · Tuning, then pre-registration
+- **Pilots are not results:** tuning runs on their own seeds answer "which settings keep both species alive?", never the experiment's question, and are labelled that way.
+- **Find the mechanism behind a failure:** prey died out after few captures because young populations dip; more founders fixed it, where weaker predators wouldn't have.
+- **Positive controls:** a designed flee rule must beat ignoring predators, or the arena can't show evasion and the main test means nothing.
+- **Smoke runs earn their keep:** three real bugs (an empty-table check, colliding labels, births refilling the arena) were found before a single real run.
+- **Changing an approved plan openly:** neural predators couldn't survive; the change went to the user with the evidence, and the definition says so.
+
 ## Future learning objectives
 - **Later (D-046):** PyTorch and gradient-based training, compared with neuroevolution on the same task.

@@ -512,5 +512,5 @@ Scope: [roadmap/06A](roadmap/06A_PREDATOR_PREY.md). After trying the lab, the us
 | 6.3 | Senses: predators sense the nearest prey; prey sense the nearest predator (3 inputs) | Sensor values against hand-worked cases; old brains unchanged | done |
 | 6.4 | Recording: counts per species, capture attempts and successes, extinctions, traits per species; schema version; lake tables; report sections | Saved-run schema compatibility; lake validation | done |
 | 6.5 | The lab redrawn: cell bodies, species, energy, capture marks; predator/prey charts and phase plot; species in the specimen panel | Snapshot contract (fixtures) and drawing rules unit-tested; checked in Chrome | done |
-| 6.6 | E008 pre-registered (after labelled tuning pilots): prey evolved with vs without predators, plus a designed fleeing rule, tested against the same frozen predators | Spec and definition committed before running | |
+| 6.6 | E008 pre-registered (after labelled tuning pilots): prey evolved with vs without predators, plus a designed fleeing rule, tested against the same frozen predators | Spec and definition committed before running | done |
 | 6.7 | Run E008; effect sizes and uncertainty; honest limits of a toy model; 06A scope check; docs | Verdicts from the pre-registered analysis | |

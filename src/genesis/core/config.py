@@ -32,7 +32,8 @@ BRAIN_PARAMETERS = 62
 # Prey in a world with predators have 3 more inputs (D-059): 10 x 6 + 6 + 6 x 2 + 2.
 PREY_BRAIN_PARAMETERS = 80
 
-ControllerName = Literal["random_walk", "nearest_food_seeker", "neural"]
+# flee_seeker (E008, D-062): turn away from a predator in sight, otherwise seek food.
+ControllerName = Literal["random_walk", "nearest_food_seeker", "neural", "flee_seeker"]
 # Predators can't use the food seeker (they don't eat food); they chase prey instead (D-059).
 PredatorControllerName = Literal["random_walk", "nearest_prey_seeker", "neural"]
 EventKind = Literal["birth", "death", "meal"]
@@ -149,6 +150,13 @@ class OrganismConfig(_Strict):
         description="EU lost by the parent when reproducing, beyond the transfer."
     )
     controller: ControllerName
+    births: bool = Field(
+        default=True,
+        description=(
+            "False: nobody is born, whatever their energy (test arenas such as E008's, where "
+            "deaths would otherwise free room for births). Left out of the dump when true."
+        ),
+    )
 
     @model_validator(mode="after")
     def _check_consistency(self) -> Self:
@@ -338,6 +346,12 @@ class SimulationConfig(_Strict):
         for name in ("brain", "predators"):
             if getattr(self, name) is None:
                 data.pop(name, None)
+        # births (D-062) defaults to true, and every config before it had births: leaving the
+        # default out keeps their hashes. Only a config that turns births off says so.
+        for section in ("organisms", "predators"):
+            body = data.get(section)
+            if isinstance(body, dict) and body.get("births", False) is True:
+                body.pop("births")
         return data
 
     @model_validator(mode="after")
@@ -416,6 +430,20 @@ class SimulationConfig(_Strict):
             )
         # Validators must return the model; returning nothing would discard the config.
         return self
+
+
+def editable_dump(config: SimulationConfig) -> dict:
+    """The config as a dict with every setting present, for code that changes settings.
+
+    ``model_dump`` leaves defaults out where hashes depend on it (``births`` when true, D-062);
+    an edit by path ("organisms.births") needs them there. Validating the edited dict leaves
+    them out again.
+    """
+    raw = config.model_dump()
+    for section in ("organisms", "predators"):
+        if isinstance(raw.get(section), dict):
+            raw[section].setdefault("births", True)
+    return raw
 
 
 def with_overrides(

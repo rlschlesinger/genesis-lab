@@ -157,3 +157,16 @@ def test_a_lake_of_older_runs_still_offers_every_new_column(tmp_path):
     assert con.sql("SELECT count(*) FROM strikes").fetchone() == (0,)
     names = [row[0] for row in con.sql("DESCRIBE brains").fetchall()]
     assert names[-1] == THREAT_BRAIN_COLUMNS[-1] and len(names) == 2 + 80
+
+
+def test_a_world_ready_for_predators_with_none_in_it_ingests(tmp_path):
+    # E008's "safe" condition: a predators section with initial_count 0. Its predator tables
+    # are empty, which every check must accept (an empty-table check once refused it).
+    config = apply_changes(
+        load_config(CONFIGS / "predators.yaml"),
+        {"predators.initial_count": 0, "run.max_ticks": 30},
+    )
+    execute_run(config, tmp_path / "safe", run_id="safe")
+    result = ingest_run(tmp_path / "safe", tmp_path / "lake")
+    assert result.ingested, result.reason
+    assert result.rows["predators"] == result.rows["strikes"] == 0

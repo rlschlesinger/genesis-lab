@@ -14,6 +14,7 @@ from typing import Protocol
 import numpy as np
 from numpy.typing import NDArray
 
+from genesis.core.geometry import wrap_angle
 from genesis.intelligence.brain_inputs import brain_inputs
 from genesis.intelligence.neural import Activations, BrainStack, forward
 from genesis.intelligence.sensors import Observations
@@ -89,6 +90,33 @@ class NearestFoodSeeker:
 
 
 @dataclass(frozen=True, slots=True)
+class FleeSeeker:
+    """Designed evasion (E008, D-062): turn straight away from the nearest predator in sight;
+    otherwise behave exactly like NearestFoodSeeker.
+
+    The hand-written counterpart to evolved avoidance. It reads ``obs.threat`` (the nearest
+    predator within sense range, the same sensing neural prey get, D-059) and asks to turn by
+    bearing + pi, so it faces directly away; movement limits the turn to max_turn per tick,
+    so it swings round over several ticks. Full speed always, like the seeker. Its random
+    draws are the seeker's, every tick, so with no predator in sight it is the seeker, draw
+    for draw. Without a ``threat`` (a world without predators) it simply is the seeker.
+    """
+
+    turn_sd: float = 0.3
+
+    def decide(
+        self, obs: Observations, rng: np.random.Generator, brains: BrainStack | None = None
+    ) -> Actions:
+        seeking = NearestFoodSeeker(self.turn_sd).decide(obs, rng)
+        if obs.threat is None:
+            return seeking
+        away = wrap_angle(obs.threat.bearing + np.pi)
+        return Actions(
+            turn=np.where(obs.threat.found, away, seeking.turn), throttle=seeking.throttle
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class Thought:
     """One tick of neural decision-making, kept whole so it can be inspected (4.6)."""
 
@@ -142,10 +170,13 @@ class NeuralController:
         return self.think(obs, rng, brains).actions
 
 
-CONTROLLERS: dict[str, type[RandomWalk] | type[NearestFoodSeeker] | type[NeuralController]] = {
+CONTROLLERS: dict[
+    str, type[RandomWalk] | type[NearestFoodSeeker] | type[FleeSeeker] | type[NeuralController]
+] = {
     "random_walk": RandomWalk,
     "nearest_food_seeker": NearestFoodSeeker,
     "neural": NeuralController,
+    "flee_seeker": FleeSeeker,  # prey: designed evasion (E008)
     # A predator's "food" is prey: its observations hold the nearest prey where a prey's hold
     # the nearest food, so chasing prey is the food seeker's rule, unchanged (D-059).
     "nearest_prey_seeker": NearestFoodSeeker,

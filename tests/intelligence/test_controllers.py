@@ -1,5 +1,6 @@
 """Tests for the baseline controllers and the controller registry."""
 
+from dataclasses import replace
 from typing import get_args
 
 import numpy as np
@@ -95,3 +96,23 @@ def test_random_walk_turn_spread_matches_setting():
     actions = RandomWalk(turn_sd=0.3).decide(obs, np.random.default_rng(1))
     assert np.std(actions.turn) == pytest.approx(0.3, abs=0.01)
     assert np.mean(actions.turn) == pytest.approx(0.0, abs=0.01)
+
+
+def test_the_flee_rule_turns_straight_away_from_a_seen_predator_and_otherwise_seeks_food():
+    # D-062: E008's designed evasion. A predator at bearing +1 rad (left of ahead) means
+    # turning to +1 - pi; no predator in sight means exactly the food seeker, draw for draw.
+    from genesis.intelligence.controllers import FleeSeeker
+    from genesis.intelligence.sensors import ThreatSenses
+
+    base = observations([True, True, False], [0.3, -0.5, 0.0])
+    threat = ThreatSenses(
+        np.array([True, False, True]), np.array([5.0, np.inf, 4.0]), np.array([1.0, 0.0, -2.0])
+    )
+    flee = FleeSeeker().decide(replace(base, threat=threat), np.random.default_rng(1))
+    seek = NearestFoodSeeker().decide(base, np.random.default_rng(1))
+    assert flee.turn[0] == pytest.approx(1.0 - np.pi)
+    assert flee.turn[1] == seek.turn[1]  # no predator: the seeker's turn toward food
+    assert flee.turn[2] == pytest.approx(-2.0 + np.pi)
+    assert (flee.throttle == 1.0).all()
+    without = FleeSeeker().decide(base, np.random.default_rng(1))  # no predators section
+    assert np.array_equal(without.turn, seek.turn)

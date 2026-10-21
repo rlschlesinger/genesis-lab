@@ -247,3 +247,20 @@ def test_predators_that_catch_nothing_leave_the_prey_history_untouched():
     without = Simulation(predator_config(**NONE, **seeker))
     for _ in range(300):
         assert with_p.step() == without.step()
+
+
+def test_births_can_be_switched_off_without_changing_any_existing_config_hash():
+    # D-062: births defaults to true and is left out of the dump then, so no older config's
+    # hash moves; switched off, nobody is born even with room and energy to spare.
+    for name in ("default.yaml", "evolution.yaml", "neural.yaml", "predators.yaml"):
+        config = load_config(CONFIGS / name)
+        assert config.organisms.births and "births" not in config.model_dump()["organisms"]
+    config = predator_config(
+        **{"organisms.births": False, "predators.births": False,
+           "predators.initial_energy": 300.0, "organisms.initial_energy": 100.0}
+    )  # fmt: skip
+    assert config.model_dump()["organisms"]["births"] is False
+    sim = Simulation(config)
+    for _ in range(50):
+        summary = sim.step()
+        assert summary.births == 0 and sim.predator_summary.births == 0

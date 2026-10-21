@@ -222,7 +222,9 @@ def check_predators(run: dict, meta: dict, tables: dict[str, pa.Table]) -> None:
             )
 
     alive, no_death = predators["alive"], pc.is_null(predators["death_tick"])
-    if not pc.all(pc.equal(alive, no_death)).as_py():
+    # Guarded: a world ready for predators with none in it (E008's "safe") has an empty
+    # table, and pc.all of nothing is null, not true.
+    if predators.num_rows and not pc.all(pc.equal(alive, no_death)).as_py():
         raise ValidationError("ranges", "predators: alive disagrees with death_tick")
     if brain:
         _check_weights(tables["predator_brains"], BASE_BRAIN_COLUMNS, brain["weight_limit"],

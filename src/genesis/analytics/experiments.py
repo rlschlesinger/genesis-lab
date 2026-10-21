@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from genesis.analytics.runs import execute_run
-from genesis.core.config import SimulationConfig
+from genesis.core.config import SimulationConfig, editable_dump
 
 
 @dataclass(frozen=True)
@@ -28,7 +28,7 @@ class Condition:
 
 def apply_changes(base: SimulationConfig, changes: dict) -> SimulationConfig:
     """A validated copy of ``base`` with dotted-path changes applied."""
-    raw = base.model_dump()
+    raw = editable_dump(base)  # every setting present, so any real path can be changed
     for path, value in changes.items():
         *parents, leaf = path.split(".")
         section = raw

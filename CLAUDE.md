@@ -39,6 +39,8 @@ uv run python scripts/build_api_fixtures.py          # after any API change: ref
 uv run genesis dashboard E00N [--compare T:C]       # experiment dashboard from the lake
 uv run genesis lake export --experiment E00N --out data/exports/E00N   # + README + manifest
 uv run python experiments/e007_neuroevolution.py --analyse-only --report   # E007 verdicts + results page
+uv run python experiments/e008_evasion.py [--smoke | --analyse-only]   # E008: train, arena, analyse
+uv run python experiments/pilots/e008_tuning.py --round 4   # E008 tuning pilots (labelled tuning)
 ```
 
 ## Simulation invariants (do not break)
