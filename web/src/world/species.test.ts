@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BODIES, MARK_MS, interiorAlpha, markLook, mixColour, newCaptures } from "./species";
+import { BODIES, MARK_MS, interiorAlpha, markLook, mixColour, newCaptures, startsNewRun } from "./species";
 
 describe("drawing rules for two species", () => {
   it("draws predators larger than prey, and both smaller than their reach", () => {
@@ -51,5 +51,20 @@ describe("tinting by diet", () => {
     expect(mixColour(iodine, malachite, 1)).toBe(malachite);
     expect(mixColour(0x000000, 0xffffff, 0.5)).toBe(0x808080);
     expect(mixColour(iodine, malachite, -1)).toBe(iodine);
+  });
+});
+
+describe("telling a new run from the next picture of the same one", () => {
+  const a5 = { run_id: "a", tick: 5 };
+  it("is not a new run on the first picture, or when the same run moves on or repeats", () => {
+    expect(startsNewRun(null, a5)).toBe(false);
+    expect(startsNewRun(a5, { run_id: "a", tick: 6 })).toBe(false);
+    expect(startsNewRun(a5, { run_id: "a", tick: 5 })).toBe(false);
+  });
+  it("is a new run when time goes backwards, or when the run ID changes at any tick", () => {
+    expect(startsNewRun(a5, { run_id: "a", tick: 0 })).toBe(true);
+    expect(startsNewRun(a5, { run_id: "b", tick: 0 })).toBe(true);
+    // A replacement followed after a long disconnection may already be past the old tick.
+    expect(startsNewRun(a5, { run_id: "b", tick: 900 })).toBe(true);
   });
 });

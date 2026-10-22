@@ -21,6 +21,9 @@ export interface PhaseBox {
   right: number;
 }
 
+/** The plot's drawing area in SVG units (its viewBox), with room for the axis labels. */
+export const PHASE_BOX: PhaseBox = { width: 420, height: 260, left: 44, bottom: 34, top: 10, right: 14 };
+
 /** The smallest of 1, 2, 5, 10, 20, 50 ... at or above ``value`` (and at least 5). */
 export function niceMax(value: number): number {
   const target = Math.max(5, value);

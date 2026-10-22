@@ -8,6 +8,11 @@ export function PlateSummary() {
   const food = useLabStore((s) => s.snapshot?.food.x.length ?? 0);
   const hundreds = useLabStore((s) => Math.floor((s.snapshot?.tick ?? 0) / 100) * 100);
   const selected = useLabStore((s) => s.selectedOrganism);
+  // Name the species from the picture itself, so the word is right before any detail arrives.
+  const selectedIsPredator = useLabStore(
+    (s) => s.selectedOrganism !== null && (s.snapshot?.predators?.id.includes(s.selectedOrganism) ?? false),
+  );
+  const word = predators === null ? "Organism" : selectedIsPredator ? "Predator" : "Prey";
   return (
     <p className="visually-hidden">
       Around tick {hundreds}:{" "}
@@ -16,7 +21,7 @@ export function PlateSummary() {
         : `${population} prey, ${predators} ${predators === 1 ? "predator" : "predators"}`}{" "}
       and{" "}
       {food} food items.
-      {selected !== null && ` Organism ${selected} is selected.`}
+      {selected !== null && ` ${word} ${selected} is selected.`}
     </p>
   );
 }

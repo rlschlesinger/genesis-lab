@@ -33,7 +33,7 @@ cli.py ──► core/simulation.py ──owns──► World       (core/world.
 | `core/resources.py` | Food positions `(n, 2)`, Poisson regrowth, removal | Create its own RNG |
 | `core/organism.py` | Per-organism state, `Traits`, energy bookkeeping, death rules | Draw random numbers, sense, or move itself |
 | `intelligence/sensors.py` | World snapshot → `Observations` (nearest food in range) | Mutate anything |
-| `intelligence/neural.py` | `Brain` (weights and biases, flat-vector layout), `BrainStack`, `forward()` → `Activations` (D-039) | Know about organisms or the world; use any other summation method |
+| `intelligence/neural.py` | `Brain` (weights and biases, flat-vector layout), `BrainStack`, `BrainStackCache` (the living stack patched for births and deaths, D-065), `forward()` → `Activations` (D-039) | Know about organisms or the world; use any other summation method |
 | `intelligence/brain_inputs.py` | `INPUT_NAMES`, `wall_distance_ahead`, `brain_inputs` → the (n, 7) input matrix (D-040) | Draw random numbers (noise is passed in) |
 | `intelligence/controllers.py` | `Observations` → `Actions` (pure); `NeuralController.think` also returns inputs and activations (D-042) | Mutate world state |
 | `core/movement.py` | Apply `Actions` within trait limits; walls; distance moved | Decide anything |

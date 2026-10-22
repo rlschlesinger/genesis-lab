@@ -320,3 +320,38 @@ def test_table_definitions_match_the_writers():
     renamed = ["organism_id" if c == "id" else c for c in ORGANISM_FIELDS]
     assert [c for c in ORGANISMS.schema.names if c != "run_id"] == renamed
     assert not math.isnan(0.0)
+
+
+# --- Damaged run.json files: refused, never a crash ----------------------------------------
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "[]",
+        '"hello"',
+        "42",
+        "null",
+        '{"run_id": "r", "seed": 1, "status": "completed", "config": "x"}',
+    ],
+    ids=["list", "string", "number", "null", "config-not-a-mapping"],
+)
+def test_a_run_json_that_is_not_a_run_record_is_refused_not_fatal(tmp_path, text):
+    # `genesis lake ingest data/runs data/experiments` walks every folder; one damaged
+    # run.json must refuse that folder with a reason, not stop the whole ingest.
+    folder = tmp_path / "damaged"
+    folder.mkdir()
+    (folder / "run.json").write_text(text)
+    result = ingest_run(folder, tmp_path / "lake")
+    assert not result.ingested and result.reason
+    assert "run.json" in result.reason
+    assert not (tmp_path / "lake").exists()
+
+
+def test_ingest_paths_carries_on_past_a_damaged_folder(run_dir, tmp_path):
+    root = tmp_path / "runs"
+    shutil.copytree(run_dir, root / run_dir.name)
+    (root / "broken").mkdir()
+    (root / "broken" / "run.json").write_text("[]")
+    results = {r.run_dir.name: r.ingested for r in ingest_paths([root], tmp_path / "lake")}
+    assert results == {run_dir.name: True, "broken": False}

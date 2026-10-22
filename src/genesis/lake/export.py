@@ -109,9 +109,17 @@ def readme(experiment_id: str, tables: list[str]) -> str:
     """The data dictionary's conventions plus the sections for the exported tables."""
     text = DICTIONARY.read_text()
     conventions = text.split("\n---\n", 1)[0].split("**Conventions**", 1)[-1]
-    sections = re.split(r"\n(?=## `)", text)
+    # A table's section starts with its name in backticks: at level 2 (`## \`ticks\``) or, for
+    # the tables grouped under "Worlds with predators" and "Two-food worlds", level 3. Cutting
+    # at every heading keeps each section to its own table: before this, the grouped sections
+    # and "Checks the ETL performs" hung off the `brains` section, so an E008 export carried
+    # them all and an E009 export (no brains) lost its diet tables' documentation.
+    sections = re.split(r"\n(?=#{2,3} )", text)
     chosen = [
-        s.strip() for s in sections if (m := re.match(r"## `(\w+)`", s)) and m.group(1) in tables
+        # Every exported table at the same level in the README, whatever its level here.
+        re.sub(r"^#{2,3} ", "## ", s.strip())
+        for s in sections
+        if (m := re.match(r"#{2,3} `(\w+)`", s)) and m.group(1) in tables
     ]
     return (
         f"# {experiment_id} export from Genesis Lab\n\n"

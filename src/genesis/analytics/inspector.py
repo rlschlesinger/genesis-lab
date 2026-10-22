@@ -199,6 +199,13 @@ def _platform_note(recorded: tuple[str, str] | None) -> str | None:
 
 
 def _not_alive_reason(sim: Simulation, organism_id: int, tick: int, ids: list[int]) -> str:
+    if any(o.id == organism_id for o in (*sim.predators, *sim.dead_predators)):
+        # Predators take IDs after the prey founders (D-057) and keep their own decision
+        # record; this command walks through prey decisions. Say so, rather than "not alive".
+        return (
+            f"organism {organism_id} is a predator; genesis inspect replays prey decisions only "
+            "(the lab's specimen panel shows a predator's latest decision)"
+        )
     dead = next((o for o in sim.dead if o.id == organism_id), None)
     if dead is not None:
         # Founders act from tick 0; a newborn first acts the tick after its birth.

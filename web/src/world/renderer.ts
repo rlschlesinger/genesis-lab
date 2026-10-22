@@ -30,7 +30,7 @@ import {
 } from "./camera";
 import { nearestOrganism } from "./hitTest";
 import { SNAP_DISTANCE, blend, progress, type Pose } from "./interpolate";
-import { BODIES, type SpeciesName, interiorAlpha, markLook, mixColour, newCaptures } from "./species";
+import { BODIES, interiorAlpha, markLook, mixColour, newCaptures, startsNewRun, type SpeciesName } from "./species";
 import { TrailBook } from "./trails";
 
 /** The grid's spacing in world units: a founder's sight range (see Plate.tsx). */
@@ -167,7 +167,7 @@ export class PlateRenderer {
 
   showSnapshot(snapshot: Snapshot): void {
     const now = performance.now();
-    if (this.target !== null && snapshot.tick < this.target.tick) {
+    if (startsNewRun(this.target, snapshot)) {
       // A new run on a plate of the same size (a reset): nothing from the old one carries over.
       this.marks = [];
       this.markedUpTo = -1;

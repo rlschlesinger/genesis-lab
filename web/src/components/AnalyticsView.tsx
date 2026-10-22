@@ -1,4 +1,4 @@
-import { CHARTS, type ChartSpec, DIET_CHARTS, PREDATOR_CHARTS } from "../data/charts";
+import { CHARTS, PHASE_CHART, chartsFor, worldsOf } from "../data/charts";
 import { useRunHistory } from "../hooks/useRunHistory";
 import { useLabStore } from "../store/labStore";
 import styles from "./AnalyticsView.module.css";
@@ -16,12 +16,10 @@ export function AnalyticsView() {
     return <p className={styles.empty}>Start or watch a run on the World view; its charts appear here.</p>;
   }
   const points = series?.columns.tick.length ?? 0;
-  // A world with predators gets their charts after the population chart, and the phase plot.
-  const hunted = series?.columns.predators.some((v) => v !== null) ?? false;
-  // A world with two foods gets the diet charts there too (6.9).
-  const twoFoods = series?.columns.diet_sd.some((v) => v !== null) ?? false;
-  const extra = [...(hunted ? PREDATOR_CHARTS : []), ...(twoFoods ? DIET_CHARTS : [])];
-  const charts: ChartSpec[] = [CHARTS[0]!, ...extra, ...CHARTS.slice(1)];
+  // A world with predators gets their charts after the population chart, and the phase plot;
+  // a world with two foods gets the diet charts there too (6.9): data/charts.ts decides.
+  const hunted = series ? worldsOf(series.columns).hunted : false;
+  const charts = series ? chartsFor(series.columns) : CHARTS;
   return (
     <div className={styles.analytics}>
       <header className={styles.header}>
@@ -66,14 +64,9 @@ export function AnalyticsView() {
         <section className={styles.chart} aria-labelledby="chart-phase">
           <div className={styles.caption}>
             <h3 id="chart-phase" className={styles.chartTitle}>
-              Prey against predators
+              {PHASE_CHART.title}
             </h3>
-            <p className={styles.describe}>
-              The same two counts plotted against each other, one point per interval, joined in
-              time order. Numbers that rise and fall in turn trace a loop; a line running into an
-              axis is a species dying out. A pattern in this simulation, not a claim about real
-              ecosystems.
-            </p>
+            <p className={styles.describe}>{PHASE_CHART.describe}</p>
           </div>
           <PhasePlot columns={series.columns} />
         </section>
