@@ -406,6 +406,18 @@ class SimulationConfig(_Strict):
         return self
 
     @model_validator(mode="after")
+    def _one_extension_at_a_time(self) -> Self:
+        # Predators (06A) and two foods (06B) were built and tested apart. Together they would
+        # run, but nothing checks how they combine (prey tinted by diet in the lab, prey brains
+        # without food-kind inputs), so the combination is refused until it is designed.
+        if self.predators is not None and self.resources is not None:
+            raise ValueError(
+                "a config can have predators: or resources:, not both (the combination isn't "
+                "designed or tested yet)"
+            )
+        return self
+
+    @model_validator(mode="after")
     def _diet_seeker_needs_two_foods(self) -> Self:
         if self.organisms.controller == "diet_seeker" and self.resources is None:
             raise ValueError("controller 'diet_seeker' needs a resources: section (two foods)")

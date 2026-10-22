@@ -125,3 +125,20 @@ Written after the verdicts, to look for reasons. None of it is evidence; each po
 - **Where predators lasted, a hint.** In the 12 worlds where predators survived all of training, from_hunted was caught 9.8% less than from_safe (9 of 12 worlds lower); in the 8 where they died out, +2.3% (4 of 8 lower). Small and post hoc; consistent with "longer exposure, a little evasion".
 - **Behaviour in the arena.** Share of prey-ticks seeing a predator where, after its turn, the predator is in the prey's rear half: flee rule 0.969, from_safe 0.732, from_hunted 0.779 (higher in 13 of 20 worlds). Even predator-naive prey usually have the predator behind them (chasers approach from behind); evolved-with-predators prey, slightly more often. A first version of this measure counted turns that widened the angle to the predator; it scored a prey already fleeing straight away as a failure (that angle can't widen), and was replaced before its numbers were interpreted.
 - **Candidate reasons, untested:** too little time with too weak a signal (a 0.18 capture chance makes most strikes miss anyway, so fleeing pays rarely); the blind spot (a predator ahead and one behind look alike); prey and predators have equal speed, so turning away delays rather than prevents a capture unless the prey keeps fleeing; and fleeing costs foraging time, which selection also weighs.
+
+### Replication on Linux (2026-10-21)
+
+During the Milestone 6 review (PR #5), the whole experiment was run again on Linux x86_64 from commit `8e35bef`, with the same specs, seeds and analysis script. The results above come from the original run on macOS arm64 and stand as recorded. This section adds evidence and changes nothing above it.
+
+The two platforms round the last bit of `tanh` and `arctan2` differently (D-027, D-045). Neural brains turn those last-bit differences into different behaviour, so over 20,000 ticks of training the same seeds produced different evolutionary histories. The Linux run is therefore close to a second, independent sample of 20 worlds rather than a copy. E009, whose organisms follow a fixed rule, reproduced to every digit on Linux, which shows the code itself behaves the same on both platforms.
+
+| | macOS arm64 (above) | Linux x86_64 |
+|---|---|---|
+| Worlds entering the arena | 20 | 19 (seed 8015's `hunted` run ended with 0 prey) |
+| Predators lasted all of training | 12 of 20 worlds | 11 of 20 |
+| H15 flee − seeker | −0.00266, 20/20 lower, p = 0.00002, supported | −0.00261, 19/19 lower, p = 0.00002, supported |
+| **H16 from_hunted − from_safe** | −0.00019 [−0.00047, +0.00010], −5.2%, 13/20 lower, p = 0.106, **not supported** | −0.00054 [−0.00098, −0.00015], −14.0%, 15/19 lower, p = 0.007, **supported** |
+| H17 from_hunted − flee | +0.00246 [+0.00218, +0.00274], designed caught less | +0.00229 [+0.00204, +0.00258], designed caught less |
+| H18 meals, from_hunted − from_safe | −0.0065 [−0.0128, −0.0005], −7.2%, p = 0.057 | +0.0011 [−0.0060, +0.0082], +1.2%, p = 0.77 |
+
+**What this means.** The positive control and the designed-versus-evolved comparison agree on both platforms. The primary verdict does not: the Mac sample found no detectable difference, and the Linux sample found prey evolved with predators caught 14% less. Both intervals overlap, and both point the same way (fewer captures for prey evolved with predators). The fairest reading is that any evasion that evolved is small, and that 20 worlds are too few to settle it. The verdict recorded above was the pre-registered test and is kept. It should not be cited without this replication, and the meal cost reported under H18 did not replicate at all. A follow-up with more worlds, longer exposure to predators and an "ahead" input is the second idea in [RESEARCH_ROADMAP.md](../RESEARCH_ROADMAP.md).

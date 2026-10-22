@@ -1,6 +1,7 @@
 {
   "name": "genesis-lab-web",
   "private": true,
+  "license": "MIT",
   "version": "0.1.0",
   "type": "module",
   "description": "The Genesis Lab browser lab: a read-only viewer and remote control for the Python API (docs/API.md).",

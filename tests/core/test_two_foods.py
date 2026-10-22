@@ -228,3 +228,12 @@ def test_the_diet_seeker_heads_for_the_most_energy_per_distance():
     assert actions.turn[3] == wander[3]  # only worthless food in sight: wander
     assert actions.turn[4] == wander[4]  # nothing in sight: wander, the seeker's draws
     assert (actions.throttle == 1.0).all()
+
+
+def test_predators_and_two_foods_are_not_combined_yet():
+    # Each was built and tested on its own (06A, 06B); the combination is refused until it is
+    # designed (review of PR #5).
+    raw = load_config(DIETS).model_dump()
+    raw["predators"] = load_config(CONFIGS / "predators.yaml").model_dump()["predators"]
+    with pytest.raises(pydantic.ValidationError, match="not both"):
+        SimulationConfig.model_validate(raw)

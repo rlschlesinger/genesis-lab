@@ -3,6 +3,8 @@ name = "genesis-lab"
 version = "0.1.0"
 description = "A local-first artificial life laboratory: digital organisms, evolution, and controlled experiments."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Robby Schlesinger", email = "18275013+rlschlesinger@users.noreply.github.com" }
 ]

@@ -28,10 +28,10 @@ Each experiment was defined and committed before it ran; results are appended wi
 | [E005](experiments/E005-mutation-diversity.md) | Does more mutation keep more diversity? | Yes: ρ = 0.88, roughly √(rate) |
 | [E006](experiments/E006-founders-extinction.md) | Do fewer founders mean more extinction? | No monotonic effect (p = 0.42) |
 | [E007](experiments/E007-neuroevolution.md) | Do evolved brains forage as well as a hand-written rule? | Selection worked in 24/24 worlds and generalised; +3.6% meals against the rule, inconclusive against the 5% that mattered; replicated on Linux |
-| [E008](experiments/E008-evasion.md) | Do prey evolve to escape predators? | Not detectably (−5.2%, CI includes 0), though a designed flee rule cut captures by 73% |
+| [E008](experiments/E008-evasion.md) | Do prey evolve to escape predators? | Not detectably on the Mac (−5.2%, CI includes 0), but 14% fewer captures in a Linux replication (p = 0.007); a designed flee rule cut captures by 73% on both |
 | [E009](experiments/E009-specialisation.md) | Does a population split into specialists on two foods? | Specialists emerged in 20/20 worlds with a curved trade-off; 9 split into two coexisting groups, 11 went one way; a straight-line trade-off did nothing |
 
-Read together: **selection in this world readily tunes numbers** (genes in E002–E005; foraging brains in E007; the diet in E009) **but found avoidance, a behaviour that must react to a moving threat, much harder** (E008). The two nulls (E006, E008) are as informative as the positives because their controls passed.
+Read together: **selection in this world readily tunes numbers** (genes in E002–E005; foraging brains in E007; the diet in E009) **but found avoidance, a behaviour that must react to a moving threat, much harder** (E008: at most a small effect, detected on one platform and not the other). E006's null is informative because its controls passed; E008 shows why a single sample of 20 worlds can't settle a small effect.
 
 ## What was learned (the curriculum)
 

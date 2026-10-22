@@ -8,7 +8,7 @@ Two possible next experiments, as **ideas only**: neither is designed, approved 
 
 **The idea.** Give neural organisms two foods' worth of senses (nearest food of each kind) and the diet gene, and let both the brain and the diet evolve. Does behaviour line up with diet without anyone writing the rule: organisms that digest A learning, by selection, to seek A? A split world would then need two things to coevolve inside one population, a gene and a behaviour.
 
-**Why it might not work, and what would still be learned.** E008 found that these small brains evolved evasion too weakly to detect within 20,000 ticks. If preference fails to evolve too, comparing the two experiments would say something about which behaviours this kind of evolution finds easy (moving toward food: E007, yes) and hard (choosing between targets, avoiding threats).
+**Why it might not work, and what would still be learned.** In E008, these small brains evolved evasion weakly if at all within 20,000 ticks (no detectable effect on the Mac, 14% fewer captures in the Linux replication). If preference fails to evolve too, comparing the two experiments would say something about which behaviours this kind of evolution finds easy (moving toward food: E007, yes) and hard (choosing between targets, avoiding threats).
 
 ## 2. Evasion revisited: an "ahead" input and longer exposure
 
@@ -16,4 +16,4 @@ Two possible next experiments, as **ideas only**: neither is designed, approved 
 
 **The idea.** A pre-registered test of the two candidate reasons E008 named: (a) the blind spot, by adding a `predator_ahead` input (86 parameters instead of 80), and (b) exposure, by keeping predators present for the whole of a longer training run (for example, predators that can't die out, as in E008's arena). A two-by-two design, blind spot by exposure, would say which mattered.
 
-**Why it is worth doing.** E008's null result is informative only up to its interval (an advantage of up to ~13% wasn't ruled out); a design aimed at its likely causes would turn "not detected" into either "found, under these conditions" or a much tighter "not there".
+**Why it is worth doing.** E008's two samples disagree: no detectable effect on the Mac, 14% fewer captures (p = 0.007) when the Linux replication grew different histories from the same seeds. A design aimed at the likely causes, with more worlds, would settle whether the effect is real and how large it is.

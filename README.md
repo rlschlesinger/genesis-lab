@@ -112,7 +112,7 @@ Each experiment is defined (question, hypotheses, seeds, analysis) and committed
 | [E005](docs/experiments/E005-mutation-diversity.md) | Does more mutation maintain more diversity? | Yes: ρ = 0.88, p ≈ 0.00005, meaningful; roughly √(rate) |
 | [E006](docs/experiments/E006-founders-extinction.md) | Do fewer founders mean more extinction? | No monotonic effect (p = 0.42); an exploratory U-shape to test next |
 | [E007](docs/experiments/E007-neuroevolution.md) | Do evolved brains forage as well as the hand-written rule? | Selection works (evolved beat random brains in 24/24 worlds) and generalises to new worlds (equivalent). Against the seeker: +3.6% meals, −6.2% energy per meal; whether +3.6% reaches the 5% that would matter is inconclusive |
-| [E008](docs/experiments/E008-evasion.md) | Do prey evolve to escape predators? | Evasion is possible (a designed flee rule was caught 73% less, 20/20 worlds), but prey evolved with predators were not caught detectably less than prey evolved without (−5.2%, CI includes 0); they ate 7.2% less |
+| [E008](docs/experiments/E008-evasion.md) | Do prey evolve to escape predators? | Evasion is possible (a designed flee rule was caught 73% less, 20/20 worlds). Prey evolved with predators were caught 5.2% less on the Mac (not significant) and 14% less in a Linux replication (p = 0.007): a small effect at most, unsettled at 20 worlds |
 | [E009](docs/experiments/E009-specialisation.md) | Does a population split into specialists on two foods? | With a curved trade-off, specialists emerged in 20/20 worlds; 9 split into two coexisting groups, 11 went one way; a straight-line trade-off did nothing |
 
 ```bash
@@ -170,3 +170,7 @@ data/                      generated run output (ignored by Git)
 - [Browser lab design](docs/ui-design.md): the lab's visual system
 - [API](docs/API.md): the HTTP and WebSocket API (`genesis serve`), with a Python example in `scripts/api_example.py`
 - [Roadmap](docs/roadmap/README.md): scope for Milestones 4–6 and how it maps onto this project
+
+## License
+
+[MIT](LICENSE). You may use, copy, change and share the code, including commercially, as long as the copyright notice and license text come with it.

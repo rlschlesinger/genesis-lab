@@ -107,6 +107,8 @@ export class PlateRenderer {
   private readonly ring = new Graphics();
   private readonly trails = new TrailBook();
   private readonly foodTexture: Texture;
+  /** Food B's shape: a ring, so the two foods differ in shape as well as colour. */
+  private readonly foodRingTexture: Texture;
   private readonly groups: Record<SpeciesName, Group>;
 
   private target: Snapshot | null = null;
@@ -131,6 +133,9 @@ export class PlateRenderer {
     // Textures are white and every sprite is tinted, so one texture serves every colour: food
     // by its kind, an organism by its species or, with two foods, by its diet.
     this.foodTexture = this.stamp(new Graphics().circle(0, 0, TEXTURE_RADIUS).fill(WHITE)).texture;
+    this.foodRingTexture = this.stamp(
+      new Graphics().circle(0, 0, TEXTURE_RADIUS * 0.72).stroke({ width: TEXTURE_RADIUS * 0.56, color: WHITE }),
+    ).texture;
     this.groups = {
       prey: this.group("prey", this.preyShape(false), this.preyShape(true)),
       predator: this.group("predator", this.predatorShape(false), this.predatorShape(true)),
@@ -325,7 +330,9 @@ export class PlateRenderer {
     for (let i = 0; i < x.length; i++) {
       sprites[i]!.position.set(x[i]!, y[i]!);
       sprites[i]!.scale.set(scale);
-      sprites[i]!.tint = kind && kind[i] === 1 ? this.palette.foodB : this.palette.food;
+      const isB = kind !== null && kind[i] === 1;
+      sprites[i]!.texture = isB ? this.foodRingTexture : this.foodTexture;
+      sprites[i]!.tint = isB ? this.palette.foodB : this.palette.food;
     }
   }
 

@@ -81,8 +81,8 @@ Tick 1,501 of 100,000   106 alive                       running
 
 ## Two foods (6.9)
 
-- **Food A in iodine, food B in malachite green** (`--food-a`, `--food-b`): malachite is the spore stain, another stain from the same bench.
-- **Organisms the colour of what they digest:** each is tinted along the line from iodine to malachite by its diet, so a population splitting into specialists would show as two colours on the plate. (Prey in predator worlds keep their violet: the two worlds are separate.)
+- **Food A in iodine, food B in malachite green** (`--food-a`, `--food-b`): malachite is the spore stain, another stain from the same bench. Food A is a dot and food B a ring, so the two kinds differ in shape as well as colour, and the plate's screen-reader summary counts each kind.
+- **Organisms the colour of what they digest:** each is tinted along the line from iodine to malachite by its diet, so a population splitting into specialists would show as two colours on the plate. (A config can't have both predators and two foods, so prey in predator worlds are always violet.)
 - **Specimen panel:** "Diet 0.12 (eats A)" and meals of each kind.
 - **Analytics:** "Specialists" (shares below 0.2 and above 0.8, the spread dashed) and "Food by kind", after the population chart.
 
